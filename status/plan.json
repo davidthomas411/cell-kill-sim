@@ -11,8 +11,8 @@
     {
       "id": "2",
       "title": "Download all 63,053 masks (~4.3 GB)",
-      "status": "in_progress",
-      "note": "Download resumed 2026-10-27 (8 workers). Resumable: python3 src/download_masks.py --workers 8"
+      "status": "done",
+      "note": "All 63,053 masks downloaded and validated, 0 failures (2026-10-27). data/scidb_19235_masks/ with manifest.csv."
     },
     {
       "id": "3",
@@ -24,7 +24,7 @@
       "id": "4",
       "title": "Build per-cell death labels",
       "status": "in_progress",
-      "note": "Pilot running (Antigravity) on groups 1-3: download dead-dye projections, calibrate a 2D rule against the lab's 3D rule on local raw volumes, death time per chamber, compare with paper kill rates."
+      "note": "Pilot: 4,800 dead-dye projections for groups 1-3 downloaded (526 MB). Antigravity finishing the rule, labels and comparison with paper kill rates."
     },
     {
       "id": "5",
