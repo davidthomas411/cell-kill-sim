@@ -17,14 +17,14 @@
     {
       "id": "3",
       "title": "Reproduce the lab's published numbers",
-      "status": "todo",
-      "note": "Contact area and actin flow for a few chambers vs the paper's table."
+      "status": "in_progress",
+      "note": "Part 1 done for group 1 (e1330b3): lab's contact area reproduced from masks; 28/33 paper rows match a chamber within 0.5%, 4 probable, 1 ambiguous. Map in results/. Other 12 experiments queued as downloads finish. Next: generalize the row mapping; part 2 (actin flow) needs raw volumes."
     },
     {
       "id": "4",
       "title": "Build per-cell death labels",
       "status": "todo",
-      "note": "Death time per chamber from SYTOX in the target mask."
+      "note": "Plan: use the deposited 2D dead-dye projections (MIPxy_405 / MIPxz_405, ~130 kB each, ~1.4 GB per view for one sweep per visit) inside the target mask, following the lab's dead_count.m rule. Avoids 700+ GB of raw volumes."
     },
     {
       "id": "5",
