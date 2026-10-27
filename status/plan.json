@@ -18,13 +18,13 @@
       "id": "3",
       "title": "Reproduce the lab's published numbers",
       "status": "in_progress",
-      "note": "Contact area done for 10 of 13 experiments; v11-v13 running. Chamber-to-row map: group 1 firm 28/33, group 2 25/35 (value mismatches where lab tracking differs). Part 2 (actin flow) next; disk now has room."
+      "note": "Contact area: 10/13 experiments done, v11-v13 running. Part 2 running (Antigravity): raw volumes for v01 ROI 32 (dies) and ROI 2 (survives), port of the lab's actin flow (ARFS) and actin depletion (ADC), compared with paper values."
     },
     {
       "id": "4",
       "title": "Build per-cell death labels",
       "status": "in_progress",
-      "note": "Pilot done (b431903): pooled groups 1-3 give 59/102 kills vs paper 60/102, but per group -6/+4/+1; calibrated on only 4 raw volumes with dye. Projections for the other 10 experiments downloading. Next: validate the rule on more raw volumes before trusting per-cell labels."
+      "note": "Pilot done (b431903): pooled groups 1-3 give 59/102 kills vs paper 60/102, but per group -6/+4/+1; calibrated on only 4 raw volumes with dye. Projections for the other 10 experiments downloading. Next: validate the rule on more raw volumes before trusting per-cell labels. 3D death-rule calibration on those two chambers is part of the same Antigravity job."
     },
     {
       "id": "5",
