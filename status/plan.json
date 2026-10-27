@@ -11,8 +11,8 @@
     {
       "id": "2",
       "title": "Download all 63,053 masks (~4.3 GB)",
-      "status": "blocked",
-      "note": "Paused 2026-10-27 at 19,547 / 63,053 masks (v01-v03 complete). Resume: python3 src/download_masks.py --workers 8"
+      "status": "in_progress",
+      "note": "Download resumed 2026-10-27 (8 workers). Resumable: python3 src/download_masks.py --workers 8"
     },
     {
       "id": "3",
