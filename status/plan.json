@@ -11,14 +11,14 @@
     {
       "id": "2",
       "title": "Download all 63,053 masks (~4.3 GB)",
-      "status": "in_progress",
-      "note": "Full download running (8 workers, started 2026-10-27; ~5-7 h). Resumable: rerun python3 src/download_masks.py. 502 chambers; 20-22 visits each."
+      "status": "blocked",
+      "note": "Paused 2026-10-27 at 19,547 / 63,053 masks (v01-v03 complete). Resume: python3 src/download_masks.py --workers 8"
     },
     {
       "id": "3",
       "title": "Reproduce the lab's published numbers",
       "status": "in_progress",
-      "note": "Part 1 done for group 1 (e1330b3): lab's contact area reproduced from masks; 28/33 paper rows match a chamber within 0.5%, 4 probable, 1 ambiguous. Map in results/. Other 12 experiments queued as downloads finish. Next: generalize the row mapping; part 2 (actin flow) needs raw volumes."
+      "note": "Part 1 done for group 1 (e1330b3): lab's contact area reproduced from masks; 28/33 paper rows match a chamber within 0.5%, 4 probable, 1 ambiguous. Map in results/. Other 12 experiments queued as downloads finish. Next: generalize the row mapping; part 2 (actin flow) needs raw volumes. Queue paused during v02; resume with scratchpad run_ca_all.sh or per experiment: python3 src/reproduce_contact_area.py --experiment <exp>."
     },
     {
       "id": "4",
