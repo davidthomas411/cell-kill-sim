@@ -18,13 +18,13 @@
       "id": "3",
       "title": "Reproduce the lab's published numbers",
       "status": "in_progress",
-      "note": "Part 1 done for group 1 (e1330b3): lab's contact area reproduced from masks; 28/33 paper rows match a chamber within 0.5%, 4 probable, 1 ambiguous. Map in results/. Other 12 experiments queued as downloads finish. Next: generalize the row mapping; part 2 (actin flow) needs raw volumes. Queue paused during v02; resume with scratchpad run_ca_all.sh or per experiment: python3 src/reproduce_contact_area.py --experiment <exp>."
+      "note": "Contact area done for 10 of 13 experiments; v11-v13 running. Chamber-to-row map: group 1 firm 28/33, group 2 25/35 (value mismatches where lab tracking differs). Part 2 (actin flow) next; disk now has room."
     },
     {
       "id": "4",
       "title": "Build per-cell death labels",
       "status": "in_progress",
-      "note": "Pilot: 4,800 dead-dye projections for groups 1-3 downloaded (526 MB). Antigravity finishing the rule, labels and comparison with paper kill rates."
+      "note": "Pilot done (b431903): pooled groups 1-3 give 59/102 kills vs paper 60/102, but per group -6/+4/+1; calibrated on only 4 raw volumes with dye. Projections for the other 10 experiments downloading. Next: validate the rule on more raw volumes before trusting per-cell labels."
     },
     {
       "id": "5",
