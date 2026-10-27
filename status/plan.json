@@ -23,14 +23,14 @@
     {
       "id": "4",
       "title": "Build per-cell death labels",
-      "status": "todo",
-      "note": "Plan: use the deposited 2D dead-dye projections (MIPxy_405 / MIPxz_405, ~130 kB each, ~1.4 GB per view for one sweep per visit) inside the target mask, following the lab's dead_count.m rule. Avoids 700+ GB of raw volumes."
+      "status": "in_progress",
+      "note": "Pilot running (Antigravity) on groups 1-3: download dead-dye projections, calibrate a 2D rule against the lab's 3D rule on local raw volumes, death time per chamber, compare with paper kill rates."
     },
     {
       "id": "5",
       "title": "Describe every chamber, and 10-20 in depth",
-      "status": "todo",
-      "note": "Mask descriptors incl. 3D dent shape and topography; resolution check first."
+      "status": "in_progress",
+      "note": "Resolution check running (Antigravity): z vs xy voxel size, mask-to-membrane distance, smallest surface feature the masks keep. Descriptors come after."
     },
     {
       "id": "check",
