@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
 """
-Step 4 (Pilot): Per-chamber and per-visit target cell death labels and death times
+Step 4: Per-chamber and per-visit target cell death labels and death times
 from 2D 405-nm SYTOX max-intensity projections (`*_MIPxy_405.tif`, `*_MIPxz_405.tif`)
-and 3D U-Net segmentation masks (`*_predictions.h5`) for groups 1-3:
-  - `v01_6_40_120_0-6_hd1` (Group 1, Untreated high-killing CAR-T)
-  - `v02_6_40_120_0-6_hd3` (Group 2, Untreated high-killing CAR-T)
-  - `v03_6_40_120_0-6_hd4` (Group 3, Untreated high-killing CAR-T)
+and 3D U-Net segmentation masks (`*_predictions.h5`) across all 13 experiments
+(502 chambers, 10,510 chamber-visits), preserving the pilot outputs for Groups 1-3.
 
 Includes:
   1. Calibration against the Fei lab's 3D rule (`step2_instance_seg.m` + `dead_count.m`)
@@ -30,13 +28,23 @@ Includes:
          sustained positive signal (`>= 2` consecutive positive visits), with `death_visit`
          set to the first visit of the sustained positive run and
          `death_time_min = death_visit * 10.0`.
+       - Survival & censoring columns: `first_contact_visit`, `contact_to_death_min`,
+         `last_observed_visit`, `censored`, `km_contact_time_min`, `km_event_sustained`,
+         `any_contact_to_death_min`, `censored_any_visit`, `km_any_contact_time_min`,
+         `km_event_any_visit`.
   3. Outputs under `data/step4/`:
        - `calibration_20_raw_volumes.csv`
-       - `per_visit_death_labels.csv` (and `data/step4/<experiment>/per_visit_death_labels.csv`)
-       - `per_chamber_death_labels.csv` (and `data/step4/<experiment>/per_chamber_death_labels.csv`)
-       - `group_kill_rate_comparison.csv`
-       - `summary.json`
-  4. Figure `figures/step4_death_labels_pilot.png` following House Style.
+       - Pilot tables (Groups 1-3, preserved):
+           `per_visit_death_labels.csv`, `per_chamber_death_labels.csv`,
+           `group_kill_rate_comparison.csv`, `summary.json`
+       - All-experiment tables (13 experiments, 502 chambers):
+           `per_visit_death_labels_all.csv`, `per_chamber_death_labels_all.csv`,
+           `group_kill_rate_comparison_all.csv`, `summary_all.json`
+       - Per-experiment directories `data/step4/<experiment>/`:
+           `per_visit_death_labels.csv`, `per_chamber_death_labels.csv`
+  4. Figures following House Style:
+       - `figures/step4_death_labels_pilot.png` (preserved)
+       - `figures/step4_death_labels_all.png`
 """
 
 from __future__ import annotations
@@ -54,11 +62,13 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
+from matplotlib.lines import Line2D
 from matplotlib.patches import Patch
 import numpy as np
 import pandas as pd
-import tifffile
 from scipy.ndimage import binary_closing, distance_transform_edt, gaussian_filter, label
+from scipy.stats import beta
+import tifffile
 
 try:
     from src.paths import DATA_DIR, FIGURES_DIR, REPO_ROOT
@@ -66,7 +76,6 @@ except ImportError:
     from paths import DATA_DIR, FIGURES_DIR, REPO_ROOT
 
 sys.path.insert(0, str(REPO_ROOT / "src"))
-from map_chambers_to_paper_rows import align_one_group
 from reproduce_contact_area import (
     STRUCT26,
     compute_contact_surface_from_mask_array,
@@ -88,6 +97,24 @@ PILOT_EXPERIMENTS: tuple[tuple[str, str, str], ...] = (
     ("2", "v02_6_40_120_0-6_hd3", "Untreated high-killing CAR-T"),
     ("3", "v03_6_40_120_0-6_hd4", "Untreated high-killing CAR-T"),
 )
+
+ALL_EXPERIMENTS: tuple[tuple[str, str, str], ...] = (
+    ("1", "v01_6_40_120_0-6_hd1", "Untreated high-killing CAR-T"),
+    ("2", "v02_6_40_120_0-6_hd3", "Untreated high-killing CAR-T"),
+    ("3", "v03_6_40_120_0-6_hd4", "Untreated high-killing CAR-T"),
+    ("4", "v04_6_40_120_0-6_hd6", "Untreated high-killing CAR-T"),
+    ("5", "v05_6_40_120_0-6_hd7", "Untreated high-killing CAR-T"),
+    ("6", "v06_6_40_120_0-6_hd8", "Untreated low-killing CAR-T"),
+    ("7", "v07_6_39_120_0-6_hd9", "Untreated low-killing CAR-T"),
+    ("8", "v08_6_40_120_0-6_hd2", "Untreated low-killing CAR-T"),
+    ("9", "v09_6_40_120_0-6_hd10", "Untreated low-killing CAR-T"),
+    ("10", "v10_6_40_120_0-6_hd5", "Untreated low-killing CAR-T"),
+    ("8*", "v11_6_36_120_0-6_hd2_ds", "Dasatinib 50 nM CAR-T"),
+    ("9*", "v12_6_35_120_0-6_hd10ds", "Dasatinib 50 nM CAR-T"),
+    ("10*", "v13_6_40_120_0-6_hd5_ds", "Dasatinib 50 nM CAR-T"),
+)
+
+GROUP_ORDER_MAP: dict[str, int] = {gid: i for i, (gid, _, _) in enumerate(ALL_EXPERIMENTS)}
 
 # 3D sphere(3) and 2D disk(3) structuring elements
 _zz, _yy3, _xx3 = np.ogrid[-3:4, -3:4, -3:4]
@@ -409,60 +436,96 @@ def _process_one_chamber(args: tuple[str, str, str, str, list[tuple[int, str, Pa
     return rows
 
 
+def clopper_pearson_ci(k: int, n: int, alpha: float = 0.05) -> tuple[float, float]:
+    """Exact 95% Clopper-Pearson binomial confidence interval for k successes in n trials."""
+    if n <= 0:
+        return (np.nan, np.nan)
+    lo = 0.0 if k <= 0 else float(beta.ppf(alpha / 2.0, k, n - k + 1))
+    hi = 1.0 if k >= n else float(beta.ppf(1.0 - alpha / 2.0, k + 1, n - k))
+    return (lo, hi)
+
+
 def load_paper_chamber_mapping() -> dict[tuple[str, str], dict[str, Any]]:
     """
-    Load paper-row to chamber mapping from `results/chamber_to_row_map.csv` for groups 1-2,
-    and run `align_one_group` in-memory for Group 3 if not yet written to `results/chamber_to_row_map.csv`.
+    Load paper-row to chamber mapping from `results/chamber_to_row_map.csv` across all 13 groups.
+    Records both `in_paper` (any row in the 419-row mapping) and `in_paper_firm_probable`
+    (rows with `label` in `{"firm", "probable"}`).
     """
     df_map = pd.read_csv(ROW_MAP_CSV, dtype={"group_id": str})
-    df_paper = pd.read_csv(CLEAN_419_CSV, dtype={"group_id": str})
-
-    existing_groups = set(df_map["group_id"].unique())
-    extra_dfs: list[pd.DataFrame] = []
-    for gid, exp, _cond in PILOT_EXPERIMENTS:
-        if gid not in existing_groups:
-            ch_csv = STEP3_DIR / exp / "per_chamber_contact_area.csv"
-            df_ch = pd.read_csv(ch_csv)
-            df_pg = df_paper[df_paper["group_id"] == gid].sort_values("cell_index").reset_index(drop=True)
-            df_g = align_one_group(exp, gid, df_pg, df_ch)
-            extra_dfs.append(df_g)
-
-    if extra_dfs:
-        df_map = pd.concat([df_map] + extra_dfs, ignore_index=True)
 
     mapping: dict[tuple[str, str], dict[str, Any]] = {}
     for _, row in df_map.iterrows():
         key = (str(row["experiment"]), str(row["roi"]))
+        lbl = str(row["label"])
         mapping[key] = {
             "in_paper": True,
+            "in_paper_firm_probable": lbl in ("firm", "probable"),
             "paper_cell_index": int(row["cell_index"]),
             "paper_CA_um2": float(row["paper_CA_um2"]),
-            "alignment_label": str(row["label"]),
+            "alignment_label": lbl,
         }
     return mapping
 
 
+def discover_chamber_visit_items(
+    exp: str,
+    roi: str,
+    n_visits_s3: int,
+    v_ca_map: dict[int, float],
+) -> list[tuple[int, str, Path, Path, Path, float]]:
+    """
+    Discover valid `(visit_index, stem, xy_path, xz_path, pred_path, ca_um2)` items
+    directly from `data/scidb_19235_mips/<exp>/<roi>/` and `data/scidb_19235_masks/<exp>/<roi>/`,
+    handling 20, 21, or 22 visits and truncated chambers (such as `v07_6_39_120_0-6_hd9/MIP_ROI_36`
+    where predictions end at visit 14).
+    """
+    roi_mip_dir = MIPS_DIR / exp / roi
+    roi_mask_dir = MASKS_DIR / exp / roi
+
+    xy_files = sorted(
+        roi_mip_dir.glob("*_MIPxy_405.tif"),
+        key=lambda p: int(p.name.split("_")[0]) if p.name.split("_")[0].isdigit() else p.name,
+    )
+    items: list[tuple[int, str, Path, Path, Path, float]] = []
+    for idx0, xy_p in enumerate(xy_files):
+        v_idx = idx0 + 1
+        if v_idx > n_visits_s3:
+            break
+        stem = xy_p.name[: -len("_MIPxy_405.tif")]
+        xz_p = roi_mip_dir / f"{stem}_MIPxz_405.tif"
+        pred_p = roi_mask_dir / f"{stem}_predictions.h5"
+        if not xz_p.exists() or not pred_p.exists():
+            break
+        ca_val = v_ca_map.get(v_idx, 0.0)
+        items.append((v_idx, stem.zfill(5), xy_p, xz_p, pred_p, ca_val))
+    return items
+
+
 def build_chamber_and_visit_tables(
-    workers: int = 4,
+    experiments: tuple[tuple[str, str, str], ...] = ALL_EXPERIMENTS,
+    workers: int = 2,
 ) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """
-    Compute per-visit and per-chamber death labels across all 120 chambers (2,400 visits)
-    of groups 1-3, plus the per-group comparison table against the paper.
+    Compute per-visit and per-chamber death labels across the specified experiments
+    (up to all 13 experiments, 502 chambers, 10,510 visits), plus the per-group comparison
+    table against the paper (`Source_Data Figure 5g`).
     """
-    mips_df = pd.read_csv(MIPS_MANIFEST_CSV)
     paper_map = load_paper_chamber_mapping()
     df_paper = pd.read_csv(CLEAN_419_CSV, dtype={"group_id": str})
     df_grp_inv = pd.read_csv(GROUP_INV_CSV, dtype={"group_id": str})
 
     # Index step3 per-chamber contact area series
     ca_lookup: dict[tuple[str, str], dict[str, Any]] = {}
-    for gid, exp, _cond in PILOT_EXPERIMENTS:
+    tasks: list[tuple[str, str, str, str, list[tuple[int, str, Path, Path, Path, float]]]] = []
+
+    for gid, exp, cond in experiments:
         ch_csv = STEP3_DIR / exp / "per_chamber_contact_area.csv"
         df_ch = pd.read_csv(ch_csv)
+        df_ch = df_ch.sort_values("roi_index").reset_index(drop=True)
         for _, row in df_ch.iterrows():
             roi = str(row["roi"])
             n_v = int(row["n_visits"])
-            v_ca = {}
+            v_ca: dict[int, float] = {}
             for v in range(1, n_v + 1):
                 col = f"visit_{v:02d}_CA_um2"
                 v_ca[v] = float(row[col]) if col in row and pd.notna(row[col]) else 0.0
@@ -474,43 +537,28 @@ def build_chamber_and_visit_tables(
                 "multi_tcell_sweeps": int(row["multi_tcell_sweeps"]),
                 "visit_ca": v_ca,
             }
-
-    tasks: list[tuple[str, str, str, str, list[tuple[int, str, Path, Path, Path, float]]]] = []
-    for gid, exp, cond in PILOT_EXPERIMENTS:
-        exp_mips = mips_df[mips_df["experiment"] == exp]
-        rois = sorted(
-            exp_mips["roi"].unique(),
-            key=lambda r: int(r.split("_")[-1]) if r.split("_")[-1].isdigit() else r,
-        )
-        for roi in rois:
-            r_df = exp_mips[exp_mips["roi"] == roi]
-            xy_df = r_df[r_df["proj_type"] == "MIPxy_405"].sort_values("visit_index")
-            xz_paths = dict(
-                zip(
-                    r_df[r_df["proj_type"] == "MIPxz_405"]["visit_index"],
-                    r_df[r_df["proj_type"] == "MIPxz_405"]["path"],
-                )
-            )
-            v_ca_map = ca_lookup[(exp, roi)]["visit_ca"]
-            visit_items = []
-            for _, r in xy_df.iterrows():
-                v_idx = int(r["visit_index"])
-                stem = str(r["stem"]).zfill(5)
-                xy_p = REPO_ROOT / str(r["path"])
-                xz_p = REPO_ROOT / str(xz_paths[v_idx])
-                pred_p = MASKS_DIR / exp / roi / f"{stem}_predictions.h5"
-                ca_val = v_ca_map.get(v_idx, 0.0)
-                visit_items.append((v_idx, stem, xy_p, xz_p, pred_p, ca_val))
+            visit_items = discover_chamber_visit_items(exp, roi, n_v, v_ca)
             tasks.append((gid, exp, cond, roi, visit_items))
 
     visit_rows: list[dict[str, Any]] = []
-    with ProcessPoolExecutor(max_workers=max(1, workers)) as executor:
+    with ProcessPoolExecutor(max_workers=max(1, min(workers, 2))) as executor:
         for res in executor.map(_process_one_chamber, tasks):
             visit_rows.extend(res)
 
-    df_visits = pd.DataFrame(visit_rows).sort_values(
-        ["group_id", "roi_index", "visit"]
-    ).reset_index(drop=True)
+    df_visits = pd.DataFrame(visit_rows)
+    df_visits["_grp_order"] = df_visits["group_id"].map(
+        lambda g: GROUP_ORDER_MAP.get(str(g), 999)
+    )
+    df_visits = (
+        df_visits.sort_values(["_grp_order", "roi_index", "visit"])
+        .drop(columns=["_grp_order"])
+        .reset_index(drop=True)
+    )
+
+    # Experiment-level nominal max visits (to identify truncated chambers)
+    exp_max_visits: dict[str, int] = (
+        df_visits.groupby("experiment")["visit"].max().astype(int).to_dict()
+    )
 
     # Build per-chamber summary table
     chamber_rows: list[dict[str, Any]] = []
@@ -519,6 +567,10 @@ def build_chamber_and_visit_tables(
     ):
         grp = grp.sort_values("visit").reset_index(drop=True)
         n_visits = len(grp)
+        last_observed_visit = int(grp["visit"].iloc[-1])
+        last_observed_time_min = round(float(last_observed_visit * VISIT_INTERVAL_MIN), 1)
+        is_truncated = bool(last_observed_visit < exp_max_visits.get(str(exp), last_observed_visit))
+
         pos = grp["dead_visit"].to_numpy(dtype=bool)
         pos_dil10 = grp["dead_visit_dil10"].to_numpy(dtype=bool)
         has_c = grp["has_contact"].to_numpy(dtype=bool)
@@ -552,7 +604,14 @@ def build_chamber_and_visit_tables(
         # Single-visit (any visit) positive and 10-px dilated sustained positive
         any_pos_idx = np.where(pos)[0]
         ever_dead_any_visit = bool(any_pos_idx.size > 0)
-        first_any_dead_visit = int(grp.loc[any_pos_idx[0], "visit"]) if ever_dead_any_visit else None
+        first_any_dead_visit: int | None = (
+            int(grp.loc[any_pos_idx[0], "visit"]) if ever_dead_any_visit else None
+        )
+        first_any_dead_time_min: float | None = (
+            float(first_any_dead_visit * VISIT_INTERVAL_MIN)
+            if first_any_dead_visit is not None
+            else None
+        )
 
         sust_dil10_idx: int | None = None
         for i in range(n_visits - 1):
@@ -573,11 +632,43 @@ def build_chamber_and_visit_tables(
         else:
             contact_to_death_min = None
 
+        if first_any_dead_time_min is not None and first_contact_time_min is not None:
+            any_contact_to_death_min: float | None = round(
+                first_any_dead_time_min - first_contact_time_min, 1
+            )
+        else:
+            any_contact_to_death_min = None
+
+        # Censoring and survival time from first contact (censored at last observed visit)
+        censored = not ever_dead
+        censored_any_visit = not ever_dead_any_visit
+        if first_contact_time_min is not None:
+            censor_from_contact = round(last_observed_time_min - first_contact_time_min, 1)
+            if ever_dead and contact_to_death_min is not None:
+                km_contact_time_min: float | None = max(0.0, float(contact_to_death_min))
+                km_event_sustained: int | None = 1
+            else:
+                km_contact_time_min = max(0.0, float(censor_from_contact))
+                km_event_sustained = 0
+
+            if ever_dead_any_visit and any_contact_to_death_min is not None:
+                km_any_contact_time_min: float | None = max(0.0, float(any_contact_to_death_min))
+                km_event_any_visit: int | None = 1
+            else:
+                km_any_contact_time_min = max(0.0, float(censor_from_contact))
+                km_event_any_visit = 0
+        else:
+            km_contact_time_min = None
+            km_event_sustained = None
+            km_any_contact_time_min = None
+            km_event_any_visit = None
+
         ca_info = ca_lookup[(exp, roi)]
         p_info = paper_map.get(
             (exp, roi),
             {
                 "in_paper": False,
+                "in_paper_firm_probable": False,
                 "paper_cell_index": None,
                 "paper_CA_um2": np.nan,
                 "alignment_label": "excluded",
@@ -597,11 +688,15 @@ def build_chamber_and_visit_tables(
                 "roi": roi,
                 "roi_index": int(roi_idx),
                 "in_paper": bool(p_info["in_paper"]),
+                "in_paper_firm_probable": bool(p_info["in_paper_firm_probable"]),
                 "paper_cell_index": p_info["paper_cell_index"],
                 "alignment_label": p_info["alignment_label"],
                 "paper_CA_um2": p_info["paper_CA_um2"],
                 "our_CA_um2": round(ca_info["CA_um2"], 4),
                 "n_visits": n_visits,
+                "last_observed_visit": last_observed_visit,
+                "last_observed_time_min": last_observed_time_min,
+                "is_truncated": is_truncated,
                 "n_contact_visits": ca_info["n_contact_visits"],
                 "max_tcell_instances": ca_info["max_tcell_instances"],
                 "multi_tcell_sweeps": ca_info["multi_tcell_sweeps"],
@@ -612,11 +707,19 @@ def build_chamber_and_visit_tables(
                 "death_visit": death_visit,
                 "death_time_min": death_time_min,
                 "contact_to_death_min": contact_to_death_min,
+                "censored": censored,
+                "km_contact_time_min": km_contact_time_min,
+                "km_event_sustained": km_event_sustained,
                 "dead_at_visit_1": dead_at_visit_1,
                 "dead_before_contact": dead_before_contact,
                 "n_dead_visits": int(pos.sum()),
                 "ever_dead_any_visit": ever_dead_any_visit,
                 "first_any_dead_visit": first_any_dead_visit,
+                "first_any_dead_time_min": first_any_dead_time_min,
+                "any_contact_to_death_min": any_contact_to_death_min,
+                "censored_any_visit": censored_any_visit,
+                "km_any_contact_time_min": km_any_contact_time_min,
+                "km_event_any_visit": km_event_any_visit,
                 "ever_dead_dil10": ever_dead_dil10,
                 "peak_overlap_xy_px": int(grp["overlap_xy_px"].max()),
                 "peak_overlap_xz_px": int(grp["overlap_xz_px"].max()),
@@ -626,71 +729,128 @@ def build_chamber_and_visit_tables(
             }
         )
 
-    df_chambers = pd.DataFrame(chamber_rows).sort_values(
-        ["group_id", "roi_index"]
-    ).reset_index(drop=True)
+    df_chambers = pd.DataFrame(chamber_rows)
+    df_chambers["_grp_order"] = df_chambers["group_id"].map(
+        lambda g: GROUP_ORDER_MAP.get(str(g), 999)
+    )
+    df_chambers = (
+        df_chambers.sort_values(["_grp_order", "roi_index"])
+        .drop(columns=["_grp_order"])
+        .reset_index(drop=True)
+    )
 
     # Build per-group comparison table
     group_rows: list[dict[str, Any]] = []
-    for gid, exp, cond in PILOT_EXPERIMENTS:
+    for gid, exp, cond in experiments:
         sub_all = df_chambers[df_chambers["group_id"] == gid]
-        sub_pap = sub_all[sub_all["in_paper"]]
+        if sub_all.empty:
+            continue
+        sub_fp = sub_all[sub_all["in_paper_firm_probable"]]
+        sub_pap_all419 = sub_all[sub_all["in_paper"]]
+
         inv_row = df_grp_inv[df_grp_inv["group_id"] == gid].iloc[0]
         pub_rate_419 = float(df_paper[df_paper["group_id"] == gid]["group_kill_rate"].iloc[0])
         pub_n_cells = int(inv_row["n_pairs_in_published_xlsx"])
         pub_n_killed = int(inv_row["n_killed_published"])
         pub_rate_exact = float(inv_row["kill_rate_published"])
+        pub_ci_lo, pub_ci_hi = clopper_pearson_ci(pub_n_killed, pub_n_cells)
 
         n_all = len(sub_all)
-        n_pap = len(sub_pap)
+        n_fp = len(sub_fp)
+        n_pap_all419 = len(sub_pap_all419)
 
-        # Primary sustained rule (T=404, ov>=20, >=2 consecutive visits)
-        k_pap_sust = int(sub_pap["ever_dead"].sum())
+        # Primary sustained rule (>=2 consecutive visits) on firm/probable paper chambers & all chambers
+        k_fp_sust = int(sub_fp["ever_dead"].sum())
         k_all_sust = int(sub_all["ever_dead"].sum())
+        k_pap419_sust = int(sub_pap_all419["ever_dead"].sum())
+        fp_sust_lo, fp_sust_hi = clopper_pearson_ci(k_fp_sust, n_fp)
+        all_sust_lo, all_sust_hi = clopper_pearson_ci(k_all_sust, n_all)
 
-        # Any-visit rule (T=404, ov>=20, >=1 visit, matching summary.m max over time)
-        k_pap_any = int(sub_pap["ever_dead_any_visit"].sum())
+        # Any-visit rule (>=1 visit, matching summary.m max over time)
+        k_fp_any = int(sub_fp["ever_dead_any_visit"].sum())
         k_all_any = int(sub_all["ever_dead_any_visit"].sum())
+        k_pap419_any = int(sub_pap_all419["ever_dead_any_visit"].sum())
+        fp_any_lo, fp_any_hi = clopper_pearson_ci(k_fp_any, n_fp)
+        all_any_lo, all_any_hi = clopper_pearson_ci(k_all_any, n_all)
 
         # Dilated 10-px sustained rule
-        k_pap_dil10 = int(sub_pap["ever_dead_dil10"].sum())
+        k_fp_dil10 = int(sub_fp["ever_dead_dil10"].sum())
         k_all_dil10 = int(sub_all["ever_dead_dil10"].sum())
+        k_pap419_dil10 = int(sub_pap_all419["ever_dead_dil10"].sum())
+
+        min_v = int(sub_all["n_visits"].min())
+        max_v = int(sub_all["n_visits"].max())
 
         group_rows.append(
             {
                 "group_id": gid,
                 "experiment": exp,
                 "condition": cond,
-                "n_visits_per_chamber": int(sub_all["n_visits"].iloc[0]),
+                "n_visits_per_chamber": max_v,
+                "min_visits_per_chamber": min_v,
+                "n_truncated_chambers": int(sub_all["is_truncated"].sum()),
                 "paper_n_cells": pub_n_cells,
                 "paper_n_killed": pub_n_killed,
                 "paper_group_kill_rate": pub_rate_419,
                 "paper_group_kill_rate_exact": round(pub_rate_exact, 5),
-                "our_paper_chambers_n": n_pap,
-                "our_paper_killed_sustained": k_pap_sust,
-                "our_paper_kill_rate_sustained": round(k_pap_sust / n_pap, 4),
+                "paper_kill_rate_ci95_lo": round(pub_ci_lo, 4),
+                "paper_kill_rate_ci95_hi": round(pub_ci_hi, 4),
+                # Firm + probable paper chambers (requested in Step 4 all-chambers spec)
+                "our_paper_chambers_n": n_fp,
+                "our_paper_killed_sustained": k_fp_sust,
+                "our_paper_kill_rate_sustained": round(k_fp_sust / n_fp, 4) if n_fp > 0 else np.nan,
+                "our_paper_sustained_ci95_lo": round(fp_sust_lo, 4),
+                "our_paper_sustained_ci95_hi": round(fp_sust_hi, 4),
+                "our_paper_killed_any_visit": k_fp_any,
+                "our_paper_kill_rate_any_visit": round(k_fp_any / n_fp, 4) if n_fp > 0 else np.nan,
+                "our_paper_any_visit_ci95_lo": round(fp_any_lo, 4),
+                "our_paper_any_visit_ci95_hi": round(fp_any_hi, 4),
+                "our_paper_killed_dil10_sustained": k_fp_dil10,
+                "our_paper_kill_rate_dil10_sustained": round(k_fp_dil10 / n_fp, 4) if n_fp > 0 else np.nan,
+                # All 419 mapped rows (including unmatched/ambiguous) for reference
+                "our_paper_all419_n": n_pap_all419,
+                "our_paper_all419_killed_sustained": k_pap419_sust,
+                "our_paper_all419_kill_rate_sustained": round(k_pap419_sust / n_pap_all419, 4)
+                if n_pap_all419 > 0
+                else np.nan,
+                "our_paper_all419_killed_any_visit": k_pap419_any,
+                "our_paper_all419_kill_rate_any_visit": round(k_pap419_any / n_pap_all419, 4)
+                if n_pap_all419 > 0
+                else np.nan,
+                "our_paper_all419_killed_dil10_sustained": k_pap419_dil10,
+                # All chambers in deposit
                 "our_all_chambers_n": n_all,
                 "our_all_killed_sustained": k_all_sust,
                 "our_all_kill_rate_sustained": round(k_all_sust / n_all, 4),
-                "our_paper_killed_any_visit": k_pap_any,
-                "our_paper_kill_rate_any_visit": round(k_pap_any / n_pap, 4),
+                "our_all_sustained_ci95_lo": round(all_sust_lo, 4),
+                "our_all_sustained_ci95_hi": round(all_sust_hi, 4),
                 "our_all_killed_any_visit": k_all_any,
                 "our_all_kill_rate_any_visit": round(k_all_any / n_all, 4),
-                "our_paper_killed_dil10_sustained": k_pap_dil10,
-                "our_paper_kill_rate_dil10_sustained": round(k_pap_dil10 / n_pap, 4),
+                "our_all_any_visit_ci95_lo": round(all_any_lo, 4),
+                "our_all_any_visit_ci95_hi": round(all_any_hi, 4),
                 "our_all_killed_dil10_sustained": k_all_dil10,
                 "our_all_kill_rate_dil10_sustained": round(k_all_dil10 / n_all, 4),
+                # Special flags
                 "n_dead_at_visit_1_all": int(sub_all["dead_at_visit_1"].sum()),
-                "n_dead_at_visit_1_paper": int(sub_pap["dead_at_visit_1"].sum()),
+                "n_dead_at_visit_1_paper": int(sub_fp["dead_at_visit_1"].sum()),
+                "n_dead_before_contact_all": int(sub_all["dead_before_contact"].sum()),
+                "n_dead_before_contact_paper": int(sub_fp["dead_before_contact"].sum()),
                 "n_no_contact_all": int(sub_all["no_contact"].sum()),
-                "n_no_contact_paper": int(sub_pap["no_contact"].sum()),
-                "median_death_time_min_paper": float(sub_pap["death_time_min"].dropna().median())
-                if sub_pap["death_time_min"].notna().any()
+                "n_no_contact_paper": int(sub_fp["no_contact"].sum()),
+                "n_censored_all": int(sub_all["censored"].sum()),
+                "n_censored_paper": int(sub_fp["censored"].sum()),
+                "median_death_time_min_paper": float(sub_fp["death_time_min"].dropna().median())
+                if sub_fp["death_time_min"].notna().any()
                 else np.nan,
                 "median_contact_to_death_min_paper": float(
-                    sub_pap["contact_to_death_min"].dropna().median()
+                    sub_fp["contact_to_death_min"].dropna().median()
                 )
-                if sub_pap["contact_to_death_min"].notna().any()
+                if sub_fp["contact_to_death_min"].notna().any()
+                else np.nan,
+                "median_contact_to_death_min_all": float(
+                    sub_all["contact_to_death_min"].dropna().median()
+                )
+                if sub_all["contact_to_death_min"].notna().any()
                 else np.nan,
             }
         )
@@ -1084,17 +1244,387 @@ def make_pilot_figure(
     plt.close(fig)
 
 
+def compute_km_curve(
+    times: np.ndarray,
+    events: np.ndarray,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """
+    Compute standard product-limit Kaplan-Meier survival curve S(t) for right-censored data:
+      - `times`: non-negative durations from first contact (min)
+      - `events`: 1 if target died, 0 if censored at last observed visit
+    Returns `(t_step, s_step, censor_times)` suitable for `ax.step(..., where='post')`.
+    """
+    valid = np.isfinite(times) & np.isfinite(events)
+    t_arr = np.maximum(0.0, times[valid].astype(float))
+    e_arr = events[valid].astype(int)
+    if t_arr.size == 0:
+        return np.array([0.0]), np.array([1.0]), np.array([])
+
+    uniq_t = np.sort(np.unique(t_arr))
+    t_pts = [0.0]
+    s_pts = [1.0]
+    s_cur = 1.0
+
+    for t_val in uniq_t:
+        n_risk = int(np.sum(t_arr >= t_val))
+        d_i = int(np.sum((t_arr == t_val) & (e_arr == 1)))
+        if n_risk > 0 and d_i > 0:
+            s_cur = s_cur * (1.0 - d_i / float(n_risk))
+        t_pts.append(float(t_val))
+        s_pts.append(float(s_cur))
+
+    censor_t = np.sort(np.unique(t_arr[e_arr == 0]))
+    return np.array(t_pts), np.array(s_pts), censor_t
+
+
+def make_all_figure(
+    df_chambers: pd.DataFrame,
+    df_groups: pd.DataFrame,
+    out_path: Path,
+) -> None:
+    """
+    Create `figures/step4_death_labels_all.png` following House Style:
+      (a) Kill fraction vs paper per group across all 13 groups for both definitions
+          (sustained >= 2 visits vs any-visit >= 1 visit) on paper chambers
+          (firm + probable) and on all chambers, with 95% Clopper-Pearson binomial intervals.
+      (b) Kaplan-Meier target survival curves of time from first contact to death per group
+          (censored at last observed visit), distinguishing untreated high-killing (Groups 1-5),
+          untreated low-killing (Groups 6-10), and dasatinib 50 nM (Groups 8*, 9*, 10*) groups.
+    """
+    plt.rcParams.update(
+        {
+            "font.family": "sans-serif",
+            "font.sans-serif": [
+                "Arial",
+                "Helvetica Neue",
+                "DejaVu Sans",
+            ],
+            "axes.edgecolor": "#C9C9C9",
+            "axes.linewidth": 0.8,
+            "xtick.color": "#111111",
+            "ytick.color": "#111111",
+            "text.color": "#111111",
+            "figure.facecolor": "#FFFFFF",
+            "axes.facecolor": "#FFFFFF",
+        }
+    )
+
+    fig = plt.figure(figsize=(14.0, 9.5), dpi=200)
+    gs = fig.add_gridspec(
+        nrows=2,
+        ncols=2,
+        height_ratios=[1.12, 1.0],
+        width_ratios=[1.0, 1.0],
+        hspace=0.38,
+        wspace=0.20,
+        left=0.055,
+        right=0.975,
+        top=0.885,
+        bottom=0.075,
+    )
+
+    # -------------------------------------------------------------------------
+    # Panel (a): Kill fraction vs published Figure 5g across all 13 groups
+    #            with 95% Clopper-Pearson binomial intervals
+    # -------------------------------------------------------------------------
+    ax_a = fig.add_subplot(gs[0, :])
+    n_g = len(df_groups)
+    x = np.arange(n_g, dtype=float)
+
+    r_pub = df_groups["paper_group_kill_rate_exact"].to_numpy() * 100.0
+    pub_lo = df_groups["paper_kill_rate_ci95_lo"].to_numpy() * 100.0
+    pub_hi = df_groups["paper_kill_rate_ci95_hi"].to_numpy() * 100.0
+
+    r_sust_fp = df_groups["our_paper_kill_rate_sustained"].to_numpy() * 100.0
+    sust_fp_lo = df_groups["our_paper_sustained_ci95_lo"].to_numpy() * 100.0
+    sust_fp_hi = df_groups["our_paper_sustained_ci95_hi"].to_numpy() * 100.0
+
+    r_any_fp = df_groups["our_paper_kill_rate_any_visit"].to_numpy() * 100.0
+    any_fp_lo = df_groups["our_paper_any_visit_ci95_lo"].to_numpy() * 100.0
+    any_fp_hi = df_groups["our_paper_any_visit_ci95_hi"].to_numpy() * 100.0
+
+    r_sust_all = df_groups["our_all_kill_rate_sustained"].to_numpy() * 100.0
+    sust_all_lo = df_groups["our_all_sustained_ci95_lo"].to_numpy() * 100.0
+    sust_all_hi = df_groups["our_all_sustained_ci95_hi"].to_numpy() * 100.0
+
+    r_any_all = df_groups["our_all_kill_rate_any_visit"].to_numpy() * 100.0
+    any_all_lo = df_groups["our_all_any_visit_ci95_lo"].to_numpy() * 100.0
+    any_all_hi = df_groups["our_all_any_visit_ci95_hi"].to_numpy() * 100.0
+
+    # Offsets for 5 series per group
+    dx = [-0.26, -0.13, 0.0, 0.13, 0.26]
+
+    # 1. Paper Figure 5g
+    ax_a.errorbar(
+        x + dx[0],
+        r_pub,
+        yerr=[np.maximum(0.0, r_pub - pub_lo), np.maximum(0.0, pub_hi - r_pub)],
+        fmt="s",
+        markersize=5.8,
+        color="#111111",
+        markerfacecolor="#111111",
+        markeredgecolor="#111111",
+        elinewidth=1.2,
+        capsize=2.5,
+        label="Paper Fig. 5g (curated chambers)",
+        zorder=5,
+    )
+    # 2. Sustained (>=2 visits), paper firm+probable chambers
+    ax_a.errorbar(
+        x + dx[1],
+        r_sust_fp,
+        yerr=[np.maximum(0.0, r_sust_fp - sust_fp_lo), np.maximum(0.0, sust_fp_hi - r_sust_fp)],
+        fmt="o",
+        markersize=5.6,
+        color="#1F4E79",
+        markerfacecolor="#1F4E79",
+        markeredgecolor="#1F4E79",
+        elinewidth=1.2,
+        capsize=2.5,
+        label="Sustained (>=2 visits), paper firm+probable",
+        zorder=4,
+    )
+    # 3. Sustained (>=2 visits), all chambers
+    ax_a.errorbar(
+        x + dx[2],
+        r_sust_all,
+        yerr=[np.maximum(0.0, r_sust_all - sust_all_lo), np.maximum(0.0, sust_all_hi - r_sust_all)],
+        fmt="o",
+        markersize=5.4,
+        color="#1F4E79",
+        markerfacecolor="#FFFFFF",
+        markeredgecolor="#1F4E79",
+        markeredgewidth=1.3,
+        elinewidth=1.0,
+         linestyle="none",
+        capsize=2.2,
+        label="Sustained (>=2 visits), all chambers",
+        zorder=3,
+    )
+    # 4. Any-visit (>=1 visit), paper firm+probable chambers
+    ax_a.errorbar(
+        x + dx[3],
+        r_any_fp,
+        yerr=[np.maximum(0.0, r_any_fp - any_fp_lo), np.maximum(0.0, any_fp_hi - r_any_fp)],
+        fmt="^",
+        markersize=5.8,
+        color="#C0561F",
+        markerfacecolor="#C0561F",
+        markeredgecolor="#C0561F",
+        elinewidth=1.2,
+        capsize=2.5,
+        label="Any visit (>=1 visit), paper firm+probable",
+        zorder=4,
+    )
+    # 5. Any-visit (>=1 visit), all chambers
+    ax_a.errorbar(
+        x + dx[4],
+        r_any_all,
+        yerr=[np.maximum(0.0, r_any_all - any_all_lo), np.maximum(0.0, any_all_hi - r_any_all)],
+        fmt="^",
+        markersize=5.6,
+        color="#C0561F",
+        markerfacecolor="#FFFFFF",
+        markeredgecolor="#C0561F",
+        markeredgewidth=1.3,
+        elinewidth=1.0,
+        linestyle="none",
+        capsize=2.2,
+        label="Any visit (>=1 visit), all chambers",
+        zorder=3,
+    )
+
+    # Vertical condition dividers
+    ax_a.axvline(4.5, color="#C9C9C9", linestyle="--", linewidth=0.9)
+    ax_a.axvline(9.5, color="#C9C9C9", linestyle="--", linewidth=0.9)
+
+    ax_a.text(2.0, 95.5, "Untreated high-killing (Groups 1–5)", ha="center", va="top", fontsize=9.0, fontweight="bold", color="#1F1F1F")
+    ax_a.text(7.0, 95.5, "Untreated low-killing (Groups 6–10)", ha="center", va="top", fontsize=9.0, fontweight="bold", color="#1F1F1F")
+    ax_a.text(11.0, 95.5, "Dasatinib 50 nM (8*–10*)", ha="center", va="top", fontsize=9.0, fontweight="bold", color="#1F1F1F")
+
+    xtick_lbls = []
+    for _, r in df_groups.iterrows():
+        gid = str(r["group_id"])
+        exp_short = str(r["experiment"]).split("_")[-1]
+        if exp_short == "ds":
+            exp_short = "_".join(str(r["experiment"]).split("_")[-2:])
+        n_fp = int(r["our_paper_chambers_n"])
+        n_all = int(r["our_all_chambers_n"])
+        xtick_lbls.append(f"G{gid}\n({exp_short})\n{n_fp}/{n_all}")
+
+    ax_a.set_xticks(x)
+    ax_a.set_xticklabels(xtick_lbls, fontsize=8.2)
+    ax_a.set_xlim(-0.6, n_g - 0.4)
+    ax_a.set_ylim(-3, 102)
+    ax_a.set_ylabel("Target kill fraction (%)", fontsize=10.0, fontweight="bold")
+    ax_a.grid(axis="y", color="#E3E3E3", linewidth=0.6)
+    ax_a.set_axisbelow(True)
+    ax_a.spines["top"].set_visible(False)
+    ax_a.spines["right"].set_visible(False)
+    ax_a.legend(
+        loc="lower center",
+        bbox_to_anchor=(0.5, 1.01),
+        frameon=False,
+        fontsize=8.2,
+        ncol=3,
+    )
+    ax_a.text(
+        -0.04,
+        1.19,
+        "a  Kill fraction per group vs. Figure 5g (95% Clopper-Pearson intervals; ticks show firm+probable / all chambers)",
+        transform=ax_a.transAxes,
+        fontsize=11.0,
+        fontweight="bold",
+        color="#111111",
+    )
+
+    # -------------------------------------------------------------------------
+    # Panel (b): Kaplan-Meier curves of time from first contact to death
+    #            Left: Sustained (>=2 visits) | Right: Any-visit (>=1 visit)
+    # -------------------------------------------------------------------------
+    km_specs = [
+        (
+            gs[1, 0],
+            "km_contact_time_min",
+            "km_event_sustained",
+            "b  Time from first contact to death: sustained rule (>=2 visits)",
+        ),
+        (
+            gs[1, 1],
+            "km_any_contact_time_min",
+            "km_event_any_visit",
+            "c  Time from first contact to death: any-visit rule (>=1 visit)",
+        ),
+    ]
+
+    for sub_spec, time_col, event_col, panel_title in km_specs:
+        ax_km = fig.add_subplot(sub_spec)
+
+        # Plot per-group curves
+        for _, g_row in df_groups.iterrows():
+            gid = str(g_row["group_id"])
+            cond = str(g_row["condition"])
+            sub_c = df_chambers[
+                (df_chambers["group_id"].astype(str) == gid) & (~df_chambers["no_contact"])
+            ]
+            t_vals = sub_c[time_col].to_numpy(dtype=float)
+            e_vals = sub_c[event_col].to_numpy(dtype=float)
+            t_step, s_step, c_times = compute_km_curve(t_vals, e_vals)
+
+            if "high-killing" in cond:
+                color = "#1F4E79"
+                ls = "-"
+                lw = 1.15
+                alpha = 0.65
+            elif "low-killing" in cond:
+                color = "#2E7D5B"
+                ls = "-"
+                lw = 1.15
+                alpha = 0.65
+            else:
+                color = "#C0561F"
+                ls = "--"
+                lw = 1.35
+                alpha = 0.85
+
+            ax_km.step(t_step, s_step * 100.0, where="post", color=color, linestyle=ls, linewidth=lw, alpha=alpha)
+            if t_step.size > 0:
+                ax_km.plot(t_step[-1], s_step[-1] * 100.0, marker="|", markersize=5.5, color=color, alpha=alpha)
+
+        # Also plot pooled condition KM curves in bold with direct right-margin labels
+        cond_Order = [
+            ("Untreated high-killing CAR-T", "High-killing\n(G1–G5)", "#1F4E79", "-", 2.5),
+            ("Untreated low-killing CAR-T", "Low-killing\n(G6–G10)", "#2E7D5B", "-", 2.5),
+            ("Dasatinib 50 nM CAR-T", "Dasatinib\n(G8*–G10*)", "#C0561F", "--", 2.5),
+        ]
+        for cond_key, end_lbl, color, ls, lw in cond_Order:
+            sub_c = df_chambers[
+                (df_chambers["condition"] == cond_key) & (~df_chambers["no_contact"])
+            ]
+            t_vals = sub_c[time_col].to_numpy(dtype=float)
+            e_vals = sub_c[event_col].to_numpy(dtype=float)
+            t_step, s_step, _ = compute_km_curve(t_vals, e_vals)
+            ax_km.step(t_step, s_step * 100.0, where="post", color=color, linestyle=ls, linewidth=lw, zorder=5)
+            if t_step.size > 0:
+                ax_km.text(
+                    t_step[-1] + 3.0,
+                    s_step[-1] * 100.0,
+                    end_lbl,
+                    fontsize=7.6,
+                    color=color,
+                    va="center",
+                    fontweight="bold",
+                )
+
+        legend_lines = [
+            Line2D([0], [0], color="#1F4E79", lw=2.3, linestyle="-", label="Untreated high-killing (Groups 1–5; thin = group, bold = pooled)"),
+            Line2D([0], [0], color="#2E7D5B", lw=2.3, linestyle="-", label="Untreated low-killing (Groups 6–10; thin = group, bold = pooled)"),
+            Line2D([0], [0], color="#C0561F", lw=2.3, linestyle="--", label="Dasatinib 50 nM (Groups 8*–10*; thin = group, bold = pooled)"),
+        ]
+        ax_km.legend(
+            handles=legend_lines,
+            loc="lower left",
+            frameon=True,
+            facecolor="#FFFFFF",
+            edgecolor="#E3E3E3",
+            fontsize=7.6,
+        )
+        ax_km.set_xlim(0, 242)
+        ax_km.set_ylim(0, 105)
+        ax_km.set_xlabel("Time from first T-cell contact (min)", fontsize=9.5, fontweight="bold")
+        ax_km.set_ylabel("Target survival (%)", fontsize=9.5, fontweight="bold")
+        ax_km.grid(axis="both", color="#E3E3E3", linewidth=0.6)
+        ax_km.set_axisbelow(True)
+        ax_km.spines["top"].set_visible(False)
+        ax_km.spines["right"].set_visible(False)
+        ax_km.text(
+            -0.08,
+            1.06,
+            panel_title,
+            transform=ax_km.transAxes,
+            fontsize=10.8,
+            fontweight="bold",
+            color="#111111",
+        )
+
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(out_path, dpi=200)
+    plt.close(fig)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Step 4 pilot: calibrate 2D dead-dye MIP rule and compute per-chamber death labels for groups 1-3."
+        description="Step 4: calibrate 2D dead-dye MIP rule and compute per-chamber death labels across all 13 experiments (502 chambers)."
+    )
+    parser.add_argument(
+        "--experiment",
+        type=str,
+        default=None,
+        help="Optional single experiment folder name to run (default: all 13 experiments).",
+    )
+    parser.add_argument(
+        "--pilot-only",
+        action="store_true",
+        help="Run only the 3 pilot experiments (Groups 1-3).",
     )
     parser.add_argument(
         "--workers",
         type=int,
-        default=4,
-        help="Number of worker processes (default: 4).",
+        default=2,
+        help="Number of worker processes (default: 2, capped at 2).",
     )
     args = parser.parse_args()
+    workers = max(1, min(args.workers, 2))
+
+    if args.pilot_only:
+        exp_list = PILOT_EXPERIMENTS
+    elif args.experiment is not None:
+        matched = tuple(item for item in ALL_EXPERIMENTS if item[1] == args.experiment)
+        if not matched:
+            raise ValueError(f"Unknown experiment: {args.experiment}")
+        exp_list = matched
+    else:
+        exp_list = ALL_EXPERIMENTS
 
     t0 = time.perf_counter()
     STEP4_DIR.mkdir(parents=True, exist_ok=True)
@@ -1122,18 +1652,17 @@ def main() -> int:
         f"dil10 vs 3D raw_target={agree_rawb_dil10}/{n_raw} ({100*agree_rawb_dil10/n_raw:.1f}%)"
     )
 
-    print(f"2. Computing per-visit and per-chamber death labels across 120 chambers (workers={args.workers})...")
-    df_visits, df_chambers, df_groups = build_chamber_and_visit_tables(workers=args.workers)
+    print(
+        f"2. Computing per-visit and per-chamber death labels across {len(exp_list)} experiment(s) "
+        f"(workers={workers})..."
+    )
+    df_visits, df_chambers, df_groups = build_chamber_and_visit_tables(
+        experiments=exp_list,
+        workers=workers,
+    )
 
-    # Save combined and per-experiment tables under data/step4/
-    visits_csv = STEP4_DIR / "per_visit_death_labels.csv"
-    chambers_csv = STEP4_DIR / "per_chamber_death_labels.csv"
-    groups_csv = STEP4_DIR / "group_kill_rate_comparison.csv"
-    df_visits.to_csv(visits_csv, index=False)
-    df_chambers.to_csv(chambers_csv, index=False)
-    df_groups.to_csv(groups_csv, index=False)
-
-    for _gid, exp, _cond in PILOT_EXPERIMENTS:
+    # Save per-experiment tables under data/step4/<experiment>/
+    for _gid, exp, _cond in exp_list:
         exp_dir = STEP4_DIR / exp
         exp_dir.mkdir(parents=True, exist_ok=True)
         df_visits[df_visits["experiment"] == exp].to_csv(
@@ -1143,36 +1672,73 @@ def main() -> int:
             exp_dir / "per_chamber_death_labels.csv", index=False
         )
 
-    print("3. Generating pilot figure figures/step4_death_labels_pilot.png...")
-    fig_path = FIGURES_DIR / "step4_death_labels_pilot.png"
-    make_pilot_figure(df_visits, df_chambers, df_groups, fig_path)
-
     elapsed = time.perf_counter() - t0
-    summary_payload = {
-        "elapsed_s": round(elapsed, 2),
-        "rule_parameters": {
-            "gauss_sigma_2d": GAUSS_SIGMA_2D,
-            "gauss_truncate": GAUSS_TRUNCATE,
-            "threshold_3d_adu": THRESH_3D_ADU,
-            "threshold_2d_adu": THRESH_2D_ADU,
-            "min_component_area_2d_px": MIN_COMPONENT_AREA_2D,
-            "min_overlap_px_2d": MIN_OVERLAP_PX_2D,
-            "visit_interval_min": VISIT_INTERVAL_MIN,
-            "sustained_consecutive_visits": 2,
-        },
-        "calibration_summary": {
-            "n_raw_volumes": n_raw,
-            "n_with_deposited_tifs": n_tif,
-            "exact_mip_xy_matches": exact_xy,
-            "exact_mip_xz_matches": exact_xz,
-            "agreement_direct_vs_3d_binst": f"{agree_binst}/{n_raw}",
-            "agreement_direct_vs_3d_raw_target": f"{agree_rawb_direct}/{n_raw}",
-            "agreement_dil10_vs_3d_raw_target": f"{agree_rawb_dil10}/{n_raw}",
-        },
-        "group_comparison": df_groups.to_dict(orient="records"),
+    rule_params = {
+        "gauss_sigma_2d": GAUSS_SIGMA_2D,
+        "gauss_truncate": GAUSS_TRUNCATE,
+        "threshold_3d_adu": THRESH_3D_ADU,
+        "threshold_2d_adu": THRESH_2D_ADU,
+        "min_component_area_2d_px": MIN_COMPONENT_AREA_2D,
+        "min_overlap_px_2d": MIN_OVERLAP_PX_2D,
+        "visit_interval_min": VISIT_INTERVAL_MIN,
+        "sustained_consecutive_visits": 2,
     }
-    with open(STEP4_DIR / "summary.json", "w", encoding="utf-8") as f:
-        json.dump(summary_payload, f, indent=2)
+    cal_summary = {
+        "n_raw_volumes": n_raw,
+        "n_with_deposited_tifs": n_tif,
+        "exact_mip_xy_matches": exact_xy,
+        "exact_mip_xz_matches": exact_xz,
+        "agreement_direct_vs_3d_binst": f"{agree_binst}/{n_raw}",
+        "agreement_direct_vs_3d_raw_target": f"{agree_rawb_direct}/{n_raw}",
+        "agreement_dil10_vs_3d_raw_target": f"{agree_rawb_dil10}/{n_raw}",
+    }
+
+    if len(exp_list) == len(ALL_EXPERIMENTS):
+        # Save all-experiment tables (keeping pilot files intact)
+        visits_all_csv = STEP4_DIR / "per_visit_death_labels_all.csv"
+        chambers_all_csv = STEP4_DIR / "per_chamber_death_labels_all.csv"
+        groups_all_csv = STEP4_DIR / "group_kill_rate_comparison_all.csv"
+        df_visits.to_csv(visits_all_csv, index=False)
+        df_chambers.to_csv(chambers_all_csv, index=False)
+        df_groups.to_csv(groups_all_csv, index=False)
+
+        print("3. Generating all-experiment figure figures/step4_death_labels_all.png...")
+        fig_all_path = FIGURES_DIR / "step4_death_labels_all.png"
+        make_all_figure(df_chambers, df_groups, fig_all_path)
+
+        summary_all_payload = {
+            "elapsed_s": round(elapsed, 2),
+            "n_experiments": len(df_groups),
+            "n_chambers_total": len(df_chambers),
+            "n_visits_total": len(df_visits),
+            "n_paper_firm_probable_total": int(df_chambers["in_paper_firm_probable"].sum()),
+            "n_paper_all419_total": int(df_chambers["in_paper"].sum()),
+            "n_dead_at_visit_1_all": int(df_chambers["dead_at_visit_1"].sum()),
+            "n_dead_at_visit_1_paper_firm_probable": int(
+                df_chambers[df_chambers["in_paper_firm_probable"]]["dead_at_visit_1"].sum()
+            ),
+            "n_no_contact_all": int(df_chambers["no_contact"].sum()),
+            "n_no_contact_paper_firm_probable": int(
+                df_chambers[df_chambers["in_paper_firm_probable"]]["no_contact"].sum()
+            ),
+            "n_censored_all": int(df_chambers["censored"].sum()),
+            "n_truncated_chambers": int(df_chambers["is_truncated"].sum()),
+            "rule_parameters": rule_params,
+            "calibration_summary": cal_summary,
+            "group_comparison": df_groups.to_dict(orient="records"),
+        }
+        with open(STEP4_DIR / "summary_all.json", "w", encoding="utf-8") as f:
+            json.dump(summary_all_payload, f, indent=2)
+
+    elif args.pilot_only:
+        visits_csv = STEP4_DIR / "per_visit_death_labels.csv"
+        chambers_csv = STEP4_DIR / "per_chamber_death_labels.csv"
+        groups_csv = STEP4_DIR / "group_kill_rate_comparison.csv"
+        df_visits.to_csv(visits_csv, index=False)
+        df_chambers.to_csv(chambers_csv, index=False)
+        df_groups.to_csv(groups_csv, index=False)
+        fig_path = FIGURES_DIR / "step4_death_labels_pilot.png"
+        make_pilot_figure(df_visits, df_chambers, df_groups, fig_path)
 
     print("4. Summary of per-group comparison:")
     print(
@@ -1181,13 +1747,17 @@ def main() -> int:
                 "group_id",
                 "paper_n_cells",
                 "paper_n_killed",
-                "paper_group_kill_rate",
+                "paper_group_kill_rate_exact",
+                "our_paper_chambers_n",
                 "our_paper_killed_sustained",
                 "our_paper_kill_rate_sustained",
-                "our_all_killed_sustained",
-                "our_all_kill_rate_sustained",
                 "our_paper_killed_any_visit",
                 "our_paper_kill_rate_any_visit",
+                "our_all_chambers_n",
+                "our_all_killed_sustained",
+                "our_all_kill_rate_sustained",
+                "our_all_killed_any_visit",
+                "our_all_kill_rate_any_visit",
             ]
         ].to_string(index=False)
     )
