@@ -1,0 +1,34 @@
+group_id,cell_index,experiment,roi,paper_CA_um2,our_CA_um2,pct_diff,confidence
+1,1,v01_6_40_120_0-6_hd1,MIP_ROI_0,94.132,94.417,0.303,firm: within 0.5% at peak visit
+1,2,v01_6_40_120_0-6_hd1,MIP_ROI_1,124.098,124.111,0.011,firm: within 0.5% at peak visit
+1,3,v01_6_40_120_0-6_hd1,MIP_ROI_2,93.547,93.578,0.033,firm: within 0.5% at peak visit
+1,4,v01_6_40_120_0-6_hd1,MIP_ROI_4,34.303,34.411,0.316,firm: within 0.5% at peak visit
+1,5,v01_6_40_120_0-6_hd1,MIP_ROI_5,62.747,62.64,-0.171,firm: within 0.5% at peak visit
+1,6,v01_6_40_120_0-6_hd1,MIP_ROI_6,436.097,435.574,-0.12,firm: within 0.5% at peak visit
+1,7,v01_6_40_120_0-6_hd1,MIP_ROI_7,214.406,251.436,17.271,probable: lab picked another visit
+1,8,v01_6_40_120_0-6_hd1,MIP_ROI_8,212.32,212.605,0.134,firm: within 0.5% at peak visit
+1,9,v01_6_40_120_0-6_hd1,MIP_ROI_9,58.743,58.72,-0.039,firm: within 0.5% at peak visit
+1,10,v01_6_40_120_0-6_hd1,MIP_ROI_10,205.913,206.375,0.225,firm: within 0.5% at peak visit
+1,11,v01_6_40_120_0-6_hd1,MIP_ROI_12,117.102,117.302,0.171,firm: within 0.5% at peak visit
+1,12,v01_6_40_120_0-6_hd1,MIP_ROI_13,125.856,125.387,-0.373,firm: within 0.5% at peak visit
+1,13,v01_6_40_120_0-6_hd1,MIP_ROI_14,53.138,53.384,0.463,firm: within 0.5% at peak visit
+1,14,v01_6_40_120_0-6_hd1,MIP_ROI_15,108.023,108.008,-0.014,firm: within 0.5% at peak visit
+1,15,v01_6_40_120_0-6_hd1,MIP_ROI_16,192.146,191.969,-0.092,firm: within 0.5% at peak visit
+1,16,v01_6_40_120_0-6_hd1,MIP_ROI_17,165.049,164.742,-0.186,firm: within 0.5% at peak visit
+1,17,v01_6_40_120_0-6_hd1,MIP_ROI_18,136.413,136.336,-0.056,firm: within 0.5% at peak visit
+1,18,v01_6_40_120_0-6_hd1,MIP_ROI_19,85.023,84.792,-0.271,firm: within 0.5% at peak visit
+1,19,v01_6_40_120_0-6_hd1,MIP_ROI_20,58.02,57.942,-0.134,firm: within 0.5% at peak visit
+1,20,v01_6_40_120_0-6_hd1,MIP_ROI_21,47.956,58.52,22.029,probable: second T cell at our peak visit
+1,21,v01_6_40_120_0-6_hd1,MIP_ROI_22,25.641,26.611,3.784,match 3.8% (2 contact visits)
+1,22,v01_6_40_120_0-6_hd1,MIP_ROI_24,94.926,94.541,-0.406,firm: within 0.5% at peak visit
+1,23,v01_6_40_120_0-6_hd1,MIP_ROI_26,123.962,123.778,-0.149,firm: within 0.5% at peak visit
+1,24,v01_6_40_120_0-6_hd1,MIP_ROI_28,155.009,155.186,0.114,firm: within 0.5% at peak visit
+1,25,v01_6_40_120_0-6_hd1,MIP_ROI_29,182.413,182.251,-0.089,firm: within 0.5% at peak visit
+1,26,v01_6_40_120_0-6_hd1,MIP_ROI_30,99.107,99.569,0.466,firm: within 0.5% at peak visit
+1,27,v01_6_40_120_0-6_hd1,MIP_ROI_31,33.634,33.634,-0.001,firm: within 0.5% at peak visit
+1,28,v01_6_40_120_0-6_hd1,MIP_ROI_32,129.114,128.636,-0.37,firm: within 0.5% at peak visit
+1,29,v01_6_40_120_0-6_hd1,MIP_ROI_33,56.379,60.499,7.308,probable: lab picked another visit
+1,30,v01_6_40_120_0-6_hd1,MIP_ROI_34,67.876,67.629,-0.364,firm: within 0.5% at peak visit
+1,31,v01_6_40_120_0-6_hd1,MIP_ROI_35,66.012,90.837,37.607,ambiguous: MIP_ROI_36 fits equally (0.09%)
+1,32,v01_6_40_120_0-6_hd1,MIP_ROI_37,96.242,96.027,-0.224,firm: within 0.5% at peak visit
+1,33,v01_6_40_120_0-6_hd1,MIP_ROI_39,200.061,200.215,0.077,firm: within 0.5% at peak visit
