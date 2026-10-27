@@ -1,0 +1,54 @@
+{
+  "updated": "2026-10-27",
+  "review_url": "https://claude.ai/artifact/M6gEx1wDzYK67gDQfxyYN1",
+  "steps": [
+    {
+      "id": "1",
+      "title": "Fix the foundation",
+      "status": "done",
+      "note": "Portable paths, VOXEL_UM = 0.1962, report status notes. Commit 067c571."
+    },
+    {
+      "id": "2",
+      "title": "Download all 63,053 masks (~4.3 GB)",
+      "status": "in_progress",
+      "note": "Full download running (8 workers, started 2026-10-27; ~5-7 h). Resumable: rerun python3 src/download_masks.py. 502 chambers; 20-22 visits each."
+    },
+    {
+      "id": "3",
+      "title": "Reproduce the lab's published numbers",
+      "status": "todo",
+      "note": "Contact area and actin flow for a few chambers vs the paper's table."
+    },
+    {
+      "id": "4",
+      "title": "Build per-cell death labels",
+      "status": "todo",
+      "note": "Death time per chamber from SYTOX in the target mask."
+    },
+    {
+      "id": "5",
+      "title": "Describe every chamber, and 10-20 in depth",
+      "status": "todo",
+      "note": "Mask descriptors incl. 3D dent shape and topography; resolution check first."
+    },
+    {
+      "id": "check",
+      "title": "Does geometry relate to killing at all?",
+      "status": "todo",
+      "note": "Descriptors vs death time and donor, all chambers. Decides what step 6 is for."
+    },
+    {
+      "id": "6",
+      "title": "First mechanical model",
+      "status": "todo",
+      "note": "Tool chosen on evidence; two stiffnesses; held-out test."
+    },
+    {
+      "id": "7",
+      "title": "Ask one sharp question",
+      "status": "todo",
+      "note": "Load and focus vs donor, in units of stiffness."
+    }
+  ]
+}
