@@ -53,11 +53,8 @@ import numpy as np
 import pandas as pd
 from scipy.ndimage import gaussian_filter
 
-ROOT = Path("/Users/dxt397/Documents/_PROJECTS/Cell-Kill-Sim")
-DATA_DIR = ROOT / "data"
-FIG_DIR = ROOT / "figures"
-VID_DIR = ROOT / "videos"
-ART_DIR = Path("/Users/dxt397/.gemini/antigravity/brain/f144e2e4-ff67-494b-b7e7-94fad918619d")
+from paths import REPO_ROOT as ROOT, DATA_DIR, FIGURES_DIR as FIG_DIR, VIDEOS_DIR as VID_DIR
+ART_DIR = FIG_DIR
 
 sys.path.insert(0, str(ROOT / "src"))
 from upgrade_shape_extraction_and_modeling import (

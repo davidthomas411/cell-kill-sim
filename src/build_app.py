@@ -1,15 +1,17 @@
 #!/usr/bin/env python3
 """
 Build self-contained House-Style 4D Digital Twin & Live Imaging comparison app
-at /Users/dxt397/Documents/_PROJECTS/Cell-Kill-Sim/index.html.
+at index.html in REPO_ROOT.
 """
 
 import json
 import os
 import pandas as pd
+from paths import REPO_ROOT, DATA_DIR as _DATA_DIR_PATH
+from constants import VOXEL_UM
 
-ROOT = "/Users/dxt397/Documents/_PROJECTS/Cell-Kill-Sim"
-DATA_DIR = os.path.join(ROOT, "data")
+ROOT = str(REPO_ROOT)
+DATA_DIR = str(_DATA_DIR_PATH)
 
 
 def main():
@@ -440,7 +442,7 @@ def main():
             "doi": "https://doi.org/10.1038/s41597-026-06829-9",
             "doi_label": "10.1038/s41597-026-06829-9 | 10.57760/sciencedb.19235",
             "layers": "Layer 2 (3D synapse area, actin retrograde flow, target membrane contour), Layer 3 (3D MTOC angle & distance), Layer 4 (SYTOX death)",
-            "resolution": "0.32 × 0.32 × 0.60 µm (~320 nm isotropic); 6-volume burst at 2.5 s/vol every 10 min for 5.0 h",
+            "resolution": f"{VOXEL_UM} × {VOXEL_UM} × 0.60 µm (~320 nm isotropic); 6-volume burst at 2.5 s/vol every 10 min for 5.0 h",
             "sample": "419 CAR-T–tumor pairs across 13 groups (incl. 0, 25, 50 nM dasatinib) + 1,202 3D MTOC angles",
             "license": "CC BY 4.0 (data & paper) · MIT (3D U-Net & synapse analysis code)",
             "status": "419-pair source measurements, 6 movies & MIT code verified locally; 19.55 TiB raw voxel archive on ScienceDB requires author transfer request",

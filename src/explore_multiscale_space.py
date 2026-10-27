@@ -30,9 +30,7 @@ import scipy.sparse as sp
 
 warnings.filterwarnings("ignore")
 
-ROOT = Path("/Users/dxt397/Documents/_PROJECTS/Cell-Kill-Sim")
-DATA_DIR = ROOT / "data"
-EXT_DIR = ROOT / "external"
+from paths import REPO_ROOT as ROOT, DATA_DIR, EXTERNAL_DIR as EXT_DIR
 
 
 def extract_full_behav3d_and_scrna():

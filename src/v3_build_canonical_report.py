@@ -30,11 +30,9 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec
 
-ROOT = Path("/Users/dxt397/Documents/_PROJECTS/Cell-Kill-Sim")
-DATA_DIR = ROOT / "data"
-FIG_DIR = ROOT / "figures"
-VID_DIR = ROOT / "videos"
-ART_DIR = Path("/Users/dxt397/.gemini/antigravity/brain/f144e2e4-ff67-494b-b7e7-94fad918619d")
+from paths import REPO_ROOT as ROOT, DATA_DIR, FIGURES_DIR as FIG_DIR, VIDEOS_DIR as VID_DIR
+from constants import VOXEL_UM
+ART_DIR = FIG_DIR
 IMS_PATH = ROOT / "LSM880_example_dataset_TEG_BC_organoids_2019_06_26.ims"
 
 
@@ -216,7 +214,7 @@ def update_data_registry():
             "doi": "10.1038/s41597-026-06829-9 | 10.57760/sciencedb.19235",
             "license": "CC BY 4.0 (data & article) | MIT License (feilab-hust/CAR-T-analysis code)",
             "layers_covered": "Layer 2 (3D synapse area CA, Lifeact retrograde flow ARFS, ADC, uncapped clutch traction F_syn) + Layer 3 (3D MTOC angle MPA & distance MD) + Layer 4 (405nm SYTOX Blue > 398 AU in b_mask)",
-            "spatial_res": "0.320 x 0.320 x 0.320 um voxel grid ((3, 166, 256, 256) uint16 .h5 & uint8 3D U-Net labels 1-4; ~320 nm lateral, ~600 nm axial optical)",
+            "spatial_res": f"{VOXEL_UM:.4f} x {VOXEL_UM:.4f} x {VOXEL_UM:.4f} um voxel grid ((3, 166, 256, 256) uint16 .h5 & uint8 3D U-Net labels 1-4; ~320 nm lateral, ~600 nm axial optical)",
             "temporal_res": "2.5 s/vol (6-vol burst) every 10 min for 3.0-5.0 h",
             "sample_size": "419 CAR-T-Nalm6 pairs across 13 groups (167 Train High-Killing, 163 Held-Out Low-Killing, 89 Held-Out Dasatinib 50 nM + 103 dose-response pairs) + 86 deposited 3D U-Net masks & 518 16-bit MIP .tifs",
             "access_status": "Local verified (data/scidb_19235_chambers/ & Source_Data_Wang2024_NatCommun.xlsx)",
@@ -454,7 +452,7 @@ def build_v3_reports(canonical: dict):
         )
         org21_vid_blocks_md.append(
             f"#### Organoid Rank #{rk:02d} (Track `{oid}`) — {badge} {st} (`V(0) = {r['initial_volume_um3']:,.0f} -> {r['final_volume_um3']:,.0f} um^3 [{r['obs_volume_change_pct']:+.1f}%]`, `1-Param Vol R^2 = {r['r2_vol_2B_per_org_swarm_1p']:.2f}`, `Fwd 3D IoU = {r['forward_dynamical_iou_t400_2B_1p']:.2f}`, `In-Sample Mask Fit IoU = {r['insample_harmonic_fit_iou']:.2f}`)\n\n"
-            f"![Organoid Rank #{rk:02d} 4D Twin](/Users/dxt397/.gemini/antigravity/brain/f144e2e4-ff67-494b-b7e7-94fad918619d/{vstem}.gif)\n"
+            f"![Organoid Rank #{rk:02d} 4D Twin]({ART_DIR}/{vstem}.gif)\n"
         )
 
     html_content = f"""<!doctype html>
@@ -577,7 +575,7 @@ function swapToVideo(btn, mp4Src) {{
     </tr>
     <tr>
       <td><strong>Light-Sheet Voxel Pitch (ScienceDB <code>19235</code>)</strong></td>
-      <td><code>dx = dy = dz = 0.320 &micro;m</code> (<code>(3, 166, 256, 256) uint16</code>)</td>
+      <td><code>dx = dy = dz = {VOXEL_UM:.4f} &micro;m</code> (<code>(3, 166, 256, 256) uint16</code>)</td>
       <td>Deposited 3D volume grid in <code>10.57760/sciencedb.19235</code> and 3D U-Net semantic masks <code>*_predictions.h5</code> (<code>uint8</code>: <code>1=CAR-T body</code>, <code>2=Target interior</code>, <code>3=CAR-T dense F-actin</code>, <code>4=Target plasma membrane</code>).</td>
     </tr>
     <tr>
@@ -630,7 +628,7 @@ function swapToVideo(btn, mp4Src) {{
 
 <section id="part1">
 <h2>Part I: All 7 Single-Cell 320-nm Light-Sheet Twins Rebuilt from Deposited 3D Volumes &amp; Physics Layer</h2>
-<p>All 7 single-cell CAR-T/Nalm6 digital twins are reconstructed directly from the deposited ScienceDB <code>10.57760/sciencedb.19235</code> 3D volumes (<code>*.h5</code>), 3D U-Net semantic segmentation masks (<code>*_predictions.h5</code>, <code>uint8</code> Labels <code>1&ndash;4</code>), and 16-bit raw fluorescence MIPs (<code>*.tif</code>) with zero MP4 frames, zero burned-in text, non-empty <code>t = 0</code> masks on all 7 twins, mean in-sample 3D mask fit IoU = <strong>{p1_means['mean_insample_3d_mask_fit_iou']:.3f}</strong> (vs. ellipsoid M=2 baseline <code>{p1_means['mean_insample_ellipsoid_m2_iou']:.3f}</code>; boundary RMSE = <code>{p1_means['mean_boundary_rmse_3d_um']:.3f} &micro;m</code> against the <code>0.320 &micro;m</code> voxel), and a like-for-like Twin/Real colored-pixel occupancy ratio of <strong>{p1_means['mean_colored_pixel_ratio']:.2f}&times;</strong> (range <code>{p1_means['min_colored_pixel_ratio']:.2f}&times;&ndash;{p1_means['max_colored_pixel_ratio']:.2f}&times;</code>).</p>
+<p>All 7 single-cell CAR-T/Nalm6 digital twins are reconstructed directly from the deposited ScienceDB <code>10.57760/sciencedb.19235</code> 3D volumes (<code>*.h5</code>), 3D U-Net semantic segmentation masks (<code>*_predictions.h5</code>, <code>uint8</code> Labels <code>1&ndash;4</code>), and 16-bit raw fluorescence MIPs (<code>*.tif</code>) with zero MP4 frames, zero burned-in text, non-empty <code>t = 0</code> masks on all 7 twins, mean in-sample 3D mask fit IoU = <strong>{p1_means['mean_insample_3d_mask_fit_iou']:.3f}</strong> (vs. ellipsoid M=2 baseline <code>{p1_means['mean_insample_ellipsoid_m2_iou']:.3f}</code>; boundary RMSE = <code>{p1_means['mean_boundary_rmse_3d_um']:.3f} &micro;m</code> against the <code>{VOXEL_UM:.4f} &micro;m</code> voxel), and a like-for-like Twin/Real colored-pixel occupancy ratio of <strong>{p1_means['mean_colored_pixel_ratio']:.2f}&times;</strong> (range <code>{p1_means['min_colored_pixel_ratio']:.2f}&times;&ndash;{p1_means['max_colored_pixel_ratio']:.2f}&times;</code>).</p>
 
 <div class="fig">
   <img src="figures/visual_13_all_7_single_cell_lightsheet_twins.png" alt="Figure 13: All 7 Deposited 3D Single-Cell Twins">
@@ -877,7 +875,7 @@ function swapToVideo(btn, mp4Src) {{
 | Quantity | Canonical Formula & Units | Physical & Statistical Scope |
 | :--- | :--- | :--- |
 | **Confocal Voxel Pitch (`.ims` HDF5 Metadata)** | `dx = dy = {ims['dx_um']:.4f} um`, `dz = {ims['dz_um']:.4f} um`, `dt = {ims['dt_sec']:.2f} s ({ims['dt_min']:.3f} min)` | Extracted directly from `DataSetInfo/Image` in `{ims['file']}`: `X=200, Y=200, Z=62, T=669, C=9` over `708.493 x 708.493 x 65.100 um` (`ResampleDimensionX/Y/Z = true` inside `256x256x64` HDF5 chunks; total duration `{ims['duration_h']:.2f} h`). At `dx = 3.5425 um`, a single dead tumor nucleus (`6-8 um` = `1.7-2.3 px`) cannot be spatially resolved individually; death is measurable only as step increases in local organoid dead-dye intensity (`{ims['dead_dye_channel']}`). |
-| **Light-Sheet Voxel Pitch (ScienceDB `19235`)** | `dx = dy = dz = 0.320 um` (`(3, 166, 256, 256) uint16`) | Deposited 3D volume grid in `10.57760/sciencedb.19235` and 3D U-Net semantic masks `*_predictions.h5` (`uint8`: `1=CAR-T body`, `2=Target interior`, `3=CAR-T dense F-actin`, `4=Target plasma membrane`). |
+| **Light-Sheet Voxel Pitch (ScienceDB `19235`)** | `dx = dy = dz = {VOXEL_UM:.4f} um` (`(3, 166, 256, 256) uint16`) | Deposited 3D volume grid in `10.57760/sciencedb.19235` and 3D U-Net semantic masks `*_predictions.h5` (`uint8`: `1=CAR-T body`, `2=Target interior`, `3=CAR-T dense F-actin`, `4=Target plasma membrane`). |
 | **In-Sample Mask Fit IoU** | `J(M_fit(t), M_seg(t))` | Measures how closely a 16-mode harmonic or 3D Surface-Net mesh compresses the mask `M_seg(t)` it was fitted to at frame `t`. Has **zero dynamical predictive degrees of freedom** and correlates `r = {iou_a['r_insample_iou_vs_logV0']:.3f}` (`p = {iou_a['p_insample_iou_vs_logV0']:.1e}`) with `log10(V0)`. |
 | **Forward-Predicted Dynamical 3D IoU** | `J(M_pred(t | t=0), M_seg(t))` | Measures out-of-sample 3D voxel overlap between a mask evolved forward from `t = 0` without seeing future masks and the observed mask at `t = 400 min` (Held-Out 11 mean: `{ho11['forward_dynamical_iou_t400_2A_oos']['mean']:.3f}` for 0-param ODE `2A`; `{ho11['forward_dynamical_iou_t400_2B_1p']['mean']:.3f}` for 1-param ODE `2B`). |
 | **Normalized Organoid Volume `Vol(t)`** | `Vol(t) = V(t) / V(0) * 100%` | Anchored to `V(0) = initial_volume_um3` at `t = 0 min` so `Vol(0) == 100.0%` identically on every organoid. |
@@ -894,9 +892,9 @@ function swapToVideo(btn, mp4Src) {{
 
 ## Part I: All 7 Single-Cell 320-nm Light-Sheet Twins Rebuilt from Deposited 3D Volumes & Physics Layer
 
-All 7 single-cell CAR-T/Nalm6 digital twins are reconstructed directly from the deposited ScienceDB `10.57760/sciencedb.19235` 3D volumes (`*.h5`), 3D U-Net semantic segmentation masks (`*_predictions.h5`, `uint8` Labels `1-4`), and 16-bit raw fluorescence MIPs (`*.tif`) with zero MP4 frames, zero burned-in text, non-empty `t = 0` masks on all 7 twins, mean in-sample 3D mask fit IoU = **{p1_means['mean_insample_3d_mask_fit_iou']:.3f}** (vs. ellipsoid M=2 baseline `{p1_means['mean_insample_ellipsoid_m2_iou']:.3f}`; boundary RMSE = `{p1_means['mean_boundary_rmse_3d_um']:.3f} um` against the `0.320 um` voxel), and a like-for-like Twin/Real colored-pixel occupancy ratio of **{p1_means['mean_colored_pixel_ratio']:.2f}x** (range `{p1_means['min_colored_pixel_ratio']:.2f}x-{p1_means['max_colored_pixel_ratio']:.2f}x`).
+All 7 single-cell CAR-T/Nalm6 digital twins are reconstructed directly from the deposited ScienceDB `10.57760/sciencedb.19235` 3D volumes (`*.h5`), 3D U-Net semantic segmentation masks (`*_predictions.h5`, `uint8` Labels `1-4`), and 16-bit raw fluorescence MIPs (`*.tif`) with zero MP4 frames, zero burned-in text, non-empty `t = 0` masks on all 7 twins, mean in-sample 3D mask fit IoU = **{p1_means['mean_insample_3d_mask_fit_iou']:.3f}** (vs. ellipsoid M=2 baseline `{p1_means['mean_insample_ellipsoid_m2_iou']:.3f}`; boundary RMSE = `{p1_means['mean_boundary_rmse_3d_um']:.3f} um` against the `{VOXEL_UM:.4f} um` voxel), and a like-for-like Twin/Real colored-pixel occupancy ratio of **{p1_means['mean_colored_pixel_ratio']:.2f}x** (range `{p1_means['min_colored_pixel_ratio']:.2f}x-{p1_means['max_colored_pixel_ratio']:.2f}x`).
 
-![Figure 13: All 7 Deposited 3D Single-Cell Twins](/Users/dxt397/.gemini/antigravity/brain/f144e2e4-ff67-494b-b7e7-94fad918619d/visual_13_all_7_single_cell_lightsheet_twins.png)
+![Figure 13: All 7 Deposited 3D Single-Cell Twins]({ART_DIR}/visual_13_all_7_single_cell_lightsheet_twins.png)
 
 ### Table 1A. All 7 Rebuilt Single-Cell 320-nm Light-Sheet Twins (Deposited 3D U-Net Masks & 16-Bit MIPs)
 
@@ -907,19 +905,19 @@ All 7 single-cell CAR-T/Nalm6 digital twins are reconstructed directly from the 
 ### Rebuilt Side-by-Side Animations: All 7 Deposited 3D Single-Cell Twins
 
 ````carousel
-![Twin 1: v01/ROI_39 Primary Pair Lethal Kill](/Users/dxt397/.gemini/antigravity/brain/f144e2e4-ff67-494b-b7e7-94fad918619d/side_by_side_event1_lightsheet_single_kill.gif)
+![Twin 1: v01/ROI_39 Primary Pair Lethal Kill]({ART_DIR}/side_by_side_event1_lightsheet_single_kill.gif)
 <!-- slide -->
-![Twin 2: v01/ROI_38 Primary Pair Envelopment](/Users/dxt397/.gemini/antigravity/brain/f144e2e4-ff67-494b-b7e7-94fad918619d/side_by_side_event3_lightsheet_late_synapse.gif)
+![Twin 2: v01/ROI_38 Primary Pair Envelopment]({ART_DIR}/side_by_side_event3_lightsheet_late_synapse.gif)
 <!-- slide -->
-![Twin 3: v02/ROI_12 Primary Pair Shrinkage](/Users/dxt397/.gemini/antigravity/brain/f144e2e4-ff67-494b-b7e7-94fad918619d/side_by_side_event4_lightsheet_sublethal_abort.gif)
+![Twin 3: v02/ROI_12 Primary Pair Shrinkage]({ART_DIR}/side_by_side_event4_lightsheet_sublethal_abort.gif)
 <!-- slide -->
-![Twin 4: v05/ROI_23 Rapid 2.5s/vol 3D Burst](/Users/dxt397/.gemini/antigravity/brain/f144e2e4-ff67-494b-b7e7-94fad918619d/side_by_side_twin4_moesm8_fast_burst.gif)
+![Twin 4: v05/ROI_23 Rapid 2.5s/vol 3D Burst]({ART_DIR}/side_by_side_twin4_moesm8_fast_burst.gif)
 <!-- slide -->
-![Twin 5: v01/ROI_39 Secondary Non-Lethal Pair](/Users/dxt397/.gemini/antigravity/brain/f144e2e4-ff67-494b-b7e7-94fad918619d/side_by_side_twin5_moesm5_chamber1.gif)
+![Twin 5: v01/ROI_39 Secondary Non-Lethal Pair]({ART_DIR}/side_by_side_twin5_moesm5_chamber1.gif)
 <!-- slide -->
-![Twin 6: v02/ROI_12 Secondary Abortive Pair](/Users/dxt397/.gemini/antigravity/brain/f144e2e4-ff67-494b-b7e7-94fad918619d/side_by_side_twin6_moesm5_chamber2.gif)
+![Twin 6: v02/ROI_12 Secondary Abortive Pair]({ART_DIR}/side_by_side_twin6_moesm5_chamber2.gif)
 <!-- slide -->
-![Twin 7: v01/ROI_39 Volume 6 SiR-Tubulin MTOC](/Users/dxt397/.gemini/antigravity/brain/f144e2e4-ff67-494b-b7e7-94fad918619d/side_by_side_twin7_moesm5_sirtubulin_mtoc.gif)
+![Twin 7: v01/ROI_39 Volume 6 SiR-Tubulin MTOC]({ART_DIR}/side_by_side_twin7_moesm5_sirtubulin_mtoc.gif)
 ````
 
 ### Part I Physics Layer: Mechanical Parameters, Structural Identifiability Map, Perforin/ESCRT Repair ODE & Held-Out Dasatinib Test
@@ -928,7 +926,7 @@ All 7 single-cell CAR-T/Nalm6 digital twins are reconstructed directly from the 
 - **2D Structural Identifiability Map**: 3D indentation depth `delta_syn` and actin flow `v_ARFS` alone identify only the ratio `eta_clutch / E_target = {mp['collinear_ratio_eta_over_E_s_um']:.3f} s/um` (`kappa = {mp['fim_condition_number_kinematic_only']:.1f}`); anchoring `E_target` with the external AFM/MP-TFM stiffness prior resolves the collinearity ridge (`kappa = {mp['fim_condition_number_with_afm_prior']:.2f}`).
 - **Out-of-Sample Perturbation Benchmark (`n = 419` pairs across 13 groups)**: Trained strictly on Untreated High-Killing `Groups 1-5` (`n = 167`, observed `{coh['train_high_killing_groups_1_5']['obs_kill_pct']:.1f}%` vs. predicted `{coh['train_high_killing_groups_1_5']['pred_kill_physics_pct']:.1f}%`) and evaluated with **zero refitting** on Held-Out `Dasatinib 50 nM` (`Groups 8*, 9*, 10*`, `n = 89`: observed **{coh['heldout_dasatinib_groups_8s_9s_10s']['obs_kill_pct']:.1f}%** vs. physics **{coh['heldout_dasatinib_groups_8s_9s_10s']['pred_kill_physics_pct']:.1f}%**, MAE = **{hm['mae_pct_dasatinib_3_physics']:.1f}%**; old area-only proxy predicts `{coh['heldout_dasatinib_groups_8s_9s_10s']['pred_kill_old_proxy_pct']:.1f}%`, MAE = `{hm['mae_pct_dasatinib_3_old_proxy']:.1f}%`) and Held-Out Untreated Low-Killing (`Groups 6-10`, `n = 163`: observed `{coh['heldout_low_killing_groups_6_10']['obs_kill_pct']:.1f}%` vs. physics `{coh['heldout_low_killing_groups_6_10']['pred_kill_physics_pct']:.1f}%`).
 
-![Figure 18: Physics Layer, Identifiability Map & Held-Out Dasatinib Benchmark](/Users/dxt397/.gemini/antigravity/brain/f144e2e4-ff67-494b-b7e7-94fad918619d/visual_18_physics_mechanics_identifiability_pore_repair_dasatinib.png)
+![Figure 18: Physics Layer, Identifiability Map & Held-Out Dasatinib Benchmark]({ART_DIR}/visual_18_physics_mechanics_identifiability_pore_repair_dasatinib.png)
 
 ### Table 1B. 419-Pair Cohort Benchmark Across All 13 Experimental Groups
 
@@ -944,9 +942,9 @@ All 7 single-cell CAR-T/Nalm6 digital twins are reconstructed directly from the 
 - **Zero-Local-Parameter Out-of-Sample Benchmark (`p_local = 0`, Held-Out 11)**: Global Exp (`0A`) scores Held-Out `R^2 = {ho11['r2_vol_0A_global_exp_oos']['mean']:.3f}` (`95% CI: [{ho11['r2_vol_0A_global_exp_oos']['ci95_lo']:.3f}, {ho11['r2_vol_0A_global_exp_oos']['ci95_hi']:.3f}]`, median `{ho11['r2_vol_0A_global_exp_oos']['median']:.3f}`, NRMSE `{ho11['nrmse_pct_0A_global_exp_oos']['mean']:.2f}%`); Swarm+Shell ODE (`2A`) scores Held-Out `R^2 = {ho11['r2_vol_2A_swarm_ode_oos']['mean']:.3f}` (`95% CI: [{ho11['r2_vol_2A_swarm_ode_oos']['ci95_lo']:.3f}, {ho11['r2_vol_2A_swarm_ode_oos']['ci95_hi']:.3f}]`, median `{ho11['r2_vol_2A_swarm_ode_oos']['median']:.3f}`, NRMSE `{ho11['nrmse_pct_2A_swarm_ode_oos']['mean']:.2f}%`, paired Wilcoxon `p = {wx['p_oos_2A_vs_0A_r2']:.3f}`).
 - **Matched 1-Local-Parameter Per-Organoid Benchmark (`p_local = 1`, Held-Out 11)**: 1-Param Per-Organoid Exp (`1B`) scores Held-Out **`R^2 = {ho11['r2_vol_1B_per_org_exp_1p']['mean']:.3f}`** (`95% CI: [{ho11['r2_vol_1B_per_org_exp_1p']['ci95_lo']:.3f}, {ho11['r2_vol_1B_per_org_exp_1p']['ci95_hi']:.3f}]`, median `{ho11['r2_vol_1B_per_org_exp_1p']['median']:.3f}`, NRMSE `{ho11['nrmse_pct_1B_per_org_exp_1p']['mean']:.2f}%`), while 1-Param Per-Organoid Swarm+Shell ODE (`2B`) scores Held-Out **`R^2 = {ho11['r2_vol_2B_per_org_swarm_1p']['mean']:.3f}`** (`95% CI: [{ho11['r2_vol_2B_per_org_swarm_1p']['ci95_lo']:.3f}, {ho11['r2_vol_2B_per_org_swarm_1p']['ci95_hi']:.3f}]`, median `{ho11['r2_vol_2B_per_org_swarm_1p']['median']:.3f}`, NRMSE `{ho11['nrmse_pct_2B_per_org_swarm_1p']['mean']:.2f}%`, paired Wilcoxon **`p = {wx['p_1p_2B_vs_1B_r2']:.3f}`** on `R^2`, **`p = {wx['p_1p_2B_vs_1B_nrmse']:.3f}`** on NRMSE).
 
-![Figure 14: Batch 1 Design Organoids & Matched-Parameter Comparison](/Users/dxt397/.gemini/antigravity/brain/f144e2e4-ff67-494b-b7e7-94fad918619d/visual_14_organoid_batch1_diagnosis_and_iterations.png)
+![Figure 14: Batch 1 Design Organoids & Matched-Parameter Comparison]({ART_DIR}/visual_14_organoid_batch1_diagnosis_and_iterations.png)
 
-![Figure 15: Held-Out 11 Shrinking Organoids Benchmark & Exclusion Audit](/Users/dxt397/.gemini/antigravity/brain/f144e2e4-ff67-494b-b7e7-94fad918619d/visual_15_organoid_batch2_all_21_cohort_atlas.png)
+![Figure 15: Held-Out 11 Shrinking Organoids Benchmark & Exclusion Audit]({ART_DIR}/visual_15_organoid_batch2_all_21_cohort_atlas.png)
 
 ### Table 3. All 21 Tracked Objects in `.ims`: Exclusion Audit (5 Dropped) & Matched-Parameter Benchmark on 16 Valid Shrinking Organoids
 
@@ -964,7 +962,7 @@ All 7 single-cell CAR-T/Nalm6 digital twins are reconstructed directly from the 
   2. **Crowding-Adjusted Inter-Kill Gap Correlation `rho(dt_1, dt_2)`**: Raw `rho = {p3['dt1_dt2_raw_rho']:+.3f}` (`p = {p3['dt1_dt2_raw_p']:.3f}`, `n = {p3['dt1_dt2_n_tracks']}`), which collapses after partialing out crowding and track duration to **`rho_adj = {p3['dt1_dt2_adj_rho']:+.3f}` (`p = {p3['dt1_dt2_adj_p']:.3f}`)**, matching the `sigma = 0` fragment+crowding null (`rho_null = {p3['dt1_dt2_null_adj_rho']:+.3f}`).
   3. **Level-2 Contact Topology Across 6 Wells**: Discrete bout count correlates `rho = {p3['level2_rho_bouts_mean']:+.3f} +/- {p3['level2_rho_bouts_sd']:.3f}` with dead-dye exposure across the 6 wells vs. `rho = {p3['level2_rho_contact_mean']:+.3f} +/- {p3['level2_rho_contact_sd']:.3f}` for cumulative contact (`p = {p3['level2_rho_paired_p']:.4f}`).
 
-![Figure 16: Fragment-Aware Renewal Null & 6-Well Replication](/Users/dxt397/.gemini/antigravity/brain/f144e2e4-ff67-494b-b7e7-94fad918619d/visual_16_serial_killer_novelty_and_21organoid_counterfactuals.png)
+![Figure 16: Fragment-Aware Renewal Null & 6-Well Replication]({ART_DIR}/visual_16_serial_killer_novelty_and_21organoid_counterfactuals.png)
 
 ### Table 4A. Complete Reconciled Descriptive Breakdown of Well 4 Cohorts (`n = 487` Super-Engagers & `n = 421` Long-Contact >=180m)
 
@@ -985,7 +983,7 @@ All 7 single-cell CAR-T/Nalm6 digital twins are reconstructed directly from the 
 - **Swarm Size Scales with Organoid Volume**: Peak simultaneous CD8+ swarm size correlates strongly with `log10(V0)` (**`r = {oh['r_peak_cd8_logV0_all21']:.3f}, p = {oh['p_peak_cd8_logV0_all21']:.4f}`** across all 21 objects; **`r = {oh['r_peak_cd8_logV0_valid16']:.3f}, p = {oh['p_peak_cd8_logV0_valid16']:.3f}`** across the 16 valid shrinking organoids). Unvalidated cross-swarm swapping, extrapolated kill times on `10-15 min` or `0% SYTOX` movies, and `150%` damage caps have been removed.
 - **Analytical Cycle Refractory Fraction (`tau / (tau + 1/k)`)**: Replacing heterogeneous `sigma = 0.88` with homogeneous `sigma = 0` moves simulated clearance across the 16 valid organoids by only **1.0 percentage point** (`{df_hyp.iloc[1]['mean_clearance_all16_valid_pct']:.1f}%` to `{df_hyp.iloc[0]['mean_clearance_all16_valid_pct']:.1f}%`). All perturbation regimes (`2x` kill rate, `tau = 15 min`, `tau = 95 min`, `tau_d = 16 min`) are explicitly labeled as **Unvalidated Mechanistic Hypotheses**.
 
-![Figure 17: Same-Organoid Co-Residency Audit & Hypothesis Sensitivity Projections](/Users/dxt397/.gemini/antigravity/brain/f144e2e4-ff67-494b-b7e7-94fad918619d/visual_17_model_free_same_organoid_coexistence_proof.png)
+![Figure 17: Same-Organoid Co-Residency Audit & Hypothesis Sensitivity Projections]({ART_DIR}/visual_17_model_free_same_organoid_coexistence_proof.png)
 
 ### Table 5. Hypothesis-Labeled Mechanistic Sensitivity Suite Across the 16 Valid Shrinking Organoids
 
@@ -997,7 +995,7 @@ All 7 single-cell CAR-T/Nalm6 digital twins are reconstructed directly from the 
 
 ## Part V: Complete Multi-Plane Confocal & 3D Surface-Net Video Atlas for All 21 Tracked Objects in `.ims`
 
-![All 21 Organoids Cohort Wall](/Users/dxt397/.gemini/antigravity/brain/f144e2e4-ff67-494b-b7e7-94fad918619d/side_by_side_all_21_organoids_cohort_wall.gif)
+![All 21 Organoids Cohort Wall]({ART_DIR}/side_by_side_all_21_organoids_cohort_wall.gif)
 
 {chr(10).join(org21_vid_blocks_md)}
 """
@@ -1072,7 +1070,7 @@ def main():
             "vol_pct": "V(t) / V(0) * 100%, where V(0) is the canonical initial 3D volume at t=0 (identically 100.0% at t=0).",
             "crowding_density_units": "(1) Surface attacker density: concurrent attached T cells per 10^3 um^2 of organoid surface area; (2) Neighborhood co-attachment count: concurrent T cells attached within a 35 um 3D radius around the target organoid.",
             "contact_threshold": "Official BEHAV3D threshold d <= 0.0015 mm (1.5 um) vs. expanded proximity threshold d <= 0.0050 mm (5.0 um, 3.33x official threshold, accounting for the 3.5425 um XY confocal pixel pitch).",
-            "kill_detection": "Light-sheet (dx = 0.320 um): 405 nm SYTOX Blue intensity > 398 AU inside 3D target mask b_mask == 2 (F1 = 0.978). Confocal (dx = 3.5425 um): single dead tumor nuclei (6-8 um = 1.7-2.3 px) cannot be spatially resolved; kill events are detected as positive step increases Delta I_Ch2 >= 10.0 AU in local organoid dead-dye intensity over a 20-min window.",
+            "kill_detection": f"Light-sheet (dx = {VOXEL_UM:.4f} um): 405 nm SYTOX Blue intensity > 398 AU inside 3D target mask b_mask == 2 (F1 = 0.978). Confocal (dx = 3.5425 um): single dead tumor nuclei (6-8 um = 1.7-2.3 px) cannot be spatially resolved; kill events are detected as positive step increases Delta I_Ch2 >= 10.0 AU in local organoid dead-dye intensity over a 20-min window.",
         },
         "part1": m1,
         "part2": m2,

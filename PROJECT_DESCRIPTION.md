@@ -1,5 +1,7 @@
 # Project Description & Experimental Report: Serial Killer vs. Target Geometry (`Level 1–6` Architecture)
 
+> **Status note (2026-10-27 review).** Levels 3–6 are not complete as stated in the table below. In `src/model_4d_cell_kill.py` the T cell is placed at a set distance from the target, and dent, contact area and force come from hand-written power laws, not from a force balance on a deformable mesh. No two-cell deformable simulation has been run. The serial-killer results (Sections 4–5) rest on kill detection with recall 0.58 for a lone T cell and attribution F1 0.10 in crowds; treat their direction as plausible and their numbers as fragile.
+
 ## 1. Project Overview & Core Question
 
 In engineered T-cell therapies (CAR-T, TEG, TCR-T) against solid tumors, a small fraction of T cells ("serial killers") execute the majority of tumor cell kills. A central unresolved question in quantitative immuno-oncology is **why**:
@@ -13,7 +15,7 @@ This project builds a **6-level multi-scale 4D digital twin and experimental fit
 
 ## 2. How `serial-killer-model-plan.md` Maps to What We Have Already Built (Reuse Audit)
 
-Rather than starting from scratch, our existing codebase in `/Users/dxt397/Documents/_PROJECTS/Cell-Kill-Sim` already contains the data parsers, 3D Imaris HDF5 extractors, and 4D mechanics solvers spanning the 6-level ladder:
+Rather than starting from scratch, our existing codebase in `Cell-Kill-Sim` already contains the data parsers, 3D Imaris HDF5 extractors, and 4D mechanics solvers spanning the 6-level ladder:
 
 | Plan Level | Model Scope in `serial-killer-model-plan.md` | Existing Asset in `Cell-Kill-Sim` Reused / Extended | Status |
 | :--- | :--- | :--- | :--- |

@@ -35,11 +35,9 @@ from build_physically_constrained_4d_shapes import (
     shade_mesh_phong,
 )
 
-ROOT = Path("/Users/dxt397/Documents/_PROJECTS/Cell-Kill-Sim")
-DATA_DIR = ROOT / "data"
-VID_DIR = ROOT / "videos"
+from paths import REPO_ROOT as ROOT, DATA_DIR, FIGURES_DIR as ART_DIR, VIDEOS_DIR as VID_DIR
+
 ORG_VID_DIR = VID_DIR / "organoid_twins"
-ART_DIR = Path("/Users/dxt397/.gemini/antigravity/brain/f144e2e4-ff67-494b-b7e7-94fad918619d")
 IMS_PATH = ROOT / "LSM880_example_dataset_TEG_BC_organoids_2019_06_26.ims"
 
 ORG_VID_DIR.mkdir(parents=True, exist_ok=True)

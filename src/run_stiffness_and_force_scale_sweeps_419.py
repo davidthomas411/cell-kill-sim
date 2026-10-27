@@ -16,12 +16,9 @@ import pandas as pd
 from scipy.optimize import least_squares
 import matplotlib.pyplot as plt
 
-PROJECT_ROOT = Path("/Users/dxt397/Documents/_PROJECTS/Cell-Kill-Sim")
+from paths import REPO_ROOT as PROJECT_ROOT, DATA_DIR, FIGURES_DIR as FIG_DIR
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 from v3_part1_deposited_volumes_and_physics import predict_pore_repair_kill_probability
-
-DATA_DIR = PROJECT_ROOT / "data"
-FIG_DIR = PROJECT_ROOT / "figures"
 
 TRAIN_GROUPS = ["1", "2", "3", "4", "5"]
 LOW_GROUPS = ["6", "7", "8", "9", "10"]

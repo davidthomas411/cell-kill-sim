@@ -28,11 +28,8 @@ import matplotlib.gridspec as gridspec
 from mpl_toolkits.mplot3d import Axes3D  # noqa: F401
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 
-ROOT = Path("/Users/dxt397/Documents/_PROJECTS/Cell-Kill-Sim")
-DATA_DIR = ROOT / "data"
-VID_DIR = ROOT / "videos"
-FIG_DIR = ROOT / "figures"
-ART_DIR = Path("/Users/dxt397/.gemini/antigravity/brain/f144e2e4-ff67-494b-b7e7-94fad918619d")
+from paths import REPO_ROOT as ROOT, DATA_DIR, FIGURES_DIR as FIG_DIR, VIDEOS_DIR as VID_DIR
+ART_DIR = FIG_DIR
 VID_DIR.mkdir(exist_ok=True)
 FIG_DIR.mkdir(exist_ok=True)
 

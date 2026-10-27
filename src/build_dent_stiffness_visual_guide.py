@@ -11,7 +11,7 @@ Outputs:
   2. `figures/visual_20_dent_validation_rules_and_stiffness_evidence.png`
   3. `videos/side_by_side_dent_experiment_3regimes.mp4` and `.gif`
   4. `data/dent_visual_guide_interactive_presets.json`
-  5. `/Users/dxt397/Documents/_PROJECTS/Cell-Kill-Sim/dent_stiffness_visual_guide.html`
+  5. `dent_stiffness_visual_guide.html`
 """
 
 import base64
@@ -32,7 +32,7 @@ from matplotlib.gridspec import GridSpec, GridSpecFromSubplotSpec
 from matplotlib.patches import Circle, Ellipse
 from PIL import Image
 
-ROOT = Path("/Users/dxt397/Documents/_PROJECTS/Cell-Kill-Sim")
+from paths import REPO_ROOT as ROOT, DATA_DIR, FIGURES_DIR as FIG_DIR, EXTERNAL_DIR, VIDEOS_DIR as VID_DIR
 sys.path.insert(0, str(ROOT / "src"))
 
 from upgrade_shape_extraction_and_modeling import (
@@ -56,10 +56,7 @@ from build_multiorganelle_mitospace_4d_twin import (
     render_multiorganelle_3d_axes,
 )
 
-DATA_DIR = ROOT / "data"
-FIG_DIR = ROOT / "figures"
-VID_DIR = ROOT / "videos"
-LS_DIR = ROOT / "external" / "feilab_lightsheet_data"
+LS_DIR = EXTERNAL_DIR / "feilab_lightsheet_data"
 
 plt.rcParams.update({
     "font.family": "sans-serif",
@@ -1084,7 +1081,7 @@ def img_to_data_uri(path: Path) -> str:
 
 def build_standalone_html_visual_guide(master: dict):
     """
-    Builds the House-Style interactive visual guide `/Users/dxt397/Documents/_PROJECTS/Cell-Kill-Sim/dent_stiffness_visual_guide.html`
+    Builds the House-Style interactive visual guide `dent_stiffness_visual_guide.html`
     embedding the high-resolution real video models (`visual_19`, `visual_7`, `visual_12`, `visual_14`)
     and all 63,053-frame statistical tables and figures from `data/dent_stiffness_master_results.json` (R1-R4).
     """

@@ -1,5 +1,7 @@
 # 4D Digital Twins of T-Cell Tumor Killing (Version 3.0)
 
+> **Status note (2026-10-27 review).** (1) The light-sheet voxel pitch is 0.1962 µm (feilab `summary.m`), not 0.320 µm; 0.32 µm is the optical resolution. Light-sheet volumes, radii and areas in this report were computed with 0.320 µm and are stale until the scripts are re-run (`src/constants.py` now holds the corrected value). (2) The "7 single-cell twins" in Part I are surfaces fitted to the lab's masks frame by frame (in-sample IoU); nothing is simulated or predicted forward in time. (3) The Part I physics layer fits 2 parameters to 5 group-level kill rates with hand-set constants; its dasatinib test checks an input (actin flow), not the mechanics. (4) Animation links below point to a private folder and do not render on GitHub.
+
 > [!IMPORTANT]
 > **Canonical Build (`data/v3_canonical_metrics.json`)**: Every number in this document, the HTML application (`index.html`), and all figure titles/legends is templated from a single canonical JSON dictionary (`data/v3_canonical_metrics.json`) and verified by automated consistency assertions.
 
@@ -33,7 +35,7 @@
 
 All 7 single-cell CAR-T/Nalm6 digital twins are reconstructed directly from the deposited ScienceDB `10.57760/sciencedb.19235` 3D volumes (`*.h5`), 3D U-Net semantic segmentation masks (`*_predictions.h5`, `uint8` Labels `1-4`), and 16-bit raw fluorescence MIPs (`*.tif`) with zero MP4 frames, zero burned-in text, non-empty `t = 0` masks on all 7 twins, mean in-sample 3D mask fit IoU = **0.871** (vs. ellipsoid M=2 baseline `0.662`; boundary RMSE = `0.128 um` against the `0.320 um` voxel), and a like-for-like Twin/Real colored-pixel occupancy ratio of **1.00x** (range `1.00x-1.02x`).
 
-![Figure 13: All 7 Deposited 3D Single-Cell Twins](/Users/dxt397/.gemini/antigravity/brain/f144e2e4-ff67-494b-b7e7-94fad918619d/visual_13_all_7_single_cell_lightsheet_twins.png)
+![Figure 13: All 7 Deposited 3D Single-Cell Twins](figures/visual_13_all_7_single_cell_lightsheet_twins.png)
 
 ### Table 1A. All 7 Rebuilt Single-Cell 320-nm Light-Sheet Twins (Deposited 3D U-Net Masks & 16-Bit MIPs)
 
@@ -71,7 +73,7 @@ All 7 single-cell CAR-T/Nalm6 digital twins are reconstructed directly from the 
 - **2D Structural Identifiability Map**: 3D indentation depth `delta_syn` and actin flow `v_ARFS` alone identify only the ratio `eta_clutch / E_target = 0.038 s/um` (`kappa = 16291940.5`); anchoring `E_target` with the external AFM/MP-TFM stiffness prior resolves the collinearity ridge (`kappa = 2686.37`).
 - **Out-of-Sample Perturbation Benchmark (`n = 419` pairs across 13 groups)**: Trained strictly on Untreated High-Killing `Groups 1-5` (`n = 167`, observed `57.5%` vs. predicted `57.8%`) and evaluated with **zero refitting** on Held-Out `Dasatinib 50 nM` (`Groups 8*, 9*, 10*`, `n = 89`: observed **4.5%** vs. physics **10.3%**, MAE = **5.5%**; old area-only proxy predicts `29.5%`, MAE = `23.9%`) and Held-Out Untreated Low-Killing (`Groups 6-10`, `n = 163`: observed `27.0%` vs. physics `51.1%`).
 
-![Figure 18: Physics Layer, Identifiability Map & Held-Out Dasatinib Benchmark](/Users/dxt397/.gemini/antigravity/brain/f144e2e4-ff67-494b-b7e7-94fad918619d/visual_18_physics_mechanics_identifiability_pore_repair_dasatinib.png)
+![Figure 18: Physics Layer, Identifiability Map & Held-Out Dasatinib Benchmark](figures/visual_18_physics_mechanics_identifiability_pore_repair_dasatinib.png)
 
 ### Table 1B. 419-Pair Cohort Benchmark Across All 13 Experimental Groups
 
@@ -99,9 +101,9 @@ All 7 single-cell CAR-T/Nalm6 digital twins are reconstructed directly from the 
 - **Zero-Local-Parameter Out-of-Sample Benchmark (`p_local = 0`, Held-Out 11)**: Global Exp (`0A`) scores Held-Out `R^2 = -3.062` (`95% CI: [-6.084, -0.712]`, median `-0.715`, NRMSE `19.27%`); Swarm+Shell ODE (`2A`) scores Held-Out `R^2 = -2.511` (`95% CI: [-5.580, -0.280]`, median `-0.595`, NRMSE `17.37%`, paired Wilcoxon `p = 0.083`).
 - **Matched 1-Local-Parameter Per-Organoid Benchmark (`p_local = 1`, Held-Out 11)**: 1-Param Per-Organoid Exp (`1B`) scores Held-Out **`R^2 = 0.379`** (`95% CI: [0.081, 0.636]`, median `0.570`, NRMSE `8.92%`), while 1-Param Per-Organoid Swarm+Shell ODE (`2B`) scores Held-Out **`R^2 = 0.400`** (`95% CI: [0.154, 0.607]`, median `0.566`, NRMSE `8.96%`, paired Wilcoxon **`p = 0.831`** on `R^2`, **`p = 0.966`** on NRMSE).
 
-![Figure 14: Batch 1 Design Organoids & Matched-Parameter Comparison](/Users/dxt397/.gemini/antigravity/brain/f144e2e4-ff67-494b-b7e7-94fad918619d/visual_14_organoid_batch1_diagnosis_and_iterations.png)
+![Figure 14: Batch 1 Design Organoids & Matched-Parameter Comparison](figures/visual_14_organoid_batch1_diagnosis_and_iterations.png)
 
-![Figure 15: Held-Out 11 Shrinking Organoids Benchmark & Exclusion Audit](/Users/dxt397/.gemini/antigravity/brain/f144e2e4-ff67-494b-b7e7-94fad918619d/visual_15_organoid_batch2_all_21_cohort_atlas.png)
+![Figure 15: Held-Out 11 Shrinking Organoids Benchmark & Exclusion Audit](figures/visual_15_organoid_batch2_all_21_cohort_atlas.png)
 
 ### Table 3. All 21 Tracked Objects in `.ims`: Exclusion Audit (5 Dropped) & Matched-Parameter Benchmark on 16 Valid Shrinking Organoids
 
@@ -139,7 +141,7 @@ All 7 single-cell CAR-T/Nalm6 digital twins are reconstructed directly from the 
   2. **Crowding-Adjusted Inter-Kill Gap Correlation `rho(dt_1, dt_2)`**: Raw `rho = +0.222` (`p = 0.031`, `n = 95`), which collapses after partialing out crowding and track duration to **`rho_adj = +0.049` (`p = 0.635`)**, matching the `sigma = 0` fragment+crowding null (`rho_null = -0.037`).
   3. **Level-2 Contact Topology Across 6 Wells**: Discrete bout count correlates `rho = +0.160 +/- 0.099` with dead-dye exposure across the 6 wells vs. `rho = +0.093 +/- 0.125` for cumulative contact (`p = 0.0777`).
 
-![Figure 16: Fragment-Aware Renewal Null & 6-Well Replication](/Users/dxt397/.gemini/antigravity/brain/f144e2e4-ff67-494b-b7e7-94fad918619d/visual_16_serial_killer_novelty_and_21organoid_counterfactuals.png)
+![Figure 16: Fragment-Aware Renewal Null & 6-Well Replication](figures/visual_16_serial_killer_novelty_and_21organoid_counterfactuals.png)
 
 ### Table 4A. Complete Reconciled Descriptive Breakdown of Well 4 Cohorts (`n = 487` Super-Engagers & `n = 421` Long-Contact >=180m)
 
@@ -176,7 +178,7 @@ All 7 single-cell CAR-T/Nalm6 digital twins are reconstructed directly from the 
 - **Swarm Size Scales with Organoid Volume**: Peak simultaneous CD8+ swarm size correlates strongly with `log10(V0)` (**`r = 0.688, p = 0.0006`** across all 21 objects; **`r = 0.685, p = 0.003`** across the 16 valid shrinking organoids). Unvalidated cross-swarm swapping, extrapolated kill times on `10-15 min` or `0% SYTOX` movies, and `150%` damage caps have been removed.
 - **Analytical Cycle Refractory Fraction (`tau / (tau + 1/k)`)**: Replacing heterogeneous `sigma = 0.88` with homogeneous `sigma = 0` moves simulated clearance across the 16 valid organoids by only **1.0 percentage point** (`45.9%` to `44.9%`). All perturbation regimes (`2x` kill rate, `tau = 15 min`, `tau = 95 min`, `tau_d = 16 min`) are explicitly labeled as **Unvalidated Mechanistic Hypotheses**.
 
-![Figure 17: Same-Organoid Co-Residency Audit & Hypothesis Sensitivity Projections](/Users/dxt397/.gemini/antigravity/brain/f144e2e4-ff67-494b-b7e7-94fad918619d/visual_17_model_free_same_organoid_coexistence_proof.png)
+![Figure 17: Same-Organoid Co-Residency Audit & Hypothesis Sensitivity Projections](figures/visual_17_model_free_same_organoid_coexistence_proof.png)
 
 ### Table 5. Hypothesis-Labeled Mechanistic Sensitivity Suite Across the 16 Valid Shrinking Organoids
 

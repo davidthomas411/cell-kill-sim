@@ -16,10 +16,11 @@ import numpy as np
 import openpyxl
 import pandas as pd
 
-ROOT = Path("/Users/dxt397/Documents/_PROJECTS/Cell-Kill-Sim")
-DATA_DIR = ROOT / "data"
+from paths import REPO_ROOT as ROOT, DATA_DIR, EXTERNAL_DIR
+from constants import VOXEL_UM
+
 EXP28_IMS = ROOT / "LSM880_example_dataset_CART_ALL_Exp28.ims"
-WANG_XLSX = ROOT / "external" / "feilab_lightsheet_data" / "Source_Data_Wang2024_NatCommun.xlsx"
+WANG_XLSX = EXTERNAL_DIR / "feilab_lightsheet_data" / "Source_Data_Wang2024_NatCommun.xlsx"
 
 
 def decode_attr(val):
@@ -371,7 +372,7 @@ def build_data_registry():
             "doi": "10.1038/s41597-026-06829-9 | 10.57760/sciencedb.19235",
             "license": "CC BY 4.0 (data & article) | MIT License (feilab-hust/CAR-T-analysis code)",
             "layers_covered": "Layer 2 (3D synapse area CA, Lifeact retrograde flow ARFS, ADC) + Layer 3 (3D MTOC angle MPA & distance MD) + Layer 4 (SYTOX Blue death)",
-            "spatial_res": "0.32 x 0.32 x 0.60 um (isotropic ~320 nm optical)",
+            "spatial_res": f"{VOXEL_UM} x {VOXEL_UM} x 0.60 um (isotropic ~320 nm optical)",
             "temporal_res": "2.5 s/vol (6-vol burst) every 10 min for 5.0 h (30 cycles)",
             "sample_size": "419 CAR-T-Nalm6 pairs (13 groups incl. 0/25/50 nM dasatinib; 1,202 3D MTOC angles)",
             "access_status": "Local verified (419-pair Source Data .xlsx + MIT MATLAB/U-Net code + 6 movies); 19.55 TiB raw .h5/.tiff on ScienceDB requires author transfer request",

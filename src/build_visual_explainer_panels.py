@@ -30,9 +30,8 @@ import matplotlib.patches as patches
 import numpy as np
 import pandas as pd
 
-ROOT = Path("/Users/dxt397/Documents/_PROJECTS/Cell-Kill-Sim")
-ART_DIR = Path("/Users/dxt397/.gemini/antigravity/brain/f144e2e4-ff67-494b-b7e7-94fad918619d")
-FIG_DIR = ROOT / "figures"
+from paths import REPO_ROOT as ROOT, FIGURES_DIR as FIG_DIR
+ART_DIR = FIG_DIR
 FIG_DIR.mkdir(exist_ok=True)
 
 plt.rcParams["font.sans-serif"] = ["DejaVu Sans", "Arial", "Helvetica"]

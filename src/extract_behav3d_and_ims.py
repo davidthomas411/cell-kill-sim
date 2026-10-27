@@ -18,8 +18,10 @@ import numpy as np
 import pandas as pd
 import pyreadr
 
-ROOT = "/Users/dxt397/Documents/_PROJECTS/Cell-Kill-Sim"
-DATA_DIR = os.path.join(ROOT, "data")
+from paths import REPO_ROOT, DATA_DIR as _DATA_DIR_PATH
+
+ROOT = str(REPO_ROOT)
+DATA_DIR = str(_DATA_DIR_PATH)
 os.makedirs(DATA_DIR, exist_ok=True)
 
 
@@ -63,13 +65,13 @@ class PartialH5File(io.RawIOBase):
 
 def find_bc_ims_path() -> tuple[str, int]:
     expected_size = 15124774705
-    direct = glob.glob("/Users/dxt397/Downloads/*TEG_BC_organoids*.ims") + glob.glob(
+    direct = glob.glob(
         os.path.join(ROOT, "**/*TEG_BC_organoids*.ims"), recursive=True
-    )
+    ) + glob.glob(str(REPO_ROOT / "Downloads/*TEG_BC_organoids*.ims"))
     if direct:
         return direct[0], expected_size
     # Check .crdownload files by reading header Name
-    for p in sorted(glob.glob("/Users/dxt397/Downloads/*.crdownload")):
+    for p in sorted(glob.glob(str(REPO_ROOT / "Downloads/*.crdownload"))):
         with open(p, "rb") as f:
             head = f.read(512 * 1024)
         if b"2019-06-26 CD4CD8 13T" in head:

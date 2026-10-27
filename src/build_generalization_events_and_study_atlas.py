@@ -63,11 +63,9 @@ from build_multiorganelle_mitospace_4d_twin import (
     render_multiorganelle_3d_axes,
 )
 
-ROOT = Path("/Users/dxt397/Documents/_PROJECTS/Cell-Kill-Sim")
-DATA_DIR = ROOT / "data"
-FIG_DIR = ROOT / "figures"
-VID_DIR = ROOT / "videos"
-ART_DIR = Path("/Users/dxt397/.gemini/antigravity/brain/f144e2e4-ff67-494b-b7e7-94fad918619d")
+from paths import REPO_ROOT as ROOT, DATA_DIR, FIGURES_DIR as FIG_DIR, VIDEOS_DIR as VID_DIR
+from constants import VOXEL_UM
+ART_DIR = FIG_DIR
 
 
 def extract_and_reconstruct_lightsheet_event(
@@ -509,7 +507,7 @@ def build_inventory_and_figure_15():
     df_inv = pd.DataFrame([
         {
             "dataset_and_setup": "Setup A: 320-nm Light-Sheet Orthogonal Video Pairs (MOESM5–9_ESM.mp4)",
-            "spatial_temporal_res": "0.32 µm XYZ | 2.5 s/vol continuous (MOESM8) or 10 min/cycle over 3–5 h",
+            "spatial_temporal_res": f"{VOXEL_UM} µm XYZ | 2.5 s/vol continuous (MOESM8) or 10 min/cycle over 3–5 h",
             "recreatable_events_local": "7 full 4D video pairs (MOESM9 lethal kill, MOESM6 late synapse, MOESM7 sublethal abort, MOESM8 360-vol fast burst, MOESM5 3-color MTOC + 2 chambers)",
             "recreatable_events_cohort": "419 quantified CAR-T + Nalm6 microchamber pairs across 13 groups (330 untreated + 89 Dasatinib 50 nM)",
             "twin_study_role": "Study 2 (320 nm Light-Sheet Identifiability) & Study 3 (Fast 2.5 s/vol Actin/Pore Timing)",

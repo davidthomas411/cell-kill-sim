@@ -3,7 +3,8 @@
 
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from pathlib import Path
-from build_all_ground_truth_4d_twins import run_single_cell_lightsheet_twin, ROOT
+from paths import REPO_ROOT as ROOT, EXTERNAL_DIR
+from build_all_ground_truth_4d_twins import run_single_cell_lightsheet_twin
 
 SPECS = [
     ("Twin4_MOESM8_FastBurst", "Twin 4 (MOESM8: 2.5s/vol Fast Burst)", "MOESM8_ESM.mp4", 10, 1060, 15.0,
@@ -23,7 +24,7 @@ SPECS = [
 
 def _worker(spec):
     tid, tlabel, vfile, fs, fe, tmin, xys, xzs, rwh, bmode, ostem = spec
-    ls_dir = ROOT / "external/feilab_lightsheet_data"
+    ls_dir = EXTERNAL_DIR / "feilab_lightsheet_data"
     run_single_cell_lightsheet_twin(
         ls_dir / vfile, tid, tlabel, fs, fe, tmin, xys, xzs,
         resize_wh=rwh, blue_channel_mode=bmode, n_sample_frames=28,

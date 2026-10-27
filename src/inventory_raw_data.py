@@ -27,8 +27,8 @@ import numpy as np
 import pandas as pd
 import tifffile
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
-DATA_DIR = REPO_ROOT / "data"
+from paths import REPO_ROOT, DATA_DIR
+from constants import VOXEL_UM, OPTICAL_FWHM_UM
 CHAMBERS_DIR = DATA_DIR / "scidb_19235_chambers"
 SAMPLES_DIR = DATA_DIR / "scidb_19235_samples"
 CACHE_DIR = DATA_DIR / "scidb_dent_cache"
@@ -294,7 +294,7 @@ def inventory_local_scidb() -> dict[str, Any]:
                     "`reconsitution_app_eng.mlapp` sets `PixelSize = 6.5 um`, `Magnification = 62.2`, `Binning = 2` "
                     "(`6.5 / 62.2 * 2 = 0.2090 um/voxel`)."
                 ),
-                "optical_fwhm_cited_in_data_dictionary_um": 0.320,
+                "optical_fwhm_cited_in_data_dictionary_um": OPTICAL_FWHM_UM,
                 "optical_fwhm_note": (
                     "`data/data_dictionary.md` Section 8 and `data/data_registry.csv` cite `0.320 x 0.320 x 0.320 um` "
                     "(the optical lateral FWHM resolution of the HBOPM light-sheet microscope in Wang et al. 2024/2026), "
@@ -688,13 +688,13 @@ def build_inventory() -> dict[str, Any]:
             "dataset_id": "ScienceDB_19235_LightSheet",
             "short_label": "ScienceDB 19235\nLight-Sheet (CAR-T + Nalm6)",
             "modality": "HBOPM 4D Dual-View Light-Sheet",
-            "voxel_size_um": {"dx": 0.1962, "dy": 0.1962, "dz": 0.1962, "optical_fwhm_um": 0.320},
+            "voxel_size_um": {"dx": VOXEL_UM, "dy": VOXEL_UM, "dz": VOXEL_UM, "optical_fwhm_um": OPTICAL_FWHM_UM},
             "voxel_volume_um3": round(0.196214 ** 3, 6),
-            "voxel_volume_at_0320_um3": round(0.320 ** 3, 6),
+            "voxel_volume_at_0320_um3": round(OPTICAL_FWHM_UM ** 3, 6),
             "grid_voxels_XYZ": [256, 256, 190],
             "grid_z_range_voxels": [166, 190],
             "fov_um_XYZ_at_01962": [round(256 * 0.196214, 2), round(256 * 0.196214, 2), round(190 * 0.196214, 2)],
-            "fov_um_XYZ_at_0320": [round(256 * 0.320, 2), round(256 * 0.320, 2), round(190 * 0.320, 2)],
+            "fov_um_XYZ_at_0320": [round(256 * OPTICAL_FWHM_UM, 2), round(256 * OPTICAL_FWHM_UM, 2), round(190 * OPTICAL_FWHM_UM, 2)],
             "frame_interval_s_burst": 2.5,
             "visit_interval_s": 600.0,
             "visit_interval_min": 10.0,

@@ -10,7 +10,7 @@ Implements the 6-step protocol specified in the task file:
           `step2_instance_seg.m`), excluding internal false-positive specks, fitting an undeformed
           ellipsoid (with spherical fallback when unstable) to the non-contact target surface, and
           measuring the inward depression of the contact surface. Logs every rejected frame and why.
-  Step 3. Validate `measure_dent_3d` on 35 synthetic 3D cell pairs with known dents at 0.320 um/voxel
+  Step 3. Validate `measure_dent_3d` on 35 synthetic 3D cell pairs with known dents at VOXEL_UM (0.1962 um/voxel)
           (passing through the exact same `measure_dent_3d` function) and hand-check 20 real frames
           spanning small and large dents with cross-sectional visual overlays.
   Step 4. Per-pair summary across all chambers: maximum dent (`dent_max_um`), dent at peak contact
@@ -27,7 +27,7 @@ Implements the 6-step protocol specified in the task file:
           `figures/dent_step3_20_real_frames_handcheck.png`) and summary tables.
 
 Constants Inventory (Rule 5 — every constant labeled as measured, cited, or chosen):
-  - DX_UM = 0.320 um/voxel          [cited: Wang et al., Nat Commun 2024 / Sci Data 2026 HBOPM voxel pitch]
+  - DX_UM = VOXEL_UM (0.1962 um/voxel) [cited: feilab summary.m sqrt(0.0385 um^2) reconstructed ROI voxel pitch]
   - CA_VOXEL_FACTOR_UM2 = 0.0385    [cited: github.com/feilab-hust/CAR-T-analysis/main/analysis/summary/summary.m line 16]
   - VISIT_INTERVAL_MIN = 10.0       [cited: Wang et al., Nat Commun 2024 Fig. 5a/S9 10-min visit cadence, 6 sweeps/visit]
   - SWEEPS_PER_VISIT = 6            [cited: configure.m / step2_instance_seg.m `sample_num = 6`]
@@ -73,10 +73,13 @@ from scipy.ndimage import (
 )
 from scipy.optimize import least_squares
 
+from paths import REPO_ROOT as ROOT, DATA_DIR, FIGURES_DIR as FIG_DIR, EXTERNAL_DIR
+from constants import VOXEL_UM
+
 # ==============================================================================
 # CONSTANTS (Rule 5: every constant labeled measured, cited, or chosen)
 # ==============================================================================
-DX_UM = 0.320                    # [cited] Wang et al. 2024 isotropic voxel size (um)
+DX_UM = VOXEL_UM                 # [cited] Reconstructed ROI voxel pitch sqrt(0.0385 um^2) from feilab summary.m
 CA_VOXEL_FACTOR_UM2 = 0.0385     # [cited] feilab_CART_analysis summary.m surface area factor (um^2/voxel)
 VISIT_INTERVAL_MIN = 10.0        # [cited] Wang et al. 2024 time-lapse visit interval (min)
 SWEEPS_PER_VISIT = 6             # [cited] step2_instance_seg.m sample_num = 6 sweeps per visit
@@ -91,14 +94,11 @@ MIN_CONTACT_SURF_VOX = 5         # [chosen] minimum contact voxels for non-zero 
 MAX_ELLIPSOID_ASPECT = 1.50      # [chosen] maximum semi-axis ratio before sphere fallback
 DENT_PERCENTILE = 97.0           # [chosen] percentile of inward surface deviation for robust max dent
 
-ROOT = Path("/Users/dxt397/Documents/_PROJECTS/Cell-Kill-Sim")
-DATA_DIR = ROOT / "data"
-FIG_DIR = ROOT / "figures"
 CACHE_DIR = DATA_DIR / "scidb_dent_cache"
 RAW_CACHE_DIR = CACHE_DIR / "files"
 CHAMBER_DIR = DATA_DIR / "scidb_19235_chambers"
 URLS_FILE = DATA_DIR / "scidb_19235_all_urls.txt"
-XLSX_FILE = ROOT / "external" / "feilab_lightsheet_data" / "Source_Data_Wang2024_NatCommun.xlsx"
+XLSX_FILE = EXTERNAL_DIR / "feilab_lightsheet_data" / "Source_Data_Wang2024_NatCommun.xlsx"
 
 CACHE_DIR.mkdir(parents=True, exist_ok=True)
 RAW_CACHE_DIR.mkdir(parents=True, exist_ok=True)

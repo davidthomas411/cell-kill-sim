@@ -38,10 +38,12 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 
-ROOT = "/Users/dxt397/Documents/_PROJECTS/Cell-Kill-Sim"
-DATA_DIR = os.path.join(ROOT, "data")
-FIG_DIR = os.path.join(ROOT, "figures")
-BRAIN_DIR = "/Users/dxt397/.gemini/antigravity/brain/f144e2e4-ff67-494b-b7e7-94fad918619d"
+from paths import REPO_ROOT, DATA_DIR as _DATA_DIR_PATH, FIGURES_DIR
+
+ROOT = str(REPO_ROOT)
+DATA_DIR = str(_DATA_DIR_PATH)
+FIG_DIR = str(FIGURES_DIR)
+BRAIN_DIR = str(FIGURES_DIR)
 
 
 def analyze_super_engager_vs_serial_killer():
@@ -714,7 +716,8 @@ def build_figure(df, se, lc, deconst_df, p_vals, res_df, sum_df, time_trajectori
     out_fig = os.path.join(FIG_DIR, "visual_16_serial_killer_novelty_and_21organoid_counterfactuals.png")
     fig.savefig(out_fig, dpi=200)
     plt.close(fig)
-    shutil.copy2(out_fig, os.path.join(BRAIN_DIR, "visual_16_serial_killer_novelty_and_21organoid_counterfactuals.png"))
+    if os.path.abspath(out_fig) != os.path.abspath(os.path.join(BRAIN_DIR, "visual_16_serial_killer_novelty_and_21organoid_counterfactuals.png")):
+        shutil.copy2(out_fig, os.path.join(BRAIN_DIR, "visual_16_serial_killer_novelty_and_21organoid_counterfactuals.png"))
     print(f"Saved figure -> {out_fig}")
 
 

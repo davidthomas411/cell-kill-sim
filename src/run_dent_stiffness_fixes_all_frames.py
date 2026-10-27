@@ -66,15 +66,16 @@ from scipy.optimize import least_squares, minimize
 from scipy.stats import mannwhitneyu, spearmanr
 
 import sys
-sys.path.insert(0, str(Path("/Users/dxt397/Documents/_PROJECTS/Cell-Kill-Sim/src")))
+from paths import REPO_ROOT as ROOT, DATA_DIR, FIGURES_DIR as FIG_DIR, EXTERNAL_DIR
+from constants import VOXEL_UM, OPTICAL_FWHM_UM
+sys.path.insert(0, str(ROOT / "src"))
 from v3_part1_deposited_volumes_and_physics import predict_pore_repair_kill_probability
 from run_stiffness_and_force_scale_sweeps_419 import predict_dent_hertz_pore_kill
 
 # ==============================================================================
 # CONSTANTS & PROVENANCE (R4: every constant labeled measured, cited, or chosen)
 # ==============================================================================
-DX_UM = 0.1962                     # [cited] Reconstructed ROI voxel pitch sqrt(0.0385 um^2) from feilab summary.m (optical FWHM = 0.320 um)
-OPTICAL_FWHM_UM = 0.320            # [cited] Wang et al. Nat Commun 2024 / Sci Data 2026 optical resolution FWHM (um)
+DX_UM = VOXEL_UM                   # [cited] Reconstructed ROI voxel pitch sqrt(0.0385 um^2) from feilab summary.m (optical FWHM = 0.320 um)
 CA_VOXEL_FACTOR_UM2 = 0.0385       # [cited] feilab_CART_analysis summary.m surface area factor (um^2/vox = 0.1962^2)
 VISIT_INTERVAL_MIN = 10.0          # [cited] Wang et al. 2024 time-lapse visit interval (min)
 SWEEPS_PER_VISIT = 6               # [cited] step2_instance_seg.m sample_num = 6 sweeps per visit
@@ -130,15 +131,12 @@ CONSTANTS_PROVENANCE = [
 ]
 PROVENANCE_TABLE = CONSTANTS_PROVENANCE
 
-ROOT = Path("/Users/dxt397/Documents/_PROJECTS/Cell-Kill-Sim")
-DATA_DIR = ROOT / "data"
-FIG_DIR = ROOT / "figures"
 CACHE_DIR = DATA_DIR / "scidb_dent_cache"
 SEG_MONTAGE_DIR = CACHE_DIR / "seg_montages"
 RAW_CACHE_DIR = CACHE_DIR / "files"
 CHAMBER_DIR = DATA_DIR / "scidb_19235_chambers"
 URLS_FILE = DATA_DIR / "scidb_19235_all_urls.txt"
-XLSX_FILE = ROOT / "external" / "feilab_lightsheet_data" / "Source_Data_Wang2024_NatCommun.xlsx"
+XLSX_FILE = EXTERNAL_DIR / "feilab_lightsheet_data" / "Source_Data_Wang2024_NatCommun.xlsx"
 
 V_TO_GROUP = {
     "v01_6_40_120_0-6_hd1":    ("1",   "Untreated high-killing"),

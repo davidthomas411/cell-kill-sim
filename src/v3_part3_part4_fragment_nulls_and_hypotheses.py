@@ -34,10 +34,9 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec
 
-ROOT = Path("/Users/dxt397/Documents/_PROJECTS/Cell-Kill-Sim")
-DATA_DIR = ROOT / "data"
-FIG_DIR = ROOT / "figures"
-ART_DIR = Path("/Users/dxt397/.gemini/antigravity/brain/f144e2e4-ff67-494b-b7e7-94fad918619d")
+from paths import REPO_ROOT as ROOT, DATA_DIR, FIGURES_DIR as FIG_DIR
+from constants import VOXEL_UM
+ART_DIR = FIG_DIR
 
 plt.rcParams.update({
     "font.family": "sans-serif",
@@ -243,9 +242,9 @@ def validate_kill_detection_synthetic_truth(seed: int = 20261025) -> tuple[pd.Da
 
     # Add the 320-nm Light-Sheet 1-on-1 SYTOX Blue detector (`dead_count.m`: D > 398 inside 3D b_mask)
     crowding_rows.insert(0, {
-        "modality_and_regime": "HBOPM 320-nm Light-Sheet (dx=0.32 um) · 1-on-1 Chamber (SYTOX > 398 in b_mask)",
+        "modality_and_regime": f"HBOPM 320-nm Light-Sheet (dx={VOXEL_UM:.4f} um) · 1-on-1 Chamber (SYTOX > 398 in b_mask)",
         "concurrent_attackers_m": 1,
-        "voxel_pitch_um": 0.3200,
+        "voxel_pitch_um": VOXEL_UM,
         "step_precision": 0.985,
         "step_recall": 0.972,
         "step_F1": 0.978,
@@ -263,7 +262,7 @@ def validate_kill_detection_synthetic_truth(seed: int = 20261025) -> tuple[pd.Da
         "operating_threshold_AU": op_th,
         "confocal_voxel_pitch_xy_um": 3.5425,
         "confocal_voxel_pitch_z_um": 1.0500,
-        "lightsheet_voxel_pitch_um": 0.3200,
+        "lightsheet_voxel_pitch_um": VOXEL_UM,
         "m1_step_precision": float(df_crowd.loc[1, "step_precision"]),
         "m1_step_recall": float(df_crowd.loc[1, "step_recall"]),
         "m1_step_F1": float(df_crowd.loc[1, "step_F1"]),
@@ -963,7 +962,7 @@ def build_visual_16_and_17(df_pr: pd.DataFrame, df_crowd: pd.DataFrame, summary_
 
     # --- PANEL B: Kill Detection Precision, Recall & Crowding Ambiguity ---
     ax_b = fig.add_subplot(gs[0, 1])
-    m_labels = ["320-nm Light-Sheet\n(m=1, dx=0.32 um)", "Confocal m=1\n(Solitaire, dx=3.54 um)",
+    m_labels = [f"320-nm Light-Sheet\n(m=1, dx={VOXEL_UM:.4f} um)", "Confocal m=1\n(Solitaire, dx=3.54 um)",
                 "Confocal m=2\n(Pair attached)", "Confocal m=3\n(Triplet attached)", "Confocal m>=4\n(Crowded swarm)"]
     xm = np.arange(len(m_labels))
     step_f1 = df_crowd["step_F1"].values * 100.0

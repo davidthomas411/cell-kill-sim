@@ -24,8 +24,10 @@ import os
 import numpy as np
 import pandas as pd
 
-ROOT = "/Users/dxt397/Documents/_PROJECTS/Cell-Kill-Sim"
-DATA_DIR = os.path.join(ROOT, "data")
+from paths import REPO_ROOT, DATA_DIR as _DATA_DIR_PATH
+
+ROOT = str(REPO_ROOT)
+DATA_DIR = str(_DATA_DIR_PATH)
 os.makedirs(DATA_DIR, exist_ok=True)
 
 # Starting 3D coordinates (um) and approach axes for up to 5 cooperating T cells

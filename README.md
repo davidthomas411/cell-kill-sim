@@ -91,4 +91,4 @@ Note: Video encoding functions in `src/` invoke the `ffmpeg` command-line binary
 
 ## Path Configuration Note
 
-The scripts in `src/` currently define hardcoded local paths pointing to the author's workspace (e.g., `ROOT = Path("/Users/dxt397/Documents/_PROJECTS/Cell-Kill-Sim")` and artifact output paths under `/Users/dxt397/.gemini/antigravity/brain/...`). Before running any script locally, update `ROOT` (and `ART_DIR` / `BRAIN_DIR` where present) to match your local checkout directory and place the required `.ims`, ScienceDB `.h5`/`.tif`, and BEHAV3D `.rds`/`.csv` inputs under `data/` and `external/`.
+The scripts in `src/` resolve repository paths via `src/paths.py` (`REPO_ROOT`, `DATA_DIR` configurable via `CELLKILL_DATA_DIR`, `FIGURES_DIR`, `EXTERNAL_DIR`). Before running any script locally, place the required `.ims`, ScienceDB `.h5`/`.tif`, and BEHAV3D `.rds`/`.csv` inputs under `data/` and `external/` (or set `CELLKILL_DATA_DIR`).

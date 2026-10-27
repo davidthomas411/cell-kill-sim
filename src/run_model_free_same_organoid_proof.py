@@ -29,10 +29,12 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 
-ROOT = "/Users/dxt397/Documents/_PROJECTS/Cell-Kill-Sim"
-DATA_DIR = os.path.join(ROOT, "data")
-FIG_DIR = os.path.join(ROOT, "figures")
-BRAIN_DIR = "/Users/dxt397/.gemini/antigravity/brain/f144e2e4-ff67-494b-b7e7-94fad918619d"
+from paths import REPO_ROOT, DATA_DIR as _DATA_DIR_PATH, FIGURES_DIR
+
+ROOT = str(REPO_ROOT)
+DATA_DIR = str(_DATA_DIR_PATH)
+FIG_DIR = str(FIGURES_DIR)
+BRAIN_DIR = str(FIGURES_DIR)
 
 
 def run_model_free_analysis():
@@ -434,7 +436,8 @@ def build_model_free_figure(df, sub_ge5, sub_20_ge5, anova_df, coexist_df, paire
     out_fig = os.path.join(FIG_DIR, "visual_17_model_free_same_organoid_coexistence_proof.png")
     fig.savefig(out_fig, dpi=200)
     plt.close(fig)
-    shutil.copy2(out_fig, os.path.join(BRAIN_DIR, "visual_17_model_free_same_organoid_coexistence_proof.png"))
+    if os.path.abspath(out_fig) != os.path.abspath(os.path.join(BRAIN_DIR, "visual_17_model_free_same_organoid_coexistence_proof.png")):
+        shutil.copy2(out_fig, os.path.join(BRAIN_DIR, "visual_17_model_free_same_organoid_coexistence_proof.png"))
     print(f"Saved figure -> {out_fig}")
 
 

@@ -30,9 +30,8 @@ import matplotlib.patches as mpatches
 import numpy as np
 from scipy.ndimage import binary_erosion
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
-DATA_DIR = REPO_ROOT / "data"
-FIG_DIR = REPO_ROOT / "figures"
+from paths import REPO_ROOT, DATA_DIR, FIGURES_DIR as FIG_DIR
+from constants import VOXEL_UM, OPTICAL_FWHM_UM
 CHAMBERS_DIR = DATA_DIR / "scidb_19235_chambers"
 INVENTORY_JSON = DATA_DIR / "raw_data_inventory.json"
 
@@ -66,8 +65,8 @@ plt.rcParams.update({
 })
 
 # Voxel pitches documented in repo
-DX_RECON_UM = 0.196214  # sqrt(0.0385 um^2) from feilab summary.m line 18
-DX_FWHM_UM = 0.320      # Optical FWHM cited in data_dictionary.md / data_registry.csv
+DX_RECON_UM = VOXEL_UM        # sqrt(0.0385 um^2) from feilab summary.m line 18
+DX_FWHM_UM = OPTICAL_FWHM_UM  # Optical FWHM cited in data_dictionary.md / data_registry.csv
 
 
 def norm_percentile(img: np.ndarray, vmin: float, vmax: float) -> np.ndarray:

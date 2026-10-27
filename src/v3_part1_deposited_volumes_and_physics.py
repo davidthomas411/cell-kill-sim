@@ -48,16 +48,14 @@ from build_physically_constrained_4d_shapes import (
     shade_mesh_phong,
 )
 
-ROOT = Path("/Users/dxt397/Documents/_PROJECTS/Cell-Kill-Sim")
-DATA_DIR = ROOT / "data"
-FIG_DIR = ROOT / "figures"
-VID_DIR = ROOT / "videos"
-ART_DIR = Path("/Users/dxt397/.gemini/antigravity/brain/f144e2e4-ff67-494b-b7e7-94fad918619d")
+from paths import REPO_ROOT as ROOT, DATA_DIR, FIGURES_DIR as FIG_DIR, VIDEOS_DIR as VID_DIR
+from constants import VOXEL_UM
+ART_DIR = FIG_DIR
 CHAMBER_DIR = DATA_DIR / "scidb_19235_chambers"
 SAMPLE_DIR = DATA_DIR / "scidb_19235_samples"
 
-DX_UM = 0.320  # Isotropic 0.320 x 0.320 x 0.320 um voxel pitch (HBOPM light-sheet, Wang et al. 2024)
-VOX_VOL_UM3 = DX_UM ** 3  # 0.032768 um^3 per voxel
+DX_UM = VOXEL_UM  # Lateral voxel pitch of the deposited 256x256 ROI grid (from feilab summary.m sqrt(0.0385 um^2))
+VOX_VOL_UM3 = DX_UM ** 3  # Voxel volume in um^3 per voxel
 
 plt.rcParams.update({
     "font.family": "sans-serif",
@@ -582,7 +580,7 @@ def load_deposited_chamber_frame(chamber_folder: Path, frame_str: str, instance_
         np.clip((0.92 * s_gate_xz + 0.14 * xz_561 + 0.10 * xz_488) * weight_xz, 0.0, 1.0),
     ], axis=-1)
 
-    # Compute exact 3D geometric & synaptic metrics on the 0.320 um 3D grid (matching step3_analysis.m & synapse_tracking.m)
+    # Compute exact 3D geometric & synaptic metrics on the DX_UM 3D grid (matching step3_analysis.m & synapse_tracking.m)
     vol_cart_um3 = float(np.sum(mask_cart_3d) * VOX_VOL_UM3)
     vol_tgt_um3 = float(np.sum(mask_tgt_3d) * VOX_VOL_UM3)
     vol_actin_um3 = float(np.sum(mask_actin_3d) * VOX_VOL_UM3)
@@ -1249,8 +1247,8 @@ def build_visual_13_deposited(twin_results: list, df_sum_sc: pd.DataFrame):
     )
     fig.text(
         0.5, 0.925,
-        f"Source: ScienceDB 10.57760/sciencedb.19235 ((3, 166, 256, 256) uint16 & *_predictions.h5 uint8 Labels 1-4, dx = 0.320 um) · "
-        f"Zero MP4 Frames / Zero Burned-In Text · Mean 3D Mask Fit IoU = {mean_iou:.3f} (RMSE = {mean_rmse:.2f} um vs 0.32 um Voxel) · "
+        f"Source: ScienceDB 10.57760/sciencedb.19235 ((3, 166, 256, 256) uint16 & *_predictions.h5 uint8 Labels 1-4, dx = {DX_UM:.4f} um) · "
+        f"Zero MP4 Frames / Zero Burned-In Text · Mean 3D Mask Fit IoU = {mean_iou:.3f} (RMSE = {mean_rmse:.2f} um vs {DX_UM:.4f} um Voxel) · "
         f"Colored-Pixel Ratio (Twin/Real) = {mean_px_ratio:.2f}x",
         ha="center", fontsize=7.8, fontweight="bold", color="#111111",
         bbox=dict(boxstyle="square,pad=0.25", fc="#F6F6F6", ec="#111111", lw=0.9)
