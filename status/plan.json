@@ -24,7 +24,7 @@
       "id": "4",
       "title": "Build per-cell death labels",
       "status": "in_progress",
-      "note": "Pilot on groups 1-3; 3D lab rule and projection rule agree on death onset in the 2 raw chambers. Projections for all 13 experiments downloaded. Next: run labels on all chambers."
+      "note": "Labels for all 502 chambers. Sustained rule vs paper: high-killing 58% vs 57%, low-killing 37% vs 27%, dasatinib 4.9% vs 4.5%. Contact-to-death survival curves separate the three regimes. To fix: count only the contacted target, exclude the MIP_ROI_0 late artifact, report a 200-min window."
     },
     {
       "id": "5",
