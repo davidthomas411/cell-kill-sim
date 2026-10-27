@@ -30,7 +30,7 @@
       "id": "5",
       "title": "Describe every chamber, and 10-20 in depth",
       "status": "in_progress",
-      "note": "Resolution check running (Antigravity): z vs xy voxel size, mask-to-membrane distance, smallest surface feature the masks keep. Descriptors come after."
+      "note": "Resolution check done: masks keep surface features above ~1.4 um wavelength (~0.7-1 um bumps); finer topography needs raw intensities. Mask surface sits 0.72 um outside the membrane. z pitch unresolved (0.196 or ~0.24 um). Next: descriptors at >=1.4 um scale."
     },
     {
       "id": "check",
