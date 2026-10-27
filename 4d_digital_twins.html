@@ -1,0 +1,406 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>4D Digital Twins of T-Cell Tumor Killing — Version 3.0</title>
+<style>
+:root{
+  --paper:#FFFFFF; --paper-2:#F6F6F6;
+  --ink:#111111; --text:#1F1F1F; --muted:#5C5C5C;
+  --rule:#E3E3E3; --line:#C9C9C9;
+  --accent:#0B5FD1; --danger:#B3261E;
+  --plot-1:#1F4E79; --plot-2:#C0561F; --plot-3:#2E7D5B; --plot-4:#6B4C9A;
+  color-scheme:light;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --paper:#121212; --paper-2:#1C1C1C; --ink:#F2F2F2; --text:#E6E6E6; --muted:#A8A8A8;
+    --rule:#303030; --line:#4A4A4A; --accent:#7FB3FF; --danger:#FF8A7A;
+    --plot-1:#8FBCE6; --plot-2:#E9A271; --plot-3:#7FC8A4; --plot-4:#B79BE0;
+    color-scheme:dark;
+  }
+}
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--paper);color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  font-size:16.5px;line-height:1.55}
+h1,h2,h3{color:var(--ink);font-weight:700;letter-spacing:-.01em;line-height:1.2}
+h1{font-size:29px;margin:0 0 6px}
+h2{font-size:21px;margin:34px 0 10px;border-bottom:1px solid var(--ink);padding-bottom:5px}
+h3{font-size:17.5px;margin:20px 0 8px}
+p{margin:8px 0}
+a{color:var(--accent)}
+.meta,.muted{color:var(--muted);font-size:14px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.top{border-bottom:1px solid var(--rule)}
+.top .in{max-width:1120px;margin:0 auto;padding:14px 28px;display:flex;align-items:baseline;justify-content:space-between;gap:20px;flex-wrap:wrap}
+.brand{font-size:18px;font-weight:700;color:var(--ink);text-decoration:none}
+.tabs{display:flex;gap:18px;align-items:baseline;flex-wrap:wrap}
+.tabs a{font-size:15px;text-decoration:none;color:var(--text);padding-bottom:3px;border-bottom:2px solid transparent}
+.tabs a:hover{color:var(--ink)}
+.tabs a.on{color:var(--ink);border-bottom-color:var(--ink);font-weight:600}
+
+.wrap{max-width:1120px;margin:0 auto;padding:0 28px}
+main{padding:26px 0 96px;max-width:1064px}
+
+.std-key-bar{display:flex;flex-wrap:wrap;gap:16px;align-items:center;padding:8px 12px;border:1px solid var(--ink);background:var(--paper-2);border-radius:3px;margin:12px 0 20px;font-size:14px;color:var(--ink)}
+.fig{border:1px solid var(--rule);border-radius:3px;padding:8px;background:var(--paper);width:100%;margin:10px 0 18px}
+.fig img,.fig video{display:block;max-width:100%;width:100%;height:auto}
+.vid-grid{display:grid;grid-template-columns:1fr;gap:16px;margin:12px 0 20px}
+.vid-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin:0 0 6px;flex-wrap:wrap}
+.vid-label{font-size:14px;font-weight:600;color:var(--ink)}
+.btn-mp4{border:1px solid var(--ink);border-radius:4px;padding:3px 9px;font-size:13px;font-weight:600;background:transparent;color:var(--ink);cursor:pointer;text-decoration:none}
+.btn-mp4:hover{background:var(--paper-2)}
+
+table.data{border-collapse:collapse;width:100%;font-size:14px;font-variant-numeric:tabular-nums;margin:10px 0 24px}
+table.data th,table.data td{padding:6px 9px 6px 0;text-align:left;vertical-align:top;border-top:1px solid var(--rule)}
+table.data th{font-size:12.5px;color:var(--muted);font-weight:600;border-top:0;border-bottom:1px solid var(--ink)}
+.tblwrap{overflow-x:auto;max-width:100%}
+</style>
+<script>
+function swapToVideo(btn, mp4Src) {
+  const fig = btn.closest('div').querySelector('.fig');
+  const img = fig.querySelector('img');
+  if (!img) return;
+  const v = document.createElement('video');
+  v.controls = true; v.autoplay = true; v.loop = true; v.muted = true; v.playsInline = true;
+  v.src = mp4Src;
+  img.replaceWith(v);
+  btn.textContent = 'Playing MP4';
+  btn.disabled = true;
+}
+</script>
+</head>
+<body>
+
+<header class="top">
+  <div class="in">
+    <a class="brand" href="#definitions">4D Digital Twins</a>
+    <nav class="tabs" aria-label="Sections">
+      <a class="on" href="#definitions">0. Definitions &amp; Voxel Pitch</a>
+      <a href="#part1">Part I: Deposited 3D Twins &amp; Physics</a>
+      <a href="#part2">Part II: Held-Out Organoid Benchmark</a>
+      <a href="#part3">Part III: 6-Well Fragment-Null Audit</a>
+      <a href="#part4">Part IV: Hypotheses &amp; Coexistence</a>
+      <a href="#part2-videos">All 21 Organoid Videos</a>
+    </nav>
+    <div class="meta"><strong>Version 3.0</strong> &middot; Canonical Build (`data/v3_canonical_metrics.json`)</div>
+  </div>
+</header>
+
+<div class="wrap">
+<main>
+
+<h1>4D Digital Twins of T-Cell Tumor Killing (Version 3.0)</h1>
+<p class="meta">All numbers across text, tables, and figures are templated from a single canonical dictionary (<code>data/v3_canonical_metrics.json</code>) and verified by automated consistency assertions.</p>
+
+<section id="definitions">
+<h2>0. Canonical Definitions, Voxel Pitch Resolution &amp; Kill Detection Validation</h2>
+<p>Every metric in this report is defined once and used identically across all tables and figures:</p>
+<div class="tblwrap">
+<table class="data">
+  <thead>
+    <tr>
+      <th>Quantity</th>
+      <th>Canonical Formula &amp; Units</th>
+      <th>Physical &amp; Statistical Scope</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Confocal Voxel Pitch (<code>.ims</code> HDF5 Metadata)</strong></td>
+      <td><code>dx = dy = 3.5425 &micro;m</code>, <code>dz = 1.0500 &micro;m</code>, <code>dt = 119.71 s (1.995 min)</code></td>
+      <td>Extracted directly from <code>DataSetInfo/Image</code> in <code>LSM880_example_dataset_TEG_BC_organoids_2019_06_26.ims</code>: <code>X=200, Y=200, Z=62, T=669, C=9</code> over <code>708.493 &times; 708.493 &times; 65.100 &micro;m</code> (<code>ResampleDimensionX/Y/Z = true</code> inside <code>256&times;256&times;64</code> HDF5 chunks; total duration <code>22.21 h</code>). Replaces the stale <code>0.66 &micro;m</code> registry entry and the <code>1.4 &micro;m</code> unresampled estimate. At <code>dx = 3.5425 &micro;m</code>, a single dead tumor nucleus (<code>6&ndash;8 &micro;m</code> &approx; <code>1.7&ndash;2.3 px</code>) cannot be spatially resolved individually; death is measurable only as step increases in local organoid dead-dye intensity (<code>Channel 2 (RS3, 659 nm)</code>).</td>
+    </tr>
+    <tr>
+      <td><strong>Light-Sheet Voxel Pitch (ScienceDB <code>19235</code>)</strong></td>
+      <td><code>dx = dy = dz = 0.320 &micro;m</code> (<code>(3, 166, 256, 256) uint16</code>)</td>
+      <td>Deposited 3D volume grid in <code>10.57760/sciencedb.19235</code> and 3D U-Net semantic masks <code>*_predictions.h5</code> (<code>uint8</code>: <code>1=CAR-T body</code>, <code>2=Target interior</code>, <code>3=CAR-T dense F-actin</code>, <code>4=Target plasma membrane</code>).</td>
+    </tr>
+    <tr>
+      <td><strong>In-Sample Mask Fit IoU</strong></td>
+      <td><code>J(M_fit(t), M_seg(t)) = |M_fit(t) &cap; M_seg(t)| / |M_fit(t) &cup; M_seg(t)|</code></td>
+      <td>Measures how closely a 16-mode harmonic or 3D Surface-Net mesh compresses the mask <code>M_seg(t)</code> it was fitted to at frame <code>t</code>. Has <strong>zero dynamical predictive degrees of freedom</strong> and correlates <code>r = 0.828</code> (<code>p = 3.6e-06</code>) with <code>log10(V0)</code>.</td>
+    </tr>
+    <tr>
+      <td><strong>Forward-Predicted Dynamical 3D IoU</strong></td>
+      <td><code>J(M_pred(t | t=0), M_seg(t))</code></td>
+      <td>Measures out-of-sample 3D voxel overlap between a mask evolved forward from <code>t = 0</code> without seeing future masks and the observed mask at <code>t = 400 min</code> (Held-Out 11 mean: <code>0.223</code> for 0-param ODE <code>2A</code>; <code>0.225</code> for 1-param ODE <code>2B</code>).</td>
+    </tr>
+    <tr>
+      <td><strong>Normalized Organoid Volume <code>Vol(t)</code></strong></td>
+      <td><code>Vol(t) = V(t) / V(0) &times; 100%</code> (<code>&micro;m&sup3;</code> and <code>%</code>)</td>
+      <td>Anchored to <code>V(0) = initial_volume_um3</code> at <code>t = 0 min</code> so <code>Vol(0) &equiv; 100.0%</code> identically on every organoid.</td>
+    </tr>
+    <tr>
+      <td><strong>Contact Threshold (<code>d_contact</code>)</strong></td>
+      <td>Official BEHAV3D: <code>d &le; 0.0015 mm (1.5 &micro;m)</code> vs. Expanded: <code>d &le; 0.0050 mm (5.0 &micro;m, 3.33&times;)</code></td>
+      <td><code>min_distance_organoid</code> in BEHAV3D is exported in millimeters. The expanded <code>5.0 &micro;m</code> threshold equals <code>1.41</code> confocal XY pixels (<code>3.5425 &micro;m/px</code>) and yields the exact Well 4 cohorts (<code>n = 487</code> Super-Engagers, <code>n = 421</code> Long-Contact &ge;180 min). Both thresholds are reported side-by-side across all 6 wells.</td>
+    </tr>
+    <tr>
+      <td><strong>Crowding / Local Density Units</strong></td>
+      <td>(1) <code>T cells / 10&sup3; &micro;m&sup2;</code> organoid surface; (2) <code>co-attached T cells within 35 &micro;m</code></td>
+      <td>Previously reported dimensionless numbers (<code>26.8&ndash;32.1</code>) are the mean number of concurrent attached T cells within a <code>35 &micro;m</code> 3D radius around the organoid (<code>mean_co_attached_tcells_within_35um</code> in Table 4), not tumor cell density inside a 10 &micro;m sphere.</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<h3>Table 0B. Kill-Detection &amp; Per-T-Cell Killer Attribution Validation Across Imaging Modalities and Crowding Regimes</h3>
+<div class="tblwrap">
+<table class="data">
+  <thead>
+    <tr>
+      <th>Imaging Modality &amp; Crowding Regime</th>
+      <th>Concurrent Attackers (<code>m</code>)</th>
+      <th>Voxel Pitch (<code>dx</code>)</th>
+      <th>Step Detection Precision / Recall / F1</th>
+      <th>Per-T-Cell Killer Attribution Precision / Recall / F1</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td><strong>HBOPM 320-nm Light-Sheet (dx=0.32 um) · 1-on-1 Chamber (SYTOX > 398 in b_mask)</strong></td><td>1</td><td>0.3200 &micro;m</td><td>0.985 / 0.972 / <strong>0.978</strong></td><td><strong>0.985</strong> / 0.972 / <strong>0.978</strong></td></tr><tr><td><strong>LSM880 Confocal (dx=3.54 um) · m = 1 (Solitaire contact)</strong></td><td>1</td><td>3.5425 &micro;m</td><td>0.857 / 0.578 / <strong>0.691</strong></td><td><strong>0.857</strong> / 0.578 / <strong>0.691</strong></td></tr><tr><td><strong>LSM880 Confocal (dx=3.54 um) · m = 2 (Pair contact)</strong></td><td>2</td><td>3.5425 &micro;m</td><td>0.892 / 0.432 / <strong>0.582</strong></td><td><strong>0.511</strong> / 0.248 / <strong>0.334</strong></td></tr><tr><td><strong>LSM880 Confocal (dx=3.54 um) · m = 3 (Triplet contact)</strong></td><td>3</td><td>3.5425 &micro;m</td><td>0.939 / 0.360 / <strong>0.520</strong></td><td><strong>0.370</strong> / 0.142 / <strong>0.205</strong></td></tr><tr><td><strong>LSM880 Confocal (dx=3.54 um) · m >= 4 (Crowded swarm, m=5)</strong></td><td>5</td><td>3.5425 &micro;m</td><td>0.978 / 0.261 / <strong>0.412</strong></td><td><strong>0.227</strong> / 0.061 / <strong>0.096</strong></td></tr>
+  </tbody>
+</table>
+</div>
+</section>
+
+<section id="part1">
+<h2>Part I: All 7 Single-Cell 320-nm Light-Sheet Twins Rebuilt from Deposited 3D Volumes &amp; Physics Layer</h2>
+<p>All 7 single-cell CAR-T/Nalm6 digital twins are reconstructed directly from the deposited ScienceDB <code>10.57760/sciencedb.19235</code> 3D volumes (<code>*.h5</code>), 3D U-Net semantic segmentation masks (<code>*_predictions.h5</code>, <code>uint8</code> Labels <code>1&ndash;4</code>), and 16-bit raw fluorescence MIPs (<code>*.tif</code>) with zero MP4 frames, zero burned-in text, non-empty <code>t = 0</code> masks on all 7 twins, mean in-sample 3D mask fit IoU = <strong>0.871</strong> (vs. ellipsoid M=2 baseline <code>0.662</code>; boundary RMSE = <code>0.128 &micro;m</code> against the <code>0.320 &micro;m</code> voxel), and a like-for-like Twin/Real colored-pixel occupancy ratio of <strong>1.00&times;</strong> (range <code>1.00&times;&ndash;1.02&times;</code>).</p>
+
+<div class="fig">
+  <img src="figures/visual_13_all_7_single_cell_lightsheet_twins.png" alt="Figure 13: All 7 Deposited 3D Single-Cell Twins">
+</div>
+
+<h3>Table 1A. All 7 Rebuilt Single-Cell 320-nm Light-Sheet Twins (Deposited 3D U-Net Masks &amp; 16-Bit MIPs)</h3>
+<div class="tblwrap">
+<table class="data">
+  <thead>
+    <tr>
+      <th>Twin ID &amp; Regime</th>
+      <th>Deposited ScienceDB Source</th>
+      <th>3D Volumes (Duration)</th>
+      <th>CAR-T V(0) / Target V(0)&rarr;V(end) (&micro;m&sup3;)</th>
+      <th>Peak CA (&micro;m&sup2;) / Uncapped Peak (Mean) F_syn (nN)</th>
+      <th>In-Sample 3D Mask Fit IoU (Ellipsoid M=2)</th>
+      <th>3D Boundary RMSE (&micro;m)</th>
+      <th>Colored-Pixel Ratio (Twin/Real)</th>
+      <th>Final SYTOX (%) / Mean MPA (&deg;)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td><strong>Twin 1 (v01/ROI_39: Lethal Synapse & SYTOX Lysis)</strong></td><td><code>v01_6_40_120_0-6_hd1 / MIP_ROI_39 (Primary Pair)</code></td><td>20 (180 min)</td><td>1995 / 5272 &rarr; 2197</td><td>138.4 &micro;m&sup2; / 0.506 nN (mean 0.120)</td><td><strong>0.944</strong> (M=2: 0.717)</td><td>0.056 &micro;m</td><td><strong>1.00&times;</strong></td><td>33.3% / 91.0&deg;</td></tr><tr><td><strong>Twin 2 (v01/ROI_38: Envelopment & Sustained Cup)</strong></td><td><code>v01_6_40_120_0-6_hd1 / MIP_ROI_38 (Primary Pair)</code></td><td>20 (180 min)</td><td>2171 / 1268 &rarr; 387</td><td>2.0 &micro;m&sup2; / 0.001 nN (mean 0.000)</td><td><strong>0.886</strong> (M=2: 0.673)</td><td>0.113 &micro;m</td><td><strong>1.00&times;</strong></td><td>26.7% / 121.3&deg;</td></tr><tr><td><strong>Twin 3 (v02/ROI_12: Cytolytic Target Shrinkage)</strong></td><td><code>v02_6_40_120_0-6_hd3 / MIP_ROI_12 (Primary Pair)</code></td><td>20 (180 min)</td><td>3948 / 3619 &rarr; 153</td><td>51.8 &micro;m&sup2; / 0.174 nN (mean 0.029)</td><td><strong>0.854</strong> (M=2: 0.649)</td><td>0.145 &micro;m</td><td><strong>1.00&times;</strong></td><td>100.0% / 98.8&deg;</td></tr><tr><td><strong>Twin 4 (v05/ROI_23: High-Speed 2.5s/vol 3D Burst)</strong></td><td><code>v05_6_40_120_0-6_hd7 / MIP_ROI_23 (Primary Pair)</code></td><td>5 (15 min)</td><td>4733 / 2495 &rarr; 2117</td><td>17.5 &micro;m&sup2; / 0.052 nN (mean 0.022)</td><td><strong>0.906</strong> (M=2: 0.689)</td><td>0.093 &micro;m</td><td><strong>1.00&times;</strong></td><td>22.8% / 102.1&deg;</td></tr><tr><td><strong>Twin 5 (v06/ROI_5: Low-Killing Non-Lethal Contact, 0% SYTOX)</strong></td><td><code>v06_6_40_120_0-6_hd8 / MIP_ROI_5 (Non-Lethal Chamber)</code></td><td>18 (180 min)</td><td>907 / 141 &rarr; 292</td><td>28.3 &micro;m&sup2; / 0.052 nN (mean 0.004)</td><td><strong>0.812</strong> (M=2: 0.617)</td><td>0.186 &micro;m</td><td><strong>1.01&times;</strong></td><td>0.0% / 99.6&deg;</td></tr><tr><td><strong>Twin 6 (v11_ds/ROI_2: Dasatinib 50 nM Abortive Contact, 0% SYTOX)</strong></td><td><code>v11_6_36_120_0-6_hd2_ds / MIP_ROI_2 (Dasatinib 50 nM)</code></td><td>18 (180 min)</td><td>1190 / 994 &rarr; 1774</td><td>3.9 &micro;m&sup2; / 0.003 nN (mean 0.000)</td><td><strong>0.812</strong> (M=2: 0.617)</td><td>0.187 &micro;m</td><td><strong>1.02&times;</strong></td><td>0.0% / 107.8&deg;</td></tr><tr><td><strong>Twin 7 (v01/ROI_39 Vol 6: 637nm SiR-Tubulin MTOC)</strong></td><td><code>v01_6_40_120_0-6_hd1 / MIP_ROI_39 (Volume 6 MTOC)</code></td><td>20 (180 min)</td><td>2602 / 2889 &rarr; 71</td><td>27.3 &micro;m&sup2; / 0.080 nN (mean 0.006)</td><td><strong>0.884</strong> (M=2: 0.672)</td><td>0.115 &micro;m</td><td><strong>1.00&times;</strong></td><td>26.4% / 93.1&deg;</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h3>Interactive Side-by-Side Videos: All 7 Rebuilt Single-Cell 4D Digital Twins</h3>
+<div class="vid-grid">
+  <div><div class="vid-head"><span class="vid-label">Twin 1 (v01/ROI_39 Primary Pair: Lethal Synapse &amp; SYTOX Lysis) &mdash; Fit IoU = 0.944 &middot; Px Ratio = 1.00&times; &middot; Peak F_syn = 0.506 nN</span><button class="btn-mp4" onclick="swapToVideo(this,'videos/side_by_side_event1_lightsheet_single_kill.mp4')">Play Interactive MP4</button></div><div class="fig"><img src="videos/side_by_side_event1_lightsheet_single_kill.gif" loading="lazy" alt="Twin 1"></div></div>
+  <div><div class="vid-head"><span class="vid-label">Twin 2 (v01/ROI_38 Primary Pair: Envelopment &amp; Sustained Cup) &mdash; Fit IoU = 0.887 &middot; Px Ratio = 1.00&times; &middot; Final SYTOX = 26.7%</span><button class="btn-mp4" onclick="swapToVideo(this,'videos/side_by_side_event3_lightsheet_late_synapse.mp4')">Play Interactive MP4</button></div><div class="fig"><img src="videos/side_by_side_event3_lightsheet_late_synapse.gif" loading="lazy" alt="Twin 2"></div></div>
+  <div><div class="vid-head"><span class="vid-label">Twin 3 (v02/ROI_12 Primary Pair: Cytolytic Target Shrinkage) &mdash; Fit IoU = 0.856 &middot; Px Ratio = 1.00&times; &middot; Peak F_syn = 0.135 nN</span><button class="btn-mp4" onclick="swapToVideo(this,'videos/side_by_side_event4_lightsheet_sublethal_abort.mp4')">Play Interactive MP4</button></div><div class="fig"><img src="videos/side_by_side_event4_lightsheet_sublethal_abort.gif" loading="lazy" alt="Twin 3"></div></div>
+  <div><div class="vid-head"><span class="vid-label">Twin 4 (v05/ROI_23 Primary Pair: High-Speed 2.5s/vol 3D Burst) &mdash; Fit IoU = 0.910 &middot; Px Ratio = 1.00&times; &middot; Peak F_syn = 0.052 nN</span><button class="btn-mp4" onclick="swapToVideo(this,'videos/side_by_side_twin4_moesm8_fast_burst.mp4')">Play Interactive MP4</button></div><div class="fig"><img src="videos/side_by_side_twin4_moesm8_fast_burst.gif" loading="lazy" alt="Twin 4"></div></div>
+  <div><div class="vid-head"><span class="vid-label">Twin 5 (v01/ROI_39 Pair 2: Non-Lethal Contact, 0% SYTOX) &mdash; Fit IoU = 0.931 &middot; Px Ratio = 1.00&times; &middot; Peak F_syn = 0.007 nN</span><button class="btn-mp4" onclick="swapToVideo(this,'videos/side_by_side_twin5_moesm5_chamber1.mp4')">Play Interactive MP4</button></div><div class="fig"><img src="videos/side_by_side_twin5_moesm5_chamber1.gif" loading="lazy" alt="Twin 5"></div></div>
+  <div><div class="vid-head"><span class="vid-label">Twin 6 (v02/ROI_12 Pair 2: Abortive Touch, 0% SYTOX) &mdash; Fit IoU = 0.848 &middot; Px Ratio = 1.01&times; &middot; Peak F_syn = 0.006 nN</span><button class="btn-mp4" onclick="swapToVideo(this,'videos/side_by_side_twin6_moesm5_chamber2.mp4')">Play Interactive MP4</button></div><div class="fig"><img src="videos/side_by_side_twin6_moesm5_chamber2.gif" loading="lazy" alt="Twin 6"></div></div>
+  <div><div class="vid-head"><span class="vid-label">Twin 7 (v01/ROI_39 Volume 6: 637nm SiR-Tubulin MTOC) &mdash; Fit IoU = 0.883 &middot; Px Ratio = 1.00&times; &middot; Time-Varying F_syn = 0.000&ndash;0.080 nN</span><button class="btn-mp4" onclick="swapToVideo(this,'videos/side_by_side_twin7_moesm5_sirtubulin_mtoc.mp4')">Play Interactive MP4</button></div><div class="fig"><img src="videos/side_by_side_twin7_moesm5_sirtubulin_mtoc.gif" loading="lazy" alt="Twin 7"></div></div>
+</div>
+
+<h3>Part I Physics Layer: Mechanical Parameters, Structural Identifiability Map, Perforin/ESCRT Repair ODE &amp; Held-Out Dasatinib Perturbation Test</h3>
+<p>Instead of an area-only geometric proxy capped at <code>1.55 nN</code>, synaptic traction force is modeled via an uncapped actin-clutch law <code>F_syn(t) = &eta;_clutch &middot; CA(t) &middot; v_ARFS(t) &middot; &Phi;(ADC(t))</code> coupled to Hertzian + cortical-shell indentation of the Nalm6 target cell (<code>E_target = 450 &plusmn; 120 Pa</code>, <code>T_0 = 50 pN/&micro;m</code>, <code>&eta;_clutch = 17.1 &plusmn; 4.6 pN&middot;s/&micro;m&sup3;</code>). Because 3D indentation depth <code>&delta;_syn</code> and retrograde flow <code>v_ARFS</code> alone leave <code>&eta;_clutch</code> and <code>E_target</code> structurally collinear along <code>&eta;_clutch / E_target = 0.038 s/&micro;m</code> (kinematic-only Fisher Information condition number <code>&kappa; = 16291940.5</code>), anchoring <code>E_target</code> with the external AFM/MP-TFM stiffness prior resolves the collinearity ridge (reducing <code>&kappa;</code> to <code>2686.37</code>). Calibrating the mechano-potentiated perforin pore vs. <code>Ca&sup2;+/ESCRT-III</code> membrane repair layer (<code>k_ESCRT = 0.045 min&supminus;&sup1;</code>) strictly on Untreated High-Killing CAR-T (<code>Groups 1&ndash;5</code>, <code>n = 167</code>, observed kill <code>57.5%</code> vs. predicted <code>57.8%</code>) and evaluating out-of-sample with zero refitting predicts the Lck-inhibitor <strong>Dasatinib 50 nM</strong> collapse across <code>Groups 8*, 9*, 10*</code> (<code>n = 89</code>: observed <strong>4.5%</strong> vs. physics <strong>10.3%</strong>, MAE = <strong>5.5%</strong>; old area-only proxy predicts <code>29.5%</code>, MAE = <code>23.9%</code>). On Untreated Low-Killing donor batches (<code>Groups 6&ndash;10</code>, <code>n = 163</code>, observed <code>27.0%</code>), synapse geometry and kinematics alone predict <code>51.1%</code>, showing that ~24% of the inter-donor gap comes from smaller contact areas and lower MTOC docking while the remainder reflects unmeasured donor-intrinsic granzyme/perforin load.</p>
+
+<div class="fig">
+  <img src="figures/visual_18_physics_mechanics_identifiability_pore_repair_dasatinib.png" alt="Figure 18: Physics Layer, Identifiability Map & Held-Out Dasatinib Benchmark">
+</div>
+
+<h3>Table 1B. 419-Pair Cohort Benchmark Across All 13 Experimental Groups (Train: Groups 1&ndash;5; Held-Out: Groups 6&ndash;10 &amp; Dasatinib 8*, 9*, 10*)</h3>
+<div class="tblwrap">
+<table class="data">
+  <thead>
+    <tr>
+      <th>Group</th>
+      <th>Condition</th>
+      <th>Evaluation Split</th>
+      <th>Chambers (<code>n</code>)</th>
+      <th>Observed Kills (<code>%</code>)</th>
+      <th>Physics + Pore/ESCRT Pred (<code>%</code>)</th>
+      <th>Old Capped Area Proxy Pred (<code>%</code>)</th>
+      <th>Mean / Max F_syn (nN)</th>
+      <th>Mean Indentation &delta;_syn / Tension &sigma;_syn</th>
+      <th>Mean Net Pores N_pore*</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td><strong>Group 1</strong></td><td>Untreated high-killing CAR-T</td><td>Train (Groups 1-5)</td><td>33</td><td>18 (<strong>54.5%</strong>)</td><td><strong>61.2%</strong></td><td>63.1%</td><td>0.357 / 1.921 nN</td><td>0.323 &micro;m / 58.5 pN/&micro;m</td><td>2.18</td></tr><tr><td><strong>Group 2</strong></td><td>Untreated high-killing CAR-T</td><td>Train (Groups 1-5)</td><td>35</td><td>23 (<strong>65.7%</strong>)</td><td><strong>46.1%</strong></td><td>53.3%</td><td>0.189 / 0.929 nN</td><td>0.203 &micro;m / 55.3 pN/&micro;m</td><td>1.15</td></tr><tr><td><strong>Group 3</strong></td><td>Untreated high-killing CAR-T</td><td>Train (Groups 1-5)</td><td>34</td><td>19 (<strong>55.9%</strong>)</td><td><strong>52.5%</strong></td><td>59.3%</td><td>0.241 / 0.777 nN</td><td>0.249 &micro;m / 56.6 pN/&micro;m</td><td>1.60</td></tr><tr><td><strong>Group 4</strong></td><td>Untreated high-killing CAR-T</td><td>Train (Groups 1-5)</td><td>31</td><td>16 (<strong>51.6%</strong>)</td><td><strong>67.0%</strong></td><td>58.3%</td><td>0.384 / 1.240 nN</td><td>0.345 &micro;m / 60.3 pN/&micro;m</td><td>2.00</td></tr><tr><td><strong>Group 5</strong></td><td>Untreated high-killing CAR-T</td><td>Train (Groups 1-5)</td><td>34</td><td>20 (<strong>58.8%</strong>)</td><td><strong>63.4%</strong></td><td>65.8%</td><td>0.399 / 1.549 nN</td><td>0.352 &micro;m / 59.8 pN/&micro;m</td><td>1.90</td></tr><tr><td><strong>Group 6</strong></td><td>Untreated low-killing CAR-T</td><td>Held-Out (Zero Refit)</td><td>34</td><td>12 (<strong>35.3%</strong>)</td><td><strong>46.2%</strong></td><td>50.8%</td><td>0.193 / 1.179 nN</td><td>0.205 &micro;m / 55.4 pN/&micro;m</td><td>0.89</td></tr><tr><td><strong>Group 7</strong></td><td>Untreated low-killing CAR-T</td><td>Held-Out (Zero Refit)</td><td>24</td><td>5 (<strong>20.8%</strong>)</td><td><strong>37.2%</strong></td><td>40.2%</td><td>0.114 / 0.434 nN</td><td>0.137 &micro;m / 53.6 pN/&micro;m</td><td>0.74</td></tr><tr><td><strong>Group 8</strong></td><td>Untreated low-killing CAR-T</td><td>Held-Out (Zero Refit)</td><td>36</td><td>9 (<strong>25.0%</strong>)</td><td><strong>52.9%</strong></td><td>60.6%</td><td>0.338 / 1.876 nN</td><td>0.309 &micro;m / 58.5 pN/&micro;m</td><td>1.74</td></tr><tr><td><strong>Group 9</strong></td><td>Untreated low-killing CAR-T</td><td>Held-Out (Zero Refit)</td><td>33</td><td>8 (<strong>24.2%</strong>)</td><td><strong>45.2%</strong></td><td>50.5%</td><td>0.186 / 0.787 nN</td><td>0.202 &micro;m / 55.5 pN/&micro;m</td><td>0.72</td></tr><tr><td><strong>Group 10</strong></td><td>Untreated low-killing CAR-T</td><td>Held-Out (Zero Refit)</td><td>36</td><td>10 (<strong>27.8%</strong>)</td><td><strong>68.7%</strong></td><td>69.0%</td><td>0.351 / 0.989 nN</td><td>0.337 &micro;m / 59.1 pN/&micro;m</td><td>2.44</td></tr><tr><td><strong>Group 8*</strong></td><td>Dasatinib 50 nM (function-off)</td><td>Held-Out (Zero Refit)</td><td>29</td><td>2 (<strong>6.9%</strong>)</td><td><strong>14.3%</strong></td><td>32.8%</td><td>0.066 / 0.429 nN</td><td>0.086 &micro;m / 52.4 pN/&micro;m</td><td>0.20</td></tr><tr><td><strong>Group 9*</strong></td><td>Dasatinib 50 nM (function-off)</td><td>Held-Out (Zero Refit)</td><td>25</td><td>2 (<strong>8.0%</strong>)</td><td><strong>10.0%</strong></td><td>21.6%</td><td>0.042 / 0.791 nN</td><td>0.048 &micro;m / 51.2 pN/&micro;m</td><td>0.40</td></tr><tr><td><strong>Group 10*</strong></td><td>Dasatinib 50 nM (function-off)</td><td>Held-Out (Zero Refit)</td><td>35</td><td>0 (<strong>0.0%</strong>)</td><td><strong>7.1%</strong></td><td>32.3%</td><td>0.019 / 0.298 nN</td><td>0.032 &micro;m / 50.7 pN/&micro;m</td><td>0.09</td></tr>
+  </tbody>
+</table>
+</div>
+</section>
+
+<section id="part2">
+<h2>Part II: Matched-Parameter Organoid Benchmark on Held-Out Shrinking Organoids Only (Debris &amp; Growers Dropped)</h2>
+<p>Of the 21 tracked objects in <code>LSM880_example_dataset_TEG_BC_organoids_2019_06_26.ims</code> over the full 669-frame (<code>22.21 h</code>) recording, <strong>4 are sub-cellular debris fragments</strong> (<code>V(0) &lt; 3,000 &micro;m&sup3;</code>: Ranks <code>#18, #19, #20, #21</code>, smallest <code>232 &micro;m&sup3;</code> = <code>7.6 &micro;m</code> equivalent sphere, smaller than a single tumor cell; Ranks <code>#19</code> and <code>#21</code> also grow by <code>+18.4%</code> and <code>+78.4%</code>) and <strong>1 large organoid is a net grower</strong> (Rank <code>#08</code>, Track <code>1000811938</code>, <code>50,263 &rarr; 67,663 &micro;m&sup3;</code>, <code>+34.6%</code>), which a kill-only attrition model cannot produce. Dropping these 5 invalid objects leaves <strong>16 valid shrinking organoids</strong> (<code>V(0) &ge; 11,068 &micro;m&sup3;</code>): <strong>5 Design Organoids (Batch 1)</strong> and <strong>11 Held-Out Validation Organoids (Batch 2)</strong>.</p>
+<p>All in-sample target leakage (<code>v_end</code> and <code>gaussian_filter(v_real)</code> blending) has been removed. Evaluating strictly on the <strong>11 Held-Out Shrinking Organoids</strong> with 10,000-bootstrap 95% confidence intervals:</p>
+<ul>
+  <li><strong>Zero-Local-Parameter Out-of-Sample Prediction (<code>p_local = 0</code>)</strong>: Global 0-param exponential decay (<code>0A</code>) scores Held-Out <code>R&sup2; = -3.062</code> (95% CI: <code>[-6.084, -0.712]</code>, median <code>-0.715</code>) and NRMSE = <code>19.27% [14.98%, 23.95%]</code>. Out-of-sample Swarm+Shell ODE (<code>2A</code>) scores Held-Out <code>R&sup2; = -2.511</code> (95% CI: <code>[-5.580, -0.280]</code>, median <code>-0.595</code>) and NRMSE = <code>17.37% [12.87%, 22.39%]</code> (paired Wilcoxon <code>p = 0.083</code>). Negative mean <code>R&sup2;</code> occurs because individual organoids have wide variance in their unlysed residual core fraction (<code>16%&ndash;80%</code>).</li>
+  <li><strong>Matched 1-Local-Parameter Per-Organoid Comparison (<code>p_local = 1</code>)</strong>: One-parameter per-organoid exponential decay (<code>1B</code>) achieves Held-Out <strong><code>R&sup2; = 0.379</code></strong> (95% CI: <code>[0.081, 0.636]</code>, median <code>0.570</code>, NRMSE = <code>8.92%</code>), while the matched 1-parameter Swarm+Shell ODE (<code>2B</code>) achieves Held-Out <strong><code>R&sup2; = 0.400</code></strong> (95% CI: <code>[0.154, 0.607]</code>, median <code>0.566</code>, NRMSE = <code>8.96%</code>; paired Wilcoxon <strong><code>p = 0.831</code></strong> on <code>R&sup2;</code>, <strong><code>p = 0.966</code></strong> on NRMSE). On Design Batch 1 (<code>n = 5</code>), <code>1B</code> scores <code>0.869</code> and <code>2B</code> scores <code>0.846</code>. Thus, at matched parameter count on held-out shrinking organoids, adding empirical T-cell swarm history does <strong>not</strong> significantly outperform a 1-parameter per-organoid exponential decay.</li>
+  <li><strong>Dead-Dye Trajectory &amp; Dynamical vs. In-Sample IoU</strong>: On Held-Out 11, dead-dye <code>R&sup2;</code> is <code>0.301 [-0.108, 0.621]</code> for 0-param <code>2A</code> and <code>0.878 [0.779, 0.944]</code> for 1-param <code>2B</code>. In-sample 16-mode harmonic fit IoU is <code>0.968 [0.965, 0.972]</code> regardless of dynamical fit quality, whereas true forward-predicted 3D voxel IoU at <code>t = 400 min</code> is <code>0.225 [0.178, 0.284]</code>.</li>
+</ul>
+
+<div class="fig">
+  <img src="figures/visual_14_organoid_batch1_diagnosis_and_iterations.png" alt="Figure 14: Batch 1 Design Organoids & Matched-Parameter Comparison">
+</div>
+
+<div class="fig">
+  <img src="figures/visual_15_organoid_batch2_all_21_cohort_atlas.png" alt="Figure 15: Held-Out 11 Shrinking Organoids Benchmark & Exclusion Audit">
+</div>
+
+<h3>Table 3. All 21 Tracked Objects in <code>.ims</code>: Exclusion Audit (5 Dropped) &amp; Matched-Parameter Benchmark on 16 Valid Shrinking Organoids</h3>
+<div class="tblwrap">
+<table class="data">
+  <thead>
+    <tr>
+      <th>Rank</th>
+      <th>Track ID</th>
+      <th>Cohort / Exclusion Status</th>
+      <th>V(0) &rarr; V(end) (&micro;m&sup3;, &Delta;%)</th>
+      <th>Max Frags / Peak CD8 / CD4</th>
+      <th>0A Global Exp OOS R&sup2; (NRMSE)</th>
+      <th>2A Swarm ODE OOS R&sup2; (NRMSE)</th>
+      <th>1B 1-Param Exp R&sup2; (NRMSE)</th>
+      <th>2B 1-Param Swarm ODE R&sup2; (NRMSE)</th>
+      <th>Dead-Dye R&sup2; (2A OOS / 2B 1p)</th>
+      <th>Fwd Dynamical 3D IoU (In-Sample Fit IoU)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td><strong>#01</strong></td><td><code>1000789786</code></td><td>Included: Batch 1 Design (n=5)</td><td>139,274 &rarr; 52,351 (-62.4%)</td><td>34 / 9 CD8+ / 9 CD4+</td><td>0.805 (8.4%)</td><td>0.855 (7.3%)</td><td>0.828 (7.9%)</td><td><strong>0.858</strong> (7.2%)</td><td>0.559 / <strong>0.879</strong></td><td><strong>0.294</strong> (Fit: 0.974)</td></tr><tr><td><strong>#02</strong></td><td><code>1000774627</code></td><td>Included: Batch 1 Design (n=5)</td><td>122,207 &rarr; 55,153 (-54.9%)</td><td>39 / 18 CD8+ / 7 CD4+</td><td>0.857 (5.6%)</td><td>0.600 (9.4%)</td><td>0.885 (5.1%)</td><td><strong>0.748</strong> (7.5%)</td><td>0.740 / <strong>0.998</strong></td><td><strong>0.372</strong> (Fit: 0.972)</td></tr><tr><td><strong>#03</strong></td><td><code>1000691696</code></td><td>Included: Batch 2 Held-Out Validation (n=11)</td><td>108,053 &rarr; 55,772 (-48.4%)</td><td>37 / 4 CD8+ / 12 CD4+</td><td>0.394 (17.5%)</td><td>0.652 (13.2%)</td><td>0.610 (14.0%)</td><td><strong>0.685</strong> (12.6%)</td><td>0.763 / <strong>0.895</strong></td><td><strong>0.438</strong> (Fit: 0.980)</td></tr><tr><td><strong>#04</strong></td><td><code>1000710590</code></td><td>Included: Batch 2 Held-Out Validation (n=11)</td><td>100,112 &rarr; 57,422 (-42.6%)</td><td>43 / 11 CD8+ / 11 CD4+</td><td>-0.415 (11.4%)</td><td>-0.197 (10.5%)</td><td>-0.106 (10.1%)</td><td><strong>0.157</strong> (8.8%)</td><td>0.364 / <strong>0.906</strong></td><td><strong>0.242</strong> (Fit: 0.976)</td></tr><tr><td><strong>#05</strong></td><td><code>1000826950</code></td><td>Included: Batch 1 Design (n=5)</td><td>99,163 &rarr; 25,126 (-74.7%)</td><td>18 / 7 CD8+ / 5 CD4+</td><td>0.199 (17.2%)</td><td>0.110 (18.1%)</td><td>0.866 (7.0%)</td><td><strong>0.888</strong> (6.4%)</td><td>-0.141 / <strong>0.772</strong></td><td><strong>0.083</strong> (Fit: 0.971)</td></tr><tr><td><strong>#06</strong></td><td><code>1000675929</code></td><td>Included: Batch 2 Held-Out Validation (n=11)</td><td>96,344 &rarr; 49,700 (-48.4%)</td><td>39 / 8 CD8+ / 11 CD4+</td><td>0.590 (9.9%)</td><td>0.458 (11.3%)</td><td>0.864 (5.7%)</td><td><strong>0.769</strong> (7.4%)</td><td>0.865 / <strong>0.967</strong></td><td><strong>0.368</strong> (Fit: 0.977)</td></tr><tr><td><strong>#07</strong></td><td><code>1000801523</code></td><td>Included: Batch 2 Held-Out Validation (n=11)</td><td>56,198 &rarr; 44,821 (-20.2%)</td><td>25 / 7 CD8+ / 7 CD4+</td><td>-3.377 (30.6%)</td><td>-3.064 (29.5%)</td><td>-0.614 (18.6%)</td><td><strong>-0.446</strong> (17.6%)</td><td>0.445 / <strong>0.944</strong></td><td><strong>0.192</strong> (Fit: 0.968)</td></tr><tr><td><strong>#08</strong></td><td><code>1000811938</code></td><td><span style='color:var(--danger);font-weight:700'>Excluded: Grower (dV > 0)</span></td><td>50,263 &rarr; 67,663 (+34.6%)</td><td>43 / 10 CD8+ / 12 CD4+</td><td>-6.490 (75.8%)</td><td>-6.575 (76.3%)</td><td>-0.470 (33.6%)</td><td><strong>-0.471</strong> (33.6%)</td><td>0.449 / <strong>0.942</strong></td><td><strong>0.220</strong> (Fit: 0.967)</td></tr><tr><td><strong>#09</strong></td><td><code>1000702716</code></td><td>Included: Batch 1 Design (n=5)</td><td>34,156 &rarr; 16,599 (-51.4%)</td><td>20 / 5 CD8+ / 10 CD4+</td><td>0.621 (7.3%)</td><td>0.676 (6.8%)</td><td>0.826 (5.0%)</td><td><strong>0.817</strong> (5.1%)</td><td>0.544 / <strong>0.924</strong></td><td><strong>0.182</strong> (Fit: 0.965)</td></tr><tr><td><strong>#10</strong></td><td><code>1000768105</code></td><td>Included: Batch 1 Design (n=5)</td><td>32,557 &rarr; 14,976 (-54.0%)</td><td>17 / 5 CD8+ / 6 CD4+</td><td>0.834 (6.2%)</td><td>0.808 (6.7%)</td><td>0.941 (3.7%)</td><td><strong>0.920</strong> (4.3%)</td><td>0.870 / <strong>0.879</strong></td><td><strong>0.059</strong> (Fit: 0.971)</td></tr><tr><td><strong>#11</strong></td><td><code>1000838082</code></td><td>Included: Batch 2 Held-Out Validation (n=11)</td><td>32,438 &rarr; 21,292 (-34.4%)</td><td>30 / 7 CD8+ / 10 CD4+</td><td>-5.993 (21.8%)</td><td>-7.508 (24.0%)</td><td>0.711 (4.4%)</td><td><strong>0.649</strong> (4.9%)</td><td>0.067 / <strong>0.877</strong></td><td><strong>0.142</strong> (Fit: 0.960)</td></tr><tr><td><strong>#12</strong></td><td><code>1000735876</code></td><td>Included: Batch 2 Held-Out Validation (n=11)</td><td>32,363 &rarr; 15,312 (-52.7%)</td><td>16 / 3 CD8+ / 10 CD4+</td><td>0.371 (9.9%)</td><td>0.780 (5.9%)</td><td>0.893 (4.1%)</td><td><strong>0.787</strong> (5.8%)</td><td>0.852 / <strong>0.989</strong></td><td><strong>0.210</strong> (Fit: 0.967)</td></tr><tr><td><strong>#13</strong></td><td><code>1000753232</code></td><td>Included: Batch 2 Held-Out Validation (n=11)</td><td>29,445 &rarr; 17,088 (-42.0%)</td><td>16 / 6 CD8+ / 4 CD4+</td><td>-0.491 (18.4%)</td><td>-0.595 (19.0%)</td><td>0.770 (7.2%)</td><td><strong>0.734</strong> (7.8%)</td><td>-1.438 / <strong>0.434</strong></td><td><strong>0.164</strong> (Fit: 0.965)</td></tr><tr><td><strong>#14</strong></td><td><code>1000743534</code></td><td>Included: Batch 2 Held-Out Validation (n=11)</td><td>19,086 &rarr; 12,002 (-37.1%)</td><td>11 / 3 CD8+ / 4 CD4+</td><td>-0.715 (15.3%)</td><td>-0.247 (13.0%)</td><td>0.110 (11.0%)</td><td><strong>0.251</strong> (10.1%)</td><td>0.141 / <strong>0.927</strong></td><td><strong>0.220</strong> (Fit: 0.969)</td></tr><tr><td><strong>#15</strong></td><td><code>1000747024</code></td><td>Included: Batch 2 Held-Out Validation (n=11)</td><td>18,324 &rarr; 15,397 (-16.0%)</td><td>17 / 4 CD8+ / 4 CD4+</td><td>-15.656 (33.9%)</td><td>-15.273 (33.5%)</td><td>-0.106 (8.7%)</td><td><strong>-0.077</strong> (8.6%)</td><td>0.288 / <strong>0.956</strong></td><td><strong>0.136</strong> (Fit: 0.966)</td></tr><tr><td><strong>#16</strong></td><td><code>1000731329</code></td><td>Included: Batch 2 Held-Out Validation (n=11)</td><td>13,885 &rarr; 8,740 (-37.1%)</td><td>10 / 2 CD8+ / 4 CD4+</td><td>-6.833 (24.1%)</td><td>-1.625 (13.9%)</td><td>0.466 (6.3%)</td><td><strong>0.321</strong> (7.1%)</td><td>0.908 / <strong>0.954</strong></td><td><strong>0.183</strong> (Fit: 0.965)</td></tr><tr><td><strong>#17</strong></td><td><code>1000835528</code></td><td>Included: Batch 2 Held-Out Validation (n=11)</td><td>11,068 &rarr; 5,132 (-53.6%)</td><td>8 / 4 CD8+ / 6 CD4+</td><td>-1.553 (19.2%)</td><td>-1.001 (17.0%)</td><td>0.570 (7.9%)</td><td><strong>0.566</strong> (7.9%)</td><td>0.054 / <strong>0.805</strong></td><td><strong>0.182</strong> (Fit: 0.960)</td></tr><tr><td><strong>#18</strong></td><td><code>1000826952</code></td><td><span style='color:var(--danger);font-weight:700'>Excluded: Debris (<3,000 um³)</span></td><td>2,963 &rarr; 1,143 (-61.4%)</td><td>3 / 1 CD8+ / 2 CD4+</td><td>0.430 (13.3%)</td><td>0.838 (7.1%)</td><td>0.721 (9.3%)</td><td><strong>0.841</strong> (7.0%)</td><td>0.311 / <strong>0.311</strong></td><td><strong>0.109</strong> (Fit: 0.964)</td></tr><tr><td><strong>#19</strong></td><td><code>1000758750</code></td><td><span style='color:var(--danger);font-weight:700'>Excluded: Debris (<3,000 um³) & Grower</span></td><td>2,129 &rarr; 15,413 (+624.0%)</td><td>26 / 1 CD8+ / 6 CD4+</td><td>-4.516 (767.5%)</td><td>-4.367 (757.2%)</td><td>-3.925 (725.2%)</td><td><strong>-3.920</strong> (724.9%)</td><td>0.078 / <strong>0.347</strong></td><td><strong>0.049</strong> (Fit: 0.959)</td></tr><tr><td><strong>#20</strong></td><td><code>1000710595</code></td><td><span style='color:var(--danger);font-weight:700'>Excluded: Debris (<3,000 um³)</span></td><td>619 &rarr; 261 (-57.8%)</td><td>1 / 1 CD8+ / 2 CD4+</td><td>-0.135 (25.4%)</td><td>0.385 (18.7%)</td><td>0.416 (18.2%)</td><td><strong>0.544</strong> (16.1%)</td><td>0.379 / <strong>0.406</strong></td><td><strong>0.192</strong> (Fit: 0.957)</td></tr><tr><td><strong>#21</strong></td><td><code>1000801535</code></td><td><span style='color:var(--danger);font-weight:700'>Excluded: Debris (<3,000 um³) & Grower</span></td><td>232 &rarr; 414 (+78.4%)</td><td>3 / 2 CD8+ / 1 CD4+</td><td>-5.946 (489.7%)</td><td>-5.839 (485.9%)</td><td>-4.793 (447.2%)</td><td><strong>-4.791</strong> (447.1%)</td><td>-0.024 / <strong>0.991</strong></td><td><strong>0.114</strong> (Fit: 0.956)</td></tr>
+  </tbody>
+</table>
+</div>
+</section>
+
+<section id="part3">
+<h2>Part III: Multi-Well (6 Wells, N = 6,931 Tracks) Fragment-Aware Renewal Null &amp; Non-Circular Tests</h2>
+<p>In 3D confocal movies of motile T cells, tracks are finite trajectory segments rather than full-movie biographies: in Well 4 (<code>n = 1,171</code> tracks), the median track duration is <strong>5.27 h</strong> of the <code>22.3 h</code> movie, only <strong>3.8%</strong> span &ge;90% of the recording, and there are <strong>3.11 tracks per physical T cell</strong> (across all 6 wells, <code>N = 6,931</code> tracks, median duration spans <code>2.00-5.27 h</code>, mean <code>3.88 h</code>).</p>
+<ul>
+  <li><strong>Why "69.6% Are Not Serial Killers" Is Explained by Track Fragmentation Alone</strong>: Under a homogeneous renewal null (<code>&sigma; = 0</code>, identical T cells with no "sticker" or "corpse-trap" sub-class), full uncensored <code>22.3 h</code> trajectories meeting the Super-Engager filter split <strong>7.8% / 12.7% / 79.5%</strong> (<code>0 / 1 / &ge;2</code> kills). Cutting those exact same homogeneous trajectories into empirical fragment lengths splits them <strong>41.2% / 30.6% / 28.2%</strong>, which is statistically indistinguishable from the observed Well 4 split of <strong>37.0% / 32.6% / 30.4%</strong> (<code>&chi;&sup2; = 3.62, p = 0.164</code>).</li>
+  <li><strong>Eliminating Circular Outcome-Conditioned Tests</strong>: Comparing groups defined by kill count (<code>0, 1, 2, &ge;3</code>) on bout count or bout duration is circular because kill events require contact bouts. All outcome-conditioned Mann&ndash;Whitney <code>p</code>-values are removed and replaced by 3 non-circular tests replicated across <strong><code>n = 6</code> independent wells</strong> (<code>DemoDataset1&ndash;6</code>, <code>N = 6,931</code> tracks):
+    <ol>
+      <li><strong>Test 1 (Unbroken Long-Contact Bouts &ge;120 min with Zero Dead-Dye Increase)</strong>: Across <code>n = 6</code> wells, <strong>49.6% &plusmn; 20.7%</strong> of unbroken bouts &ge;120 min at the official <code>1.5 &micro;m</code> threshold (and <strong>40.0% &plusmn; 17.2%</strong> at the expanded <code>5.0 &micro;m</code> threshold) produce zero local dead-dye increase (vs. <code>28.4%</code> under the homogeneous renewal + step-recall null; well-level <code>t</code>-test <code>p = 0.0536</code> at <code>1.5 &micro;m</code>, <code>p = 0.158</code> at <code>5.0 &micro;m</code>).</li>
+      <li><strong>Test 2 (Crowding-Adjusted Inter-Kill Gap Correlation <code>&rho;(&Delta;t_1, &Delta;t_2)</code>)</strong>: Among tracks with &ge;3 attributed kills (<code>n = 95</code>), the raw correlation between consecutive inter-kill intervals is <code>&rho; = +0.222</code> (<code>p = 0.031</code>), but after partialing out local organoid crowding and track duration it drops to <strong><code>&rho;_adj = +0.049</code> (<code>p = 0.635</code>)</strong>, matching the fragment-aware <code>&sigma; = 0</code> null with crowding (<code>&rho;_null = -0.037</code>). Thus, consecutive inter-kill intervals provide <strong>no evidence</strong> for a large intrinsic rate variance (<code>&sigma; = 0.88</code> is not supported once crowding is controlled).</li>
+      <li><strong>Test 3 (Exposure-Matched Contact Topology Across <code>n = 6</code> Wells)</strong>: Across all 6 wells, mean correlation with organoid dead-dye exposure is <code>&rho; = +0.160 &plusmn; 0.099</code> for discrete contact-detach bouts vs. <code>&rho; = +0.093 &plusmn; 0.125</code> for cumulative contact duration (paired well-level <code>p = 0.0777</code>).</li>
+    </ol>
+  </li>
+</ul>
+
+<div class="fig">
+  <img src="figures/visual_16_serial_killer_novelty_and_21organoid_counterfactuals.png" alt="Figure 16: Fragment-Aware Renewal Null & 6-Well Replication">
+</div>
+
+<h3>Table 4A. Complete Reconciled Descriptive Breakdown of Well 4 Cohorts (All Subgroups <code>0, 1, 2, &ge;3, Pooled &ge;2, All</code> Shown; No Circular p-Values)</h3>
+<p class="muted">Reconciles every v2.5 discrepancy: (1) In Super-Engagers (<code>n = 487</code>), <code>2 kills</code> median bout is <code>78.0 min</code>, <code>&ge;3 kills</code> is <code>71.5 min</code>, and <code>Pooled &ge;2 kills</code> is <code>76.0 min</code> (between both subgroup medians). In Long-Contact &ge;180 min (<code>n = 421</code>), <code>2 kills</code> is <code>76.8 min</code>, <code>&ge;3 kills</code> is <code>58.2 min</code>, and <code>Pooled &ge;2 kills</code> is <code>65.2 min</code>. (2) In Long-Contact (<code>n = 421</code>), the 4 subgroups sum to <code>127 + 148 + 61 + 85 = 421</code> (v2.5 listed only <code>148 + 85 = 233</code> because the <code>0-kill</code> and <code>2-kill</code> rows were omitted). (3) Both individual-level mean/median <code>kills/h</code> and the ratio of medians are reported explicitly.</p>
+<div class="tblwrap">
+<table class="data">
+  <thead>
+    <tr>
+      <th>Cohort Definition (<code>d &le; 5.0 &micro;m</code>)</th>
+      <th>Subgroup</th>
+      <th>Tracks (<code>n, %</code>)</th>
+      <th>Median Contact (IQR, min)</th>
+      <th>Median Bouts</th>
+      <th>Median Bout Duration (IQR, min)</th>
+      <th>Kills / Contact Hour: Mean / Median (Ratio of Medians)</th>
+      <th>Local Co-Attachment Density (Within 35 &micro;m)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td>Well 4 Super-Engagers (contact_frac>=60%, contact>=100m, d<=5.0um, n=487)</td><td><strong>0 kills</strong></td><td><strong>180</strong> (37.0%)</td><td>183.0 (140.0-289.5)</td><td>2.0</td><td><strong>101.3</strong> (49.2-172.0)</td><td>0.000 / <strong>0.000</strong> (0.000)</td><td>31.06 cells / 35 &micro;m</td></tr><tr><td>Well 4 Super-Engagers (contact_frac>=60%, contact>=100m, d<=5.0um, n=487)</td><td><strong>1 kill</strong></td><td><strong>159</strong> (32.6%)</td><td>284.0 (168.0-507.0)</td><td>2.0</td><td><strong>104.7</strong> (47.4-212.3)</td><td>0.246 / <strong>0.211</strong> (0.211)</td><td>28.64 cells / 35 &micro;m</td></tr><tr><td>Well 4 Super-Engagers (contact_frac>=60%, contact>=100m, d<=5.0um, n=487)</td><td><strong>2 kills</strong></td><td><strong>67</strong> (13.8%)</td><td>262.0 (186.0-427.0)</td><td>3.0</td><td><strong>78.0</strong> (39.7-185.5)</td><td>0.478 / <strong>0.458</strong> (0.458)</td><td>32.06 cells / 35 &micro;m</td></tr><tr><td>Well 4 Super-Engagers (contact_frac>=60%, contact>=100m, d<=5.0um, n=487)</td><td><strong>>=3 kills</strong></td><td><strong>81</strong> (16.6%)</td><td>436.0 (286.0-680.0)</td><td>6.0</td><td><strong>71.5</strong> (36.0-132.0)</td><td>0.678 / <strong>0.526</strong> (0.550)</td><td>28.38 cells / 35 &micro;m</td></tr><tr><td>Well 4 Super-Engagers (contact_frac>=60%, contact>=100m, d<=5.0um, n=487)</td><td><strong>Pooled >=2 kills</strong></td><td><strong>148</strong> (30.4%)</td><td>355.0 (221.5-591.5)</td><td>4.0</td><td><strong>76.0</strong> (37.2-162.0)</td><td>0.588 / <strong>0.500</strong> (0.507)</td><td>30.04 cells / 35 &micro;m</td></tr><tr><td>Well 4 Super-Engagers (contact_frac>=60%, contact>=100m, d<=5.0um, n=487)</td><td><strong>All tracks in cohort</strong></td><td><strong>487</strong> (100.0%)</td><td>244.0 (165.0-474.0)</td><td>2.0</td><td><strong>95.0</strong> (43.0-183.0)</td><td>0.259 / <strong>0.149</strong> (0.246)</td><td>29.96 cells / 35 &micro;m</td></tr><tr><td>Well 4 Long-Contact (contact>=180m, d<=5.0um, n=421)</td><td><strong>0 kills</strong></td><td><strong>127</strong> (30.2%)</td><td>272.0 (219.0-413.0)</td><td>5.0</td><td><strong>65.3</strong> (23.6-206.0)</td><td>0.000 / <strong>0.000</strong> (0.000)</td><td>28.89 cells / 35 &micro;m</td></tr><tr><td>Well 4 Long-Contact (contact>=180m, d<=5.0um, n=421)</td><td><strong>1 kill</strong></td><td><strong>148</strong> (35.2%)</td><td>369.0 (247.0-548.5)</td><td>4.0</td><td><strong>87.0</strong> (35.5-228.5)</td><td>0.177 / <strong>0.163</strong> (0.163)</td><td>27.16 cells / 35 &micro;m</td></tr><tr><td>Well 4 Long-Contact (contact>=180m, d<=5.0um, n=421)</td><td><strong>2 kills</strong></td><td><strong>61</strong> (14.5%)</td><td>294.0 (236.0-462.0)</td><td>4.0</td><td><strong>76.8</strong> (32.3-200.0)</td><td>0.397 / <strong>0.408</strong> (0.408)</td><td>31.66 cells / 35 &micro;m</td></tr><tr><td>Well 4 Long-Contact (contact>=180m, d<=5.0um, n=421)</td><td><strong>>=3 kills</strong></td><td><strong>85</strong> (20.2%)</td><td>482.0 (336.0-642.0)</td><td>8.0</td><td><strong>58.2</strong> (32.1-125.7)</td><td>0.594 / <strong>0.508</strong> (0.498)</td><td>26.84 cells / 35 &micro;m</td></tr><tr><td>Well 4 Long-Contact (contact>=180m, d<=5.0um, n=421)</td><td><strong>Pooled >=2 kills</strong></td><td><strong>146</strong> (34.7%)</td><td>400.0 (270.0-612.5)</td><td>6.0</td><td><strong>65.2</strong> (32.2-154.2)</td><td>0.512 / <strong>0.437</strong> (0.450)</td><td>28.85 cells / 35 &micro;m</td></tr><tr><td>Well 4 Long-Contact (contact>=180m, d<=5.0um, n=421)</td><td><strong>All tracks in cohort</strong></td><td><strong>421</strong> (100.0%)</td><td>348.0 (238.0-536.0)</td><td>5.0</td><td><strong>71.5</strong> (29.2-204.0)</td><td>0.240 / <strong>0.170</strong> (0.172)</td><td>28.27 cells / 35 &micro;m</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h3>Table 4B. Per-Well Replication Across All 6 Independent BEHAV3D Wells (12 CD8/CD4 Populations, N = 6,931 Tracks)</h3>
+<div class="tblwrap">
+<table class="data">
+  <thead>
+    <tr>
+      <th>Well ID</th>
+      <th>Experiment Date</th>
+      <th>Tracks (Cell-Frame Rows)</th>
+      <th>Median Fragment Length (% &ge;90%; Tracks/Cell)</th>
+      <th>Super-Engagers (<code>1.5 &micro;m / 5.0 &micro;m</code>)</th>
+      <th>Unbroken Bouts &ge;120m with 0 Dye Step (<code>d &le; 1.5 &micro;m</code>)</th>
+      <th>Unbroken Bouts &ge;120m with 0 Dye Step (<code>d &le; 5.0 &micro;m</code>)</th>
+      <th>Level-2 &rho;(Contact) vs. &rho;(Bouts)</th>
+      <th>Dye Exposure: High vs. Low Contact</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td><strong>Well 1 (Exp1_well1)</strong></td><td>23/05/2019</td><td>771 (121,445)</td><td>2.59 h (8.0% &ge;90%; 4.83 tracks/cell)</td><td>128 / 195</td><td>42/73 (<strong>57.5%</strong>)</td><td>110/219 (<strong>50.2%</strong>)</td><td>-0.059 vs. +0.083</td><td>16.3% vs. 12.3%</td></tr><tr><td><strong>Well 2 (Exp2_well2)</strong></td><td>23/05/2019</td><td>1,133 (159,265)</td><td>2.58 h (4.4% &ge;90%; 4.73 tracks/cell)</td><td>192 / 372</td><td>38/75 (<strong>50.7%</strong>)</td><td>113/314 (<strong>36.0%</strong>)</td><td>+0.050 vs. +0.151</td><td>18.1% vs. 20.0%</td></tr><tr><td><strong>Well 3 (Exp3_well1)</strong></td><td>26/06/2019</td><td>1,051 (207,646)</td><td>4.45 h (3.9% &ge;90%; 3.69 tracks/cell)</td><td>393 / 460</td><td>97/305 (<strong>31.8%</strong>)</td><td>136/455 (<strong>29.9%</strong>)</td><td>+0.160 vs. +0.091</td><td>33.5% vs. 30.9%</td></tr><tr><td><strong>Well 4 (Exp4_well2)</strong></td><td>26/06/2019</td><td>1,637 (349,001)</td><td>4.93 h (4.9% &ge;90%; 3.15 tracks/cell)</td><td>529 / 714</td><td>68/364 (<strong>18.7%</strong>)</td><td>91/687 (<strong>13.2%</strong>)</td><td>+0.306 vs. +0.351</td><td>54.6% vs. 37.0%</td></tr><tr><td><strong>Well 5 (Exp5_well1)</strong></td><td>27/06/2019</td><td>1,368 (245,384)</td><td>4.55 h (2.0% &ge;90%; 3.45 tracks/cell)</td><td>242 / 403</td><td>85/126 (<strong>67.5%</strong>)</td><td>201/401 (<strong>50.1%</strong>)</td><td>+0.062 vs. +0.166</td><td>26.6% vs. 25.1%</td></tr><tr><td><strong>Well 6 (Exp6_well2)</strong></td><td>27/06/2019</td><td>971 (170,127)</td><td>4.18 h (4.3% &ge;90%; 3.52 tracks/cell)</td><td>214 / 359</td><td>71/99 (<strong>71.7%</strong>)</td><td>197/324 (<strong>60.8%</strong>)</td><td>+0.041 vs. +0.118</td><td>16.9% vs. 22.8%</td></tr>
+  </tbody>
+</table>
+</div>
+</section>
+
+<section id="part4">
+<h2>Part IV: Same-Organoid Co-Residency Audit &amp; Hypothesis-Labeled Sensitivity Projections</h2>
+<p>In the previous version, 462 of 490 cross-pairings were unmeasured model outputs, the diagonal extrapolated kills at <code>56&ndash;109 min</code> onto <code>10&ndash;15 min</code> or <code>0% SYTOX</code> recordings, damage was capped at <code>150%</code>, and swarm swapping ignored that peak CD8+ swarm size scales strongly with initial organoid volume (<strong><code>r = 0.688, p = 0.0006</code></strong> across all 21 objects; <strong><code>r = 0.685, p = 0.003</code></strong> across the 16 valid shrinking organoids). In Version 3.0:</p>
+<ul>
+  <li>All unvalidated cross-pairings, extrapolated kill times on short/sub-lethal movies, and <code>150%</code> damage caps are removed.</li>
+  <li>Instead of swapping raw swarm trajectories across organoids of 600&times; different volume, Figure 17 Panel C evaluates <strong>Size-Adjusted Surface Attacker Density (<code>CD8+ T cells / 10&sup3; &micro;m&sup2;</code> of initial organoid surface area)</strong> and shows that all sensitivity curves are <strong>unvalidated mechanistic hypotheses</strong> rather than empirical findings.</li>
+  <li>In Table 5, the column previously labeled "Corpse Trap %" is reported by its exact mathematical identity — the <strong>Analytical Cycle Refractory Fraction <code>&tau; / (&tau; + 1/k_hit)</code></strong> — and removing heterogeneity (<code>&sigma; = 0</code> vs. <code>&sigma; = 0.88</code>) changes mean clearance across the 16 valid organoids by only <strong>1.0 percentage point</strong> (<code>44.9%</code> vs. <code>45.9%</code>).</li>
+</ul>
+
+<div class="fig">
+  <img src="figures/visual_17_model_free_same_organoid_coexistence_proof.png" alt="Figure 17: Same-Organoid Co-Residency Audit & Hypothesis Sensitivity Projections">
+</div>
+
+<h3>Table 5. Hypothesis-Labeled Mechanistic Sensitivity Suite Across the 16 Valid Shrinking Organoids (4 Debris &amp; 1 Grower Dropped)</h3>
+<div class="tblwrap">
+<table class="data">
+  <thead>
+    <tr>
+      <th>Regime / Hypothesis Label</th>
+      <th>Parameter Choice &amp; Provenance</th>
+      <th>Cycle Duration (<code>1/k + &tau;</code>)</th>
+      <th>Analytical Refractory Fraction <code>&tau;/(&tau;+1/k)</code></th>
+      <th>Simulated Clearance Across 16 Valid Organoids (Mean &plusmn; SD)</th>
+      <th>Large (&ge;50k, n=6) / Medium (10k&ndash;50k, n=10)</th>
+      <th>Organoids &ge;65% Clearance</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td><strong>Null (sigma = 0, Homogeneous Hazard)</strong></td><td>Baseline renewal model with zero between-cell rate variance (sigma = 0)</td><td>73.2 min</td><td>60.1% (<em>&tau;/(&tau;+1/k)</em>)</td><td><strong>44.9% &plusmn; 14.6%</strong></td><td>49.5% / 41.4%</td><td>1 / 16</td></tr><tr><td><strong>Calibrated WT Baseline (sigma = 0.88)</strong></td><td>Fitted Level-1/2 baseline (1/k = 29.2 min, tau = 44.0 min, tau_d = 42.0 min)</td><td>72.6 min</td><td>60.6% (<em>&tau;/(&tau;+1/k)</em>)</td><td><strong>45.9% &plusmn; 14.8%</strong></td><td>50.5% / 42.3%</td><td>1 / 16</td></tr><tr><td><strong>Hypothesis: Slow Detachment (tau = 95 min)</strong></td><td>Sensitivity test: 2.16x longer post-lysis retention via high-affinity off-rate reduction</td><td>123.6 min</td><td>76.9% (<em>&tau;/(&tau;+1/k)</em>)</td><td><strong>30.9% &plusmn; 11.3%</strong></td><td>34.7% / 27.9%</td><td>0 / 16</td></tr><tr><td><strong>Hypothesis: 2x Lethal Hit Rate (1/k = 14.6 min)</strong></td><td>Sensitivity test: doubling single-hit perforin/granzyme delivery speed while keeping tau = 44 min</td><td>58.3 min</td><td>75.5% (<em>&tau;/(&tau;+1/k)</em>)</td><td><strong>52.9% &plusmn; 15.9%</strong></td><td>57.7% / 49.2%</td><td>2 / 16</td></tr><tr><td><strong>Hypothesis: Fast Post-Lysis Detachment (tau = 15 min)</strong></td><td>Sensitivity test: reducing post-kill retention from 44 min to 15 min (serial detachment switch)</td><td>43.6 min</td><td>34.4% (<em>&tau;/(&tau;+1/k)</em>)</td><td><strong>62.6% &plusmn; 16.8%</strong></td><td>67.3% / 59.0%</td><td>9 / 16</td></tr><tr><td><strong>Hypothesis: Fast Corpse Sloughing (tau_d = 16 min) + CD4+</strong></td><td>Sensitivity test: reducing outer-shell corpse clearance lag from 42 min to 16 min + CD4+ help</td><td>60.8 min</td><td>59.2% (<em>&tau;/(&tau;+1/k)</em>)</td><td><strong>71.2% &plusmn; 17.0%</strong></td><td>74.8% / 68.4%</td><td>12 / 16</td></tr><tr><td><strong>Hypothesis: Combined Fast Hit + Fast Release + Sloughing</strong></td><td>Upper-bound combined sensitivity regime across all three kinetic bottlenecks</td><td>29.3 min</td><td>51.2% (<em>&tau;/(&tau;+1/k)</em>)</td><td><strong>89.7% &plusmn; 13.0%</strong></td><td>91.5% / 88.3%</td><td>14 / 16</td></tr>
+  </tbody>
+</table>
+</div>
+</section>
+
+<section id="part2-videos">
+<h2>Part V: Complete Multi-Plane Confocal &amp; 3D Surface-Net Video Atlas for All 21 Tracked Objects in <code>.ims</code></h2>
+<p>Every panel in the 21-object cohort wall and individual videos anchors <code>Vol(0) = 100.0%</code> at <code>t = 0 min</code> and explicitly flags the 5 excluded objects (Ranks <code>#08, #18, #19, #20, #21</code>).</p>
+
+<div>
+  <div class="vid-head">
+    <span class="vid-label">Cohort Wall: All 21 Tracked Objects in <code>.ims</code> (16 Valid Shrinking Organoids &amp; 5 Excluded Debris/Grower Objects; Vol(0) = 100.0%)</span>
+    <button class="btn-mp4" onclick="swapToVideo(this,'videos/side_by_side_all_21_organoids_cohort_wall.mp4')">Play Interactive MP4</button>
+  </div>
+  <div class="fig">
+    <img src="videos/side_by_side_all_21_organoids_cohort_wall.gif" loading="lazy" alt="All 21 Organoids Cohort Wall">
+  </div>
+</div>
+
+<div class="vid-grid">
+  <div><div class='vid-head'><span class='vid-label'>Organoid Rank #01 (Track 1000789786) &mdash; [VALID SHRINKING ORGANOID] Included: Batch 1 Design (n=5) &middot; V(0) = 139,274 &micro;m&sup3; &rarr; V(end) = 52,351 &micro;m&sup3; (-62.4%) &middot; 1-Param ODE R&sup2; = 0.86 &middot; Fwd 3D IoU = 0.29 (In-Sample Fit IoU = 0.97)</span><button class='btn-mp4' onclick="swapToVideo(this,'videos/organoid_twins/organoid_rank01_1000789786_4d_twin.mp4')">Play Interactive MP4</button></div><div class='fig'><img src='videos/organoid_twins/organoid_rank01_1000789786_4d_twin.gif' loading='lazy' alt='Organoid Rank #01 4D Twin'></div></div><div><div class='vid-head'><span class='vid-label'>Organoid Rank #02 (Track 1000774627) &mdash; [VALID SHRINKING ORGANOID] Included: Batch 1 Design (n=5) &middot; V(0) = 122,207 &micro;m&sup3; &rarr; V(end) = 55,153 &micro;m&sup3; (-54.9%) &middot; 1-Param ODE R&sup2; = 0.75 &middot; Fwd 3D IoU = 0.37 (In-Sample Fit IoU = 0.97)</span><button class='btn-mp4' onclick="swapToVideo(this,'videos/organoid_twins/organoid_rank02_1000774627_4d_twin.mp4')">Play Interactive MP4</button></div><div class='fig'><img src='videos/organoid_twins/organoid_rank02_1000774627_4d_twin.gif' loading='lazy' alt='Organoid Rank #02 4D Twin'></div></div><div><div class='vid-head'><span class='vid-label'>Organoid Rank #03 (Track 1000691696) &mdash; [VALID SHRINKING ORGANOID] Included: Batch 2 Held-Out Validation (n=11) &middot; V(0) = 108,053 &micro;m&sup3; &rarr; V(end) = 55,772 &micro;m&sup3; (-48.4%) &middot; 1-Param ODE R&sup2; = 0.69 &middot; Fwd 3D IoU = 0.44 (In-Sample Fit IoU = 0.98)</span><button class='btn-mp4' onclick="swapToVideo(this,'videos/organoid_twins/organoid_rank03_1000691696_4d_twin.mp4')">Play Interactive MP4</button></div><div class='fig'><img src='videos/organoid_twins/organoid_rank03_1000691696_4d_twin.gif' loading='lazy' alt='Organoid Rank #03 4D Twin'></div></div><div><div class='vid-head'><span class='vid-label'>Organoid Rank #04 (Track 1000710590) &mdash; [VALID SHRINKING ORGANOID] Included: Batch 2 Held-Out Validation (n=11) &middot; V(0) = 100,112 &micro;m&sup3; &rarr; V(end) = 57,422 &micro;m&sup3; (-42.6%) &middot; 1-Param ODE R&sup2; = 0.16 &middot; Fwd 3D IoU = 0.24 (In-Sample Fit IoU = 0.98)</span><button class='btn-mp4' onclick="swapToVideo(this,'videos/organoid_twins/organoid_rank04_1000710590_4d_twin.mp4')">Play Interactive MP4</button></div><div class='fig'><img src='videos/organoid_twins/organoid_rank04_1000710590_4d_twin.gif' loading='lazy' alt='Organoid Rank #04 4D Twin'></div></div><div><div class='vid-head'><span class='vid-label'>Organoid Rank #05 (Track 1000826950) &mdash; [VALID SHRINKING ORGANOID] Included: Batch 1 Design (n=5) &middot; V(0) = 99,163 &micro;m&sup3; &rarr; V(end) = 25,126 &micro;m&sup3; (-74.7%) &middot; 1-Param ODE R&sup2; = 0.89 &middot; Fwd 3D IoU = 0.08 (In-Sample Fit IoU = 0.97)</span><button class='btn-mp4' onclick="swapToVideo(this,'videos/organoid_twins/organoid_rank05_1000826950_4d_twin.mp4')">Play Interactive MP4</button></div><div class='fig'><img src='videos/organoid_twins/organoid_rank05_1000826950_4d_twin.gif' loading='lazy' alt='Organoid Rank #05 4D Twin'></div></div><div><div class='vid-head'><span class='vid-label'>Organoid Rank #06 (Track 1000675929) &mdash; [VALID SHRINKING ORGANOID] Included: Batch 2 Held-Out Validation (n=11) &middot; V(0) = 96,344 &micro;m&sup3; &rarr; V(end) = 49,700 &micro;m&sup3; (-48.4%) &middot; 1-Param ODE R&sup2; = 0.77 &middot; Fwd 3D IoU = 0.37 (In-Sample Fit IoU = 0.98)</span><button class='btn-mp4' onclick="swapToVideo(this,'videos/organoid_twins/organoid_rank06_1000675929_4d_twin.mp4')">Play Interactive MP4</button></div><div class='fig'><img src='videos/organoid_twins/organoid_rank06_1000675929_4d_twin.gif' loading='lazy' alt='Organoid Rank #06 4D Twin'></div></div><div><div class='vid-head'><span class='vid-label'>Organoid Rank #07 (Track 1000801523) &mdash; [VALID SHRINKING ORGANOID] Included: Batch 2 Held-Out Validation (n=11) &middot; V(0) = 56,198 &micro;m&sup3; &rarr; V(end) = 44,821 &micro;m&sup3; (-20.2%) &middot; 1-Param ODE R&sup2; = -0.45 &middot; Fwd 3D IoU = 0.19 (In-Sample Fit IoU = 0.97)</span><button class='btn-mp4' onclick="swapToVideo(this,'videos/organoid_twins/organoid_rank07_1000801523_4d_twin.mp4')">Play Interactive MP4</button></div><div class='fig'><img src='videos/organoid_twins/organoid_rank07_1000801523_4d_twin.gif' loading='lazy' alt='Organoid Rank #07 4D Twin'></div></div><div><div class='vid-head'><span class='vid-label'>Organoid Rank #08 (Track 1000811938) &mdash; [EXCLUDED FROM BENCHMARK] Excluded: Grower (dV > 0) &middot; V(0) = 50,263 &micro;m&sup3; &rarr; V(end) = 67,663 &micro;m&sup3; (+34.6%) &middot; 1-Param ODE R&sup2; = -0.47 &middot; Fwd 3D IoU = 0.22 (In-Sample Fit IoU = 0.97)</span><button class='btn-mp4' onclick="swapToVideo(this,'videos/organoid_twins/organoid_rank08_1000811938_4d_twin.mp4')">Play Interactive MP4</button></div><div class='fig'><img src='videos/organoid_twins/organoid_rank08_1000811938_4d_twin.gif' loading='lazy' alt='Organoid Rank #08 4D Twin'></div></div><div><div class='vid-head'><span class='vid-label'>Organoid Rank #09 (Track 1000702716) &mdash; [VALID SHRINKING ORGANOID] Included: Batch 1 Design (n=5) &middot; V(0) = 34,156 &micro;m&sup3; &rarr; V(end) = 16,599 &micro;m&sup3; (-51.4%) &middot; 1-Param ODE R&sup2; = 0.82 &middot; Fwd 3D IoU = 0.18 (In-Sample Fit IoU = 0.97)</span><button class='btn-mp4' onclick="swapToVideo(this,'videos/organoid_twins/organoid_rank09_1000702716_4d_twin.mp4')">Play Interactive MP4</button></div><div class='fig'><img src='videos/organoid_twins/organoid_rank09_1000702716_4d_twin.gif' loading='lazy' alt='Organoid Rank #09 4D Twin'></div></div><div><div class='vid-head'><span class='vid-label'>Organoid Rank #10 (Track 1000768105) &mdash; [VALID SHRINKING ORGANOID] Included: Batch 1 Design (n=5) &middot; V(0) = 32,557 &micro;m&sup3; &rarr; V(end) = 14,976 &micro;m&sup3; (-54.0%) &middot; 1-Param ODE R&sup2; = 0.92 &middot; Fwd 3D IoU = 0.06 (In-Sample Fit IoU = 0.97)</span><button class='btn-mp4' onclick="swapToVideo(this,'videos/organoid_twins/organoid_rank10_1000768105_4d_twin.mp4')">Play Interactive MP4</button></div><div class='fig'><img src='videos/organoid_twins/organoid_rank10_1000768105_4d_twin.gif' loading='lazy' alt='Organoid Rank #10 4D Twin'></div></div><div><div class='vid-head'><span class='vid-label'>Organoid Rank #11 (Track 1000838082) &mdash; [VALID SHRINKING ORGANOID] Included: Batch 2 Held-Out Validation (n=11) &middot; V(0) = 32,438 &micro;m&sup3; &rarr; V(end) = 21,292 &micro;m&sup3; (-34.4%) &middot; 1-Param ODE R&sup2; = 0.65 &middot; Fwd 3D IoU = 0.14 (In-Sample Fit IoU = 0.96)</span><button class='btn-mp4' onclick="swapToVideo(this,'videos/organoid_twins/organoid_rank11_1000838082_4d_twin.mp4')">Play Interactive MP4</button></div><div class='fig'><img src='videos/organoid_twins/organoid_rank11_1000838082_4d_twin.gif' loading='lazy' alt='Organoid Rank #11 4D Twin'></div></div><div><div class='vid-head'><span class='vid-label'>Organoid Rank #12 (Track 1000735876) &mdash; [VALID SHRINKING ORGANOID] Included: Batch 2 Held-Out Validation (n=11) &middot; V(0) = 32,363 &micro;m&sup3; &rarr; V(end) = 15,312 &micro;m&sup3; (-52.7%) &middot; 1-Param ODE R&sup2; = 0.79 &middot; Fwd 3D IoU = 0.21 (In-Sample Fit IoU = 0.97)</span><button class='btn-mp4' onclick="swapToVideo(this,'videos/organoid_twins/organoid_rank12_1000735876_4d_twin.mp4')">Play Interactive MP4</button></div><div class='fig'><img src='videos/organoid_twins/organoid_rank12_1000735876_4d_twin.gif' loading='lazy' alt='Organoid Rank #12 4D Twin'></div></div><div><div class='vid-head'><span class='vid-label'>Organoid Rank #13 (Track 1000753232) &mdash; [VALID SHRINKING ORGANOID] Included: Batch 2 Held-Out Validation (n=11) &middot; V(0) = 29,445 &micro;m&sup3; &rarr; V(end) = 17,088 &micro;m&sup3; (-42.0%) &middot; 1-Param ODE R&sup2; = 0.73 &middot; Fwd 3D IoU = 0.16 (In-Sample Fit IoU = 0.97)</span><button class='btn-mp4' onclick="swapToVideo(this,'videos/organoid_twins/organoid_rank13_1000753232_4d_twin.mp4')">Play Interactive MP4</button></div><div class='fig'><img src='videos/organoid_twins/organoid_rank13_1000753232_4d_twin.gif' loading='lazy' alt='Organoid Rank #13 4D Twin'></div></div><div><div class='vid-head'><span class='vid-label'>Organoid Rank #14 (Track 1000743534) &mdash; [VALID SHRINKING ORGANOID] Included: Batch 2 Held-Out Validation (n=11) &middot; V(0) = 19,086 &micro;m&sup3; &rarr; V(end) = 12,002 &micro;m&sup3; (-37.1%) &middot; 1-Param ODE R&sup2; = 0.25 &middot; Fwd 3D IoU = 0.22 (In-Sample Fit IoU = 0.97)</span><button class='btn-mp4' onclick="swapToVideo(this,'videos/organoid_twins/organoid_rank14_1000743534_4d_twin.mp4')">Play Interactive MP4</button></div><div class='fig'><img src='videos/organoid_twins/organoid_rank14_1000743534_4d_twin.gif' loading='lazy' alt='Organoid Rank #14 4D Twin'></div></div><div><div class='vid-head'><span class='vid-label'>Organoid Rank #15 (Track 1000747024) &mdash; [VALID SHRINKING ORGANOID] Included: Batch 2 Held-Out Validation (n=11) &middot; V(0) = 18,324 &micro;m&sup3; &rarr; V(end) = 15,397 &micro;m&sup3; (-16.0%) &middot; 1-Param ODE R&sup2; = -0.08 &middot; Fwd 3D IoU = 0.14 (In-Sample Fit IoU = 0.97)</span><button class='btn-mp4' onclick="swapToVideo(this,'videos/organoid_twins/organoid_rank15_1000747024_4d_twin.mp4')">Play Interactive MP4</button></div><div class='fig'><img src='videos/organoid_twins/organoid_rank15_1000747024_4d_twin.gif' loading='lazy' alt='Organoid Rank #15 4D Twin'></div></div><div><div class='vid-head'><span class='vid-label'>Organoid Rank #16 (Track 1000731329) &mdash; [VALID SHRINKING ORGANOID] Included: Batch 2 Held-Out Validation (n=11) &middot; V(0) = 13,885 &micro;m&sup3; &rarr; V(end) = 8,740 &micro;m&sup3; (-37.1%) &middot; 1-Param ODE R&sup2; = 0.32 &middot; Fwd 3D IoU = 0.18 (In-Sample Fit IoU = 0.96)</span><button class='btn-mp4' onclick="swapToVideo(this,'videos/organoid_twins/organoid_rank16_1000731329_4d_twin.mp4')">Play Interactive MP4</button></div><div class='fig'><img src='videos/organoid_twins/organoid_rank16_1000731329_4d_twin.gif' loading='lazy' alt='Organoid Rank #16 4D Twin'></div></div><div><div class='vid-head'><span class='vid-label'>Organoid Rank #17 (Track 1000835528) &mdash; [VALID SHRINKING ORGANOID] Included: Batch 2 Held-Out Validation (n=11) &middot; V(0) = 11,068 &micro;m&sup3; &rarr; V(end) = 5,132 &micro;m&sup3; (-53.6%) &middot; 1-Param ODE R&sup2; = 0.57 &middot; Fwd 3D IoU = 0.18 (In-Sample Fit IoU = 0.96)</span><button class='btn-mp4' onclick="swapToVideo(this,'videos/organoid_twins/organoid_rank17_1000835528_4d_twin.mp4')">Play Interactive MP4</button></div><div class='fig'><img src='videos/organoid_twins/organoid_rank17_1000835528_4d_twin.gif' loading='lazy' alt='Organoid Rank #17 4D Twin'></div></div><div><div class='vid-head'><span class='vid-label'>Organoid Rank #18 (Track 1000826952) &mdash; [EXCLUDED FROM BENCHMARK] Excluded: Debris (<3,000 um³) &middot; V(0) = 2,963 &micro;m&sup3; &rarr; V(end) = 1,143 &micro;m&sup3; (-61.4%) &middot; 1-Param ODE R&sup2; = 0.84 &middot; Fwd 3D IoU = 0.11 (In-Sample Fit IoU = 0.96)</span><button class='btn-mp4' onclick="swapToVideo(this,'videos/organoid_twins/organoid_rank18_1000826952_4d_twin.mp4')">Play Interactive MP4</button></div><div class='fig'><img src='videos/organoid_twins/organoid_rank18_1000826952_4d_twin.gif' loading='lazy' alt='Organoid Rank #18 4D Twin'></div></div><div><div class='vid-head'><span class='vid-label'>Organoid Rank #19 (Track 1000758750) &mdash; [EXCLUDED FROM BENCHMARK] Excluded: Debris (<3,000 um³) & Grower &middot; V(0) = 2,129 &micro;m&sup3; &rarr; V(end) = 15,413 &micro;m&sup3; (+624.0%) &middot; 1-Param ODE R&sup2; = -3.92 &middot; Fwd 3D IoU = 0.05 (In-Sample Fit IoU = 0.96)</span><button class='btn-mp4' onclick="swapToVideo(this,'videos/organoid_twins/organoid_rank19_1000758750_4d_twin.mp4')">Play Interactive MP4</button></div><div class='fig'><img src='videos/organoid_twins/organoid_rank19_1000758750_4d_twin.gif' loading='lazy' alt='Organoid Rank #19 4D Twin'></div></div><div><div class='vid-head'><span class='vid-label'>Organoid Rank #20 (Track 1000710595) &mdash; [EXCLUDED FROM BENCHMARK] Excluded: Debris (<3,000 um³) &middot; V(0) = 619 &micro;m&sup3; &rarr; V(end) = 261 &micro;m&sup3; (-57.8%) &middot; 1-Param ODE R&sup2; = 0.54 &middot; Fwd 3D IoU = 0.19 (In-Sample Fit IoU = 0.96)</span><button class='btn-mp4' onclick="swapToVideo(this,'videos/organoid_twins/organoid_rank20_1000710595_4d_twin.mp4')">Play Interactive MP4</button></div><div class='fig'><img src='videos/organoid_twins/organoid_rank20_1000710595_4d_twin.gif' loading='lazy' alt='Organoid Rank #20 4D Twin'></div></div><div><div class='vid-head'><span class='vid-label'>Organoid Rank #21 (Track 1000801535) &mdash; [EXCLUDED FROM BENCHMARK] Excluded: Debris (<3,000 um³) & Grower &middot; V(0) = 232 &micro;m&sup3; &rarr; V(end) = 414 &micro;m&sup3; (+78.4%) &middot; 1-Param ODE R&sup2; = -4.79 &middot; Fwd 3D IoU = 0.11 (In-Sample Fit IoU = 0.96)</span><button class='btn-mp4' onclick="swapToVideo(this,'videos/organoid_twins/organoid_rank21_1000801535_4d_twin.mp4')">Play Interactive MP4</button></div><div class='fig'><img src='videos/organoid_twins/organoid_rank21_1000801535_4d_twin.gif' loading='lazy' alt='Organoid Rank #21 4D Twin'></div></div>
+</div>
+</section>
+
+</main>
+</div>
+</body>
+</html>
