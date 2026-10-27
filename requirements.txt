@@ -1,0 +1,12 @@
+h5py
+matplotlib
+numpy
+opencv-python
+openpyxl
+pandas
+Pillow
+pyreadr
+rdata
+requests
+scipy
+tifffile
