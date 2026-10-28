@@ -18,7 +18,7 @@
       "id": "3",
       "title": "Reproduce the lab's published numbers",
       "status": "in_progress",
-      "note": "Contact area for all 13 experiments; 265/419 paper rows firmly mapped to chambers. Actin flow, actin depletion and contact area reproduced exactly on 2 chambers from raw volumes. Paper per-cell actin values are maxima over noisy visits. Next: add the lab's mask-based T-cell tracker to firm up the rest of the map."
+      "note": "Exact CA/ADC/ARFS reproduced from raw for 2 chambers. Lab tracker ported: trace_num==1 count equals the paper's row count in all 12 fully deposited experiments (395/395). Chamber identity firm for 415/419 rows; masks-only CA within 0.5% for 369/419. Remaining value gaps are multi-component surfaces where cl_factor needs raw actin. Group 7 has 8 undeposited chambers."
     },
     {
       "id": "4",
