@@ -1,10 +1,7 @@
 # Visual review of real-example panels, 2026-10-28
 
 Panels: `figures/review/` (gallery: `figures/review/gallery.html`). Reviewed by
-Claude: cup_measurement 1-16, fit_reachable 1-8, fit_unreachable 1-4 and 9-12,
-death_labels 5-8, 25-30 and 13-18, deep_vs_shallow deep 1-4. Not yet reviewed:
-initial_overlap, mesh_size, dasatinib_vs_untreated, the rest of deep/shallow and
-fit sheets.
+Claude: all 128 panels (33 contact sheets of 4), in two passes.
 
 ## Measurement (affects steps 5, 5b, 7)
 
@@ -22,7 +19,22 @@ fit sheets.
      of the step 5b / 7B association.
 2. **Cells cut off by the field-of-view edge** (cup_05, cup_13). Volumes, hulls
    and cup depths are wrong for truncated cells.
-3. Real-looking contacts measure sensibly (cup_14, cup_15, cup_16, deep_04).
+3. **Two target cells merged into one mask.** Two round lobes with the T cell
+   in the groove between them (dasa_vs_untr_untreated_02; deep_06, deep_07,
+   deep_08). The groove is then measured as a deep cup (deep_07: 5.6 um).
+4. **Hollow target masks.** Ring-shaped or broken-shell targets whose interior
+   is not filled (dasatinib_09, 11, 14, 15; shallow_10, shallow_11). Hollow
+   masks give 5.8-6.8 um "cups".
+5. **Mask quality differs by experiment.** Donor hd10 (v09 untreated, v12
+   dasatinib) is mostly fragmented or hollow (untreated_01, 03, 06, 07;
+   dasatinib_09, 11, 14, 15). hd10 was the step 7 outlier (focus 0.50) and the
+   one donor where dasatinib lowered depth/radius, so both may be artefact.
+   Tiny target fragments also appear (dasatinib_16: 37 um^3; dasatinib_13:
+   154 um^3).
+6. Clean, whole, separate cells measure sensibly, and where raw images exist
+   the masks follow the membrane well (cup_14-16, shallow_12, shallow_13,
+   deep_04, dasa_vs_untr_untreated_04, 05, 08). In mesh_size_06 the raw cell
+   bodies look larger than the mask outlines; to check on more raw images.
 
 ## Mechanical model (affects step 6b, including the final run in progress)
 
@@ -39,7 +51,23 @@ fit sheets.
    rotates and changes shape between visits (fit_unreach_03, 10, 12).
 7. **Push direction can miss the target.** In fit_unreach_03 the solved T cell
    slides past the target and the curve stays near 0.2 um.
-8. Several "unreachable" visits have bogus observed depths from item 1.
+8. Several "unreachable" visits have bogus observed depths from items 1-4
+   (fit_unreach_01, 06, 07, 08, 14, 16).
+9. **The fitted Pi can disagree with its own curve.** fit_reach_14: the curve
+   stays near 0.05 um up to Pi = 10, yet the fitted Pi is 6.75 for an observed
+   0.50 um. Possible bug in the curve inversion.
+10. **Cells sometimes never touch in the model** (fit_unreach_13: final gap
+    1.43 um, curve flat at 0) or the starting target is placed ~4 um from the
+    real one (fit_unreach_15).
+11. **The starting overlap is often far larger than any cup** (overlap_01:
+    11.0 um, overlap_03: 7.7 um, overlap_12: 6.3 um). That is a misplaced
+    reference, and pushing apart then moves the T cell ~4 um off its mask.
+    Sensible cases overlap by about the cup depth (overlap_06, 08, 11).
+12. Mesh size: 1.0 and 0.5 um outlines agree closely in slices; depth differs
+    4-36%. Same drift and misplacement as above in every mesh panel.
+13. Re-solve mismatches seen in 9 of 32 fit panels (fit_reach_01, 03, 07, 08,
+    09, 10, 11, 13; fit_unreach_09). Fits that look sound: fit_reach_06, 12,
+    15, 16.
 
 ## Death labels (affect steps 4, 5b, 7)
 
@@ -49,6 +77,19 @@ fit sheets.
    sensitivity check.
 10. **Possible overlap bug:** death_dasatinib_30 v5 reports 27 px overlap while
     the dye speck appears outside the target outline in both views.
+12. **Gallery overlap numbers disagree with the chamber labels.** Visits shown
+    as dead on consecutive visits in chambers labelled surviving with no
+    positive visit at all: death_surviving_24 (v11 and v12: 296/251 and
+    104/236 px, "any-visit pos: False"); death_surviving_19 (v12-v14,
+    including a bright blob at v14, labelled single-visit). death_killed_07 is
+    dead at v7 in the panel but first positive at v8 in the label. Most likely
+    the panel overlaps against every target in the field while the labels use
+    only the contacted target; or the labels have a bug. Either way, one of
+    them is wrong, and it must be resolved before step 4 is trusted.
+13. Real deaths look right where dye appears inside the target and grows over
+    visits (death_killed_03, 04, 06, 08, 10). Possible false kills from a
+    dye-positive neighbour overlapping in projection: death_killed_05,
+    death_killed_09.
 11. **Projection overlap can come from a neighbour.** In death_surviving_17 a
     dye-positive neighbouring cell lies under the target in both projections
     at v19 (304 / 928 px). death_surviving_18 v18 has a large transient smear.
