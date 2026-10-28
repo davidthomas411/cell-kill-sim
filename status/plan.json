@@ -42,7 +42,7 @@
       "id": "6",
       "title": "First mechanical model",
       "status": "in_progress",
-      "note": "6a done: SimuCell3D rejected (fails on our marching-cubes meshes, resets per-face types every step, cannot couple two cell types with different parameters, no local load without C++ edits, ~375 s per run). Chosen: small custom Python cortical-shell model (two shells, synapse tension 2x, active pressure on synapse faces, ~0.2 s per relaxation). Only push/target-tension is identifiable. 6b (build + held-out test) awaiting go-ahead on the held-out design."
+      "note": "6a done (custom two-shell model chosen over SimuCell3D). 6b first run rejected on review: solver validation was circular, and late-visit predictions were the proportional baseline times an ad hoc factor rather than per-visit solves. Rerun in progress with independent validation (flat membrane, Laplace law, tense sphere) and per-visit mechanics."
     },
     {
       "id": "7",
