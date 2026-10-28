@@ -30,7 +30,7 @@
       "id": "5",
       "title": "Describe every chamber, and 10-20 in depth",
       "status": "in_progress",
-      "note": "Resolution check done: masks keep surface features above ~1.4 um wavelength (~0.7-1 um bumps); finer topography needs raw intensities. Mask surface sits 0.72 um outside the membrane. z pitch unresolved (0.196 or ~0.24 um). Next: descriptors at >=1.4 um scale."
+      "note": "5a done: 33 mask descriptors (>=1.4 um scale) for all 502 chambers, with ICC noise scores and z-pitch sensitivity. 19 reliable (ICC>=0.5); fine topography (cup asymmetry, higher Zernike modes) is mostly sweep-to-sweep noise in masks. Check (5b) pre-registered in status/step5b_preregistration.md. 10-20 in-depth chambers still to do."
     },
     {
       "id": "check",
