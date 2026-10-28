@@ -41,8 +41,8 @@
     {
       "id": "6",
       "title": "First mechanical model",
-      "status": "todo",
-      "note": "Tool chosen on evidence; two stiffnesses; held-out test."
+      "status": "in_progress",
+      "note": "6a done: SimuCell3D rejected (fails on our marching-cubes meshes, resets per-face types every step, cannot couple two cell types with different parameters, no local load without C++ edits, ~375 s per run). Chosen: small custom Python cortical-shell model (two shells, synapse tension 2x, active pressure on synapse faces, ~0.2 s per relaxation). Only push/target-tension is identifiable. 6b (build + held-out test) awaiting go-ahead on the held-out design."
     },
     {
       "id": "7",
