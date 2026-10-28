@@ -35,8 +35,8 @@
     {
       "id": "check",
       "title": "Does geometry relate to killing at all?",
-      "status": "todo",
-      "note": "Descriptors vs death time and donor, all chambers. Decides what step 6 is for."
+      "status": "done",
+      "note": "Pre-registered result: association present. Within experiment, deeper cups and more T-cell protrusion at first contact go with faster killing (HR ~1.4 per SD, q<0.005), also after adjusting for contact area. But no held-out gain in predicting death across experiments (dAUC -0.02 to +0.01), and no separation of high- vs low-killing donors (n=5 vs 5). Dasatinib control: indentation and protrusion drop in 3/3 donors (pre-death mean)."
     },
     {
       "id": "6",

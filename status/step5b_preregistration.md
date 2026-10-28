@@ -91,3 +91,11 @@ dropped from (B) (count reported).
 - Whether shape adds anything beyond contact area (test 1 adjusted) is
   reported separately; it does not change the gate, since contact area itself
   is one of the descriptors a mechanical model would use.
+
+## Erratum (added 2026-10-27, after the analysis ran)
+
+Groups 8*-10* (v11, v12, v13; folder suffix `_ds`) are **dasatinib 50 nM**, a
+kinase inhibitor that blocks CAR/TCR signalling, not latrunculin A. The name
+above was copied from an earlier report without checking. No test or rule is
+changed: the control still asks whether switching off the signalling that
+drives actin pushing lowers indentation and protrusion in the same donors.
