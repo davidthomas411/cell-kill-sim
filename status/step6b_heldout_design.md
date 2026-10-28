@@ -77,3 +77,27 @@ over chambers (2,000 resamples).
 - Fitted Pi per chamber and visit, and its relation to death within experiment
   (exploratory, compared against raw cup depth).
 - Pi in dasatinib vs untreated chambers from the same donors.
+
+## Addendum, 2026-10-28, before the final held-out run
+
+Written after solver gates A and B (`.agy_step6b_gateA.md`, `.agy_step6b_gateB.md`)
+and before any held-out result from the fixed solver. Both earlier held-out
+runs are void: the first never solved per visit, and the second used a solver
+with stale contact pairs and unconverged solves.
+
+- Solver: contact pairs rebuilt during the solve, initial overlap pushed apart
+  along the synapse axis, solves run to convergence, volume error < 1%.
+  Benchmarks (a)-(c) plus a rigid-indenter contact benchmark (d) and a
+  two-shell symmetry test pass with no solver-fitted constants.
+- Pi grid 0-12, no extrapolation, no cap. A visit whose observed cup depth is
+  deeper than the model reaches at Pi = 12 is "unreachable". Unreachable visits
+  are not used to fit Pi. In test 1 they are still predicted and scored (the
+  model's prediction is its solved depth at the frozen Pi). A chamber with no
+  reachable early visit is dropped from test 1 and counted. Primary depth is
+  net indentation d(Pi) - d(0).
+- Known limits, reported with the result: about 20% of visits are unreachable
+  on the 20 in-depth chambers; fitted Pi changes by up to about 40% between
+  1.0 and 0.5 um meshes on real visits. The mesh stays at 1.0 um for cost.
+- Step 7 route (a) required >= 95% in-range coverage. Gate B gives about 80%,
+  so step 7 stiffness units stay on route (b) whatever this run shows.
+- Tests, baselines, split, bootstrap and decision rule are unchanged.
