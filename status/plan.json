@@ -23,8 +23,8 @@
     {
       "id": "4",
       "title": "Build per-cell death labels",
-      "status": "in_progress",
-      "note": "Labels for all 502 chambers. Sustained rule vs paper: high-killing 58% vs 57%, low-killing 37% vs 27%, dasatinib 4.9% vs 4.5%. Contact-to-death survival curves separate the three regimes. To fix: count only the contacted target, exclude the MIP_ROI_0 late artifact, report a 200-min window."
+      "status": "done",
+      "note": "Death labels for all 502 chambers, counting only the target the tracked T cell touches; MIP_ROI_0 late 405 nm band (visits 19+, all experiments) excluded; full and 200-min windows. Any-visit rule (the lab's definition) vs paper Fig 5g: high-killing 52.1% vs 57.5%, low-killing 24.4% vs 27.0%, latrunculin 5.6% vs 4.5%. Paper gives group counts only, so no per-cell check is possible."
     },
     {
       "id": "5",
