@@ -1,7 +1,13 @@
 {
-  "updated": "2026-10-27",
-  "review_url": "https://claude.ai/artifact/M6gEx1wDzYK67gDQfxyYN1",
+  "updated": "2026-10-28 21:45",
+  "review_url": "https://claude.ai/artifact/7rfWCPdbZtaptkK5nc7NTX",
   "steps": [
+    {
+      "id": "audit",
+      "title": "Audit: verify every stage on real images",
+      "status": "in_progress",
+      "note": "Started 2026-10-28 after reviewing all 128 real-data panels (figures/review/gallery.html; findings in status/visual_review_2026-10-28.md). Plan in status/verification_plan.md: gates G0-G5, each passed only after every panel of a real-image gallery is reviewed. Running now: mask QC + death-label checks (agy), raw volumes for the gallery panels (then the in-depth chambers)."
+    },
     {
       "id": "1",
       "title": "Fix the foundation",
@@ -17,38 +23,38 @@
     {
       "id": "3",
       "title": "Reproduce the lab's published numbers",
-      "status": "in_progress",
-      "note": "Exact CA/ADC/ARFS reproduced from raw for 2 chambers. Lab tracker ported: trace_num==1 count equals the paper's row count in all 12 fully deposited experiments (395/395). Chamber identity firm for 415/419 rows; masks-only CA within 0.5% for 369/419. Remaining value gaps are multi-component surfaces where cl_factor needs raw actin. Group 7 has 8 undeposited chambers."
+      "status": "done",
+      "note": "Verified on external checks: trace_num==1 count equals the paper's row count in all 12 fully deposited experiments (395/395); chamber identity firm for 415/419 rows; masks-only contact area within 0.5% for 369/419. Gate G0 passed. Not yet checked visually; gate G1 covers the same masks."
     },
     {
       "id": "4",
       "title": "Build per-cell death labels",
-      "status": "done",
-      "note": "Death labels for all 502 chambers, counting only the target the tracked T cell touches; MIP_ROI_0 late 405 nm band (visits 19+, all experiments) excluded; full and 200-min windows. Any-visit rule (the lab's definition) vs paper Fig 5g: high-killing 52.1% vs 57.5%, low-killing 24.4% vs 27.0%, latrunculin 5.6% vs 4.5%. Paper gives group counts only, so no per-cell check is possible."
+      "status": "blocked",
+      "note": "AUDIT G2. Labels exist for all 502 chambers (contacted target only, 200-min window, ROI_0 band excluded), but are not verified. Gallery panels overlap dye with every target in the field, labels with the contacted target only: death_surviving_19, 24 and death_killed_07 disagree with their labels. Possible overlap bug (death_dasatinib_30), possible neighbour false kills (death_killed_05, 09). Faint dye (threshold 404 vs background ~400): threshold sensitivity running in the QC job."
     },
     {
       "id": "5",
       "title": "Describe every chamber, and 10-20 in depth",
-      "status": "in_progress",
-      "note": "5a done: 33 mask descriptors (>=1.4 um scale) for all 502 chambers, with ICC noise scores and z-pitch sensitivity. 19 reliable (ICC>=0.5); fine topography (cup asymmetry, higher Zernike modes) is mostly sweep-to-sweep noise in masks. Check (5b) pre-registered in status/step5b_preregistration.md. 10-20 in-depth chambers still to do."
+      "status": "blocked",
+      "note": "AUDIT G1/G3. 5a descriptors exist but the cup measurements are inflated where the target mask is not one whole cell: fragmented (cup_01 10.2 um), two targets merged (deep_07 5.6 um), hollow (dasatinib_11 6.75 um), cut by the image edge (cup_05, cup_13). Median cup depth 0.72 um (compact targets) vs 1.35 um (least compact). Donor hd10 masks mostly fragmented/hollow. QC flags running; recompute on clean cells, then re-verify visually. Raw volumes for all 121 gallery panels downloading."
     },
     {
       "id": "check",
       "title": "Does geometry relate to killing at all?",
-      "status": "done",
-      "note": "Pre-registered result: association present. Within experiment, deeper cups and more T-cell protrusion at first contact go with faster killing (HR ~1.4 per SD, q<0.005), also after adjusting for contact area. But no held-out gain in predicting death across experiments (dAUC -0.02 to +0.01), and no separation of high- vs low-killing donors (n=5 vs 5). Dasatinib control: indentation and protrusion drop in 3/3 donors (pre-death mean)."
+      "status": "blocked",
+      "note": "AUDIT G4, on hold. The pre-registered association (deeper cups, faster killing, HR 1.4/SD) may be partly mask artefact if targets fragment before death. Rerun on verified G1-G3 data, old result kept for comparison."
     },
     {
       "id": "6",
       "title": "First mechanical model",
-      "status": "in_progress",
-      "note": "6a done (custom two-shell model chosen over SimuCell3D). 6b first run rejected on review: solver validation was circular, and late-visit predictions were the proportional baseline times an ad hoc factor rather than per-visit solves. Rerun in progress with independent validation (flat membrane, Laplace law, tense sphere) and per-visit mechanics."
+      "status": "blocked",
+      "note": "PARKED (G5). Solver fixed and passes analytic and contact benchmarks, but on real data: solved cells drift 2-3 um off the masks (no rigid-body pinning); re-solve disagrees with the fit curve in 9/32 panels; starting target misplaced (overlap up to 11 um); one curve-inversion inconsistency (fit_reach_14). Final run stopped. Resume only if G4 still shows something to explain."
     },
     {
       "id": "7",
       "title": "Ask one sharp question",
-      "status": "todo",
-      "note": "Load and focus vs donor, in units of stiffness."
+      "status": "blocked",
+      "note": "AUDIT G4, on hold. Pre-registered result was inconclusive (dasatinib control failed on depth/radius). The hd10 outlier that drove part of it has mostly fragmented/hollow masks. Rerun after G1-G3."
     }
   ]
 }
