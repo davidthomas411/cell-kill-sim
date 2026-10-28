@@ -433,9 +433,9 @@ def get_agent_And_downloader_sections() -> tuple[dict, dict]:
             if "-p" in tokens or "--prompt" in tokens:
                 agy_procs.append({"pid": pid, "command": args[:160]})
 
-        # Check for download_masks.py process (ignore shell wrappers / grep)
-        if base_comm not in ("zsh", "sh", "bash", "grep", "ps", "agy"):
-            if "download_masks.py" in args:
+        # Check for mask or raw downloader processes (ignore shell wrappers / grep / caffeinate)
+        if base_comm not in ("zsh", "sh", "bash", "grep", "ps", "agy", "caffeinate"):
+            if "download_masks.py" in args or "download_raw.py" in args:
                 dl_procs.append({"pid": pid, "command": args})
 
     log_exists, log_lines = _tail_cli_log(CLI_LOG_PATH, max_lines=12)
@@ -1079,7 +1079,7 @@ h2 {
       ' &nbsp; downloader: ' + chipHtml(dlActive ? 'in_progress' : 'todo', dlActive ? 'running' : 'stopped');
 
     let html = '';
-    html += '<div class="kv-row"><span>Downloader (<code>download_masks.py</code>)</span><span class="mono num">' +
+    html += '<div class="kv-row"><span>Downloader (<code>download_masks.py</code> / <code>download_raw.py</code>)</span><span class="mono num">' +
       (dlActive ? esc(downloader.processes.map(p => 'PID ' + p.pid).join(', ')) : 'not running') + '</span></div>';
     html += '<div class="kv-row"><span>Antigravity agent (<code>agy -p</code>)</span><span class="mono num">' +
       (agyActive ? esc(agent.processes.map(p => 'PID ' + p.pid).join(', ')) : 'idle') + '</span></div>';
