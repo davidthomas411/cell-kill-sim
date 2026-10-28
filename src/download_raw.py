@@ -567,6 +567,12 @@ def main() -> int:
     parser.add_argument("--workers", type=int, default=8, help="Number of parallel download workers (default: 8).")
     parser.add_argument("--limit", type=int, default=None, help="Maximum number of filtered entries to process.")
     parser.add_argument("--dry-run", action="store_true", help="Parse and summarize without downloading or writing files.")
+    parser.add_argument(
+        "--file-list",
+        type=Path,
+        default=None,
+        help="CSV with columns experiment, roi, stem: download only these volumes (other filters still apply).",
+    )
     args = parser.parse_args()
 
     roi_filter: set[str] | None = None
@@ -587,6 +593,13 @@ def main() -> int:
         if (args.experiment is None or e.experiment == args.experiment)
         and (roi_filter is None or e.roi in roi_filter)
     ]
+    if args.file_list is not None:
+        with open(args.file_list, "r", encoding="utf-8", newline="") as f:
+            wanted = {(r["experiment"], r["roi"], r["stem"].zfill(5)) for r in csv.DictReader(f)}
+        selected = [e for e in selected if (e.experiment, e.roi, e.stem.zfill(5)) in wanted]
+        missing = len(wanted) - len(selected)
+        if missing:
+            print(f"[WARN] {missing} of {len(wanted)} listed volumes not found in the URL list", flush=True)
     if args.limit is not None and args.limit >= 0:
         selected = selected[: args.limit]
 
