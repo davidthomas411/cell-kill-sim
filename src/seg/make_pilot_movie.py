@@ -358,5 +358,311 @@ def main() -> None:
         render_chamber_movie(short_exp=short_exp, exp=exp, roi=roi)
 
 
+CANDIDATES_P3 = [
+    ("C0", "C0: Lab deposited"),
+    ("C3", "C3: PlantSeg 3D (P2)"),
+    ("C4", "C4: PlantSeg + channel ID (P3)"),
+]
+
+
+def render_chamber_movie_p3(
+    short_exp: str = "v01",
+    exp: str = "v01_6_40_120_0-6_hd1",
+    roi: str = "MIP_ROI_32",
+) -> Path:
+    """Render 3-column (C0, C3, C4) comparison movie and frames for Pilot P3."""
+    manifest_path = REPO_ROOT / "data" / "scidb_19235_raw" / "manifest.csv"
+    with open(manifest_path, "r") as f:
+        all_rows = list(csv.DictReader(f))
+
+    by_visit: Dict[int, List[dict]] = {}
+    for r in all_rows:
+        if r["experiment"] == exp and r["roi"] == roi and r["ok"] == "True" and r["sweep_index"] != "6":
+            by_visit.setdefault(int(r["visit_index"]), []).append(r)
+
+    rows = []
+    for v in sorted(by_visit.keys()):
+        vlist = by_visit[v]
+        s1 = [r for r in vlist if r["sweep_index"] == "1"]
+        if s1:
+            rows.append(s1[0])
+        else:
+            s2 = [r for r in vlist if r["sweep_index"] == "2"]
+            rows.append(s2[0] if s2 else sorted(vlist, key=lambda x: int(x["sweep_index"]))[0])
+
+    metrics_csv = REPO_ROOT / "data" / "pilot_seg" / f"{short_exp}_{roi}_p3_metrics.csv"
+    if not metrics_csv.exists():
+        metrics_csv = REPO_ROOT / "data" / "pilot_seg" / "pilot3_metrics.csv"
+
+    score_lookup: Dict[Tuple[int, str], Dict[str, object]] = {}
+    if metrics_csv.exists():
+        mdf = pd.read_csv(metrics_csv)
+        mdf_sub = mdf[(mdf["experiment"] == exp) & (mdf["roi"] == roi)]
+        for _, mr in mdf_sub.iterrows():
+            score_lookup[(int(mr["visit"]), str(mr["candidate"]))] = {
+                "tracked_t_id": int(mr["tracked_t_id"]),
+                "tracked_b_id": int(mr["tracked_b_id"]),
+                "tcell_track_id": int(mr["tcell_track_id"]),
+                "target_track_id": int(mr["target_track_id"]),
+                "b_surf": float(mr["target_surf_score"]),
+                "b_miss": float(mr["target_missed_2vox"]),
+                "b_phan": float(mr["target_phantom_frac"]),
+                "t_surf": float(mr["tcell_surf_score"]),
+                "t_miss": float(mr["tcell_missed_2vox"]),
+                "t_phan": float(mr["tcell_phantom_frac"]),
+            }
+
+    frames_raw: List[np.ndarray] = []
+    stems: List[str] = []
+    z_min, y_min, x_min = 10**6, 10**6, 10**6
+    z_max, y_max, x_max = 0, 0, 0
+
+    for r in rows:
+        stem = f"{int(r['stem']):05d}"
+        stems.append(stem)
+        with h5py.File(REPO_ROOT / r["path"], "r") as f_raw:
+            raw = f_raw["raw"][:].astype(np.float32)
+        with h5py.File(
+            REPO_ROOT / "data" / "scidb_19235_masks" / exp / roi / f"{stem}_predictions.h5",
+            "r",
+        ) as f_pred:
+            pred = f_pred["predictions"][:]
+        frames_raw.append(raw)
+
+        lab, _ = ndi.label(pred > 0, structure=STRUCT26)
+        cnt = np.bincount(lab.ravel())
+        keep = np.where(cnt >= 2000)[0]
+        keep = keep[keep > 0]
+        clean = np.isin(lab, keep) if keep.size > 0 else (pred > 0)
+        npz_c4 = REPO_ROOT / "data" / "pilot_seg" / "C4" / exp / roi / f"{stem}.npz"
+        if npz_c4.exists():
+            with np.load(npz_c4) as z4:
+                clean = clean | (z4["t_inst"] > 0) | (z4["b_inst"] > 0)
+        nz = np.argwhere(clean)
+        if nz.size > 0:
+            lo_zyx = nz.min(axis=0)
+            hi_zyx = nz.max(axis=0)
+            z_min = min(z_min, int(lo_zyx[0]))
+            y_min = min(y_min, int(lo_zyx[1]))
+            x_min = min(x_min, int(lo_zyx[2]))
+            z_max = max(z_max, int(hi_zyx[0]))
+            y_max = max(y_max, int(hi_zyx[1]))
+            x_max = max(x_max, int(hi_zyx[2]))
+
+    _, Z, Y, X = frames_raw[0].shape
+    pad = 26
+    z0, z1 = max(0, z_min - pad), min(Z, z_max + pad + 1)
+    y0, y1 = max(0, y_min - pad), min(Y, y_max + pad + 1)
+    x0, x1 = max(0, x_min - pad), min(X, x_max + pad + 1)
+    crop_sl = (slice(z0, z1), slice(y0, y1), slice(x0, x1))
+    print(f"[{short_exp} {roi}] P3 crop (cells + 5 um): Z=[{z0}:{z1}], Y=[{y0}:{y1}], X=[{x0}:{x1}]")
+
+    lo = [
+        float(np.percentile(np.concatenate([raw[c, z0:z1, y0:y1, x0:x1].max(0).ravel() for raw in frames_raw]), 65.0))
+        for c in range(3)
+    ]
+    hi = [
+        float(np.percentile(np.concatenate([raw[c, z0:z1, y0:y1, x0:x1].max(0).ravel() for raw in frames_raw]), 99.8))
+        for c in range(3)
+    ]
+
+    def norm(img: np.ndarray, c: int) -> np.ndarray:
+        return np.clip((img - lo[c]) / max(1.0, hi[c] - lo[c]), 0.0, 1.0)
+
+    def composite(raw_crop: np.ndarray, axis: int) -> np.ndarray:
+        t = norm(raw_crop[1].max(axis), 1)
+        g = norm(raw_crop[2].max(axis), 2)
+        d = np.clip((ndi.gaussian_filter(raw_crop[0].max(axis), 3.0) - 404.0) / 20.0, 0.0, 1.0)
+        rgb = np.stack([g + d, t + 0.8 * d, g], axis=-1)
+        return (np.clip(rgb, 0.0, 1.0) * 255.0).astype(np.uint8)
+
+    total_w = 1200
+    left_label_w = 28
+    right_pad = 12
+    col_gap = 10
+    row_gap = 8
+    top_header_h = 46
+    pr_panel_h = 40
+    bottom_footer_h = 26
+
+    panel_w = (total_w - left_label_w - right_pad - 2 * col_gap) // 3  # 380 px
+    x_span = max(1, x1 - x0)
+    y_span = max(1, y1 - y0)
+    z_span = max(1, z1 - z0)
+    scale_factor = float(panel_w) / float(x_span)
+    top_h = max(32, int(round(y_span * scale_factor)))
+    side_h = max(32, int(round(z_span * scale_factor)))
+
+    total_h = top_header_h + top_h + row_gap + side_h + pr_panel_h + bottom_footer_h
+    if total_h % 2 != 0:
+        total_h += 1
+
+    p3_dir = REPO_ROOT / "figures" / "pilot" / "p3"
+    frames_dir = p3_dir / "frames" / f"{short_exp}_{roi}"
+    frames_dir.mkdir(parents=True, exist_ok=True)
+    movie_path = p3_dir / f"{short_exp}_{roi}.mp4"
+
+    font_title = load_font(14)
+    font_col = load_font(13)
+    font_small = load_font(12)
+
+    for r, raw_full, stem in zip(rows, frames_raw, stems):
+        visit = int(r["visit_index"])
+        sweep = int(r["sweep_index"])
+        raw_crop = raw_full[:, z0:z1, y0:y1, x0:x1]
+
+        base_top = composite(raw_crop, axis=0)
+        base_side = composite(raw_crop, axis=1)
+
+        col_panels: List[Tuple[Image.Image, Image.Image]] = []
+        for cand_code, _ in CANDIDATES_P3:
+            if cand_code == "C3":
+                npz_path = REPO_ROOT / "data" / "pilot_seg" / "C3_fixed" / exp / roi / f"{stem}.npz"
+                if not npz_path.exists():
+                    npz_path = REPO_ROOT / "data" / "pilot_seg" / "C3" / exp / roi / f"{stem}.npz"
+            else:
+                npz_path = REPO_ROOT / "data" / "pilot_seg" / cand_code / exp / roi / f"{stem}.npz"
+
+            data = np.load(npz_path)
+            t_inst = data["t_inst"][crop_sl]
+            b_inst = data["b_inst"][crop_sl]
+
+            info = score_lookup.get((visit, cand_code))
+            if info is not None:
+                tid = int(info["tracked_t_id"])
+                bid = int(info["tracked_b_id"])
+            else:
+                tid = int(data["tracked_t_id"])
+                bid = int(data["tracked_b_id"])
+
+            t_mask = (t_inst == tid) if tid > 0 else np.zeros_like(t_inst, dtype=bool)
+            b_mask = (b_inst == bid) if bid > 0 else np.zeros_like(b_inst, dtype=bool)
+
+            rendered_views: List[Image.Image] = []
+            for axis, base_rgb, target_h in [(0, base_top, top_h), (1, base_side, side_h)]:
+                rgb_up = np.array(
+                    Image.fromarray(base_rgb).resize((panel_w, target_h), Image.NEAREST)
+                )
+
+                for inst_arr, tr_id in [(b_inst, bid), (t_inst, tid)]:
+                    for uid in np.unique(inst_arr):
+                        if uid == 0 or int(uid) == tr_id:
+                            continue
+                        proj_o = (inst_arr == uid).max(axis=axis)
+                        if np.any(proj_o):
+                            proj_o_up = resize_bool_nearest(proj_o, panel_w, target_h)
+                            rgb_up[outline_2d(proj_o_up, thickness=1)] = (155, 155, 155)
+
+                proj_b = b_mask.max(axis=axis)
+                if np.any(proj_b):
+                    proj_b_up = resize_bool_nearest(proj_b, panel_w, target_h)
+                    rgb_up[outline_2d(proj_b_up, thickness=2)] = (90, 160, 255)
+
+                proj_t = t_mask.max(axis=axis)
+                if np.any(proj_t):
+                    proj_t_up = resize_bool_nearest(proj_t, panel_w, target_h)
+                    rgb_up[outline_2d(proj_t_up, thickness=2)] = (255, 150, 40)
+
+                rendered_views.append(Image.fromarray(rgb_up))
+
+            col_panels.append((rendered_views[0], rendered_views[1]))
+
+        canvas = Image.new("RGB", (total_w, total_h), (18, 18, 18))
+        dr = ImageDraw.Draw(canvas)
+
+        dr.text(
+            (left_label_w, 6),
+            f"{short_exp} {roi}  |  Visit {visit:02d}/20  (t = {(visit - 1) * 10} min, sweep {sweep})",
+            fill=(242, 242, 242),
+            font=font_title,
+        )
+
+        dr.text((4, top_header_h + 6), "XY", fill=(200, 200, 200), font=font_small)
+        dr.text((4, top_header_h + top_h + row_gap + 6), "XZ", fill=(200, 200, 200), font=font_small)
+
+        pr_y0 = top_header_h + top_h + row_gap + side_h + 4
+        for c_idx, (cand_code, col_label) in enumerate(CANDIDATES_P3):
+            x_off = left_label_w + c_idx * (panel_w + col_gap)
+            dr.text((x_off, 26), col_label, fill=(242, 242, 242), font=font_col)
+            top_im, side_im = col_panels[c_idx]
+            canvas.paste(top_im, (x_off, top_header_h))
+            canvas.paste(side_im, (x_off, top_header_h + top_h + row_gap))
+
+            info = score_lookup.get(
+                (visit, cand_code),
+                {
+                    "target_track_id": 0,
+                    "tcell_track_id": 0,
+                    "b_surf": 0.0,
+                    "b_miss": 0.0,
+                    "b_phan": 0.0,
+                    "t_surf": 0.0,
+                    "t_miss": 0.0,
+                    "t_phan": 0.0,
+                },
+            )
+            dr.text(
+                (x_off + 2, pr_y0),
+                f"Target (tr={int(info['target_track_id'])}): surf={float(info['b_surf']):.2f}  miss={float(info['b_miss']):.2f}  phan={float(info['b_phan']):.2f}",
+                fill=(130, 190, 255),
+                font=font_small,
+            )
+            dr.text(
+                (x_off + 2, pr_y0 + 16),
+                f"T cell (tr={int(info['tcell_track_id'])}): surf={float(info['t_surf']):.2f}  miss={float(info['t_miss']):.2f}  phan={float(info['t_phan']):.2f}",
+                fill=(255, 175, 85),
+                font=font_small,
+            )
+
+        px_5um = max(10, int(round((5.0 / VOXEL_UM) * scale_factor)))
+        sb_x1 = left_label_w + 3 * panel_w + 2 * col_gap - 10
+        sb_x0 = sb_x1 - px_5um
+        sb_y = top_header_h + top_h - 10
+        dr.line([(sb_x0, sb_y), (sb_x1, sb_y)], fill=(255, 255, 255), width=3)
+        dr.text((sb_x0, sb_y - 15), "5 um", fill=(255, 255, 255), font=font_small)
+
+        footer_y = pr_y0 + pr_panel_h
+        dr.text(
+            (left_label_w, footer_y),
+            "Raw: green ch1 (T cell) | magenta ch2 (target) | yellow ch0 (SYTOX >404 ADU)    "
+            "Outlines: blue tracked target | orange tracked T cell | grey other instances",
+            fill=(205, 205, 205),
+            font=font_small,
+        )
+
+        jpg_path_pad = frames_dir / f"{visit:02d}.jpg"
+        canvas.save(jpg_path_pad, format="JPEG", quality=82)
+
+    for crf_val in ("26", "28", "30", "32"):
+        cmd = [
+            "ffmpeg",
+            "-y",
+            "-framerate",
+            "2",
+            "-i",
+            str(frames_dir / "%02d.jpg"),
+            "-c:v",
+            "libx264",
+            "-crf",
+            crf_val,
+            "-pix_fmt",
+            "yuv420p",
+            "-movflags",
+            "+faststart",
+            str(movie_path),
+        ]
+        subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        size_mb = movie_path.stat().st_size / (1024 * 1024)
+        if size_mb <= 1.48:
+            break
+    print(f"Saved {movie_path} ({size_mb:.3f} MB, crf={crf_val}, {total_w}x{total_h})")
+    return movie_path
+
+
+def main_p3() -> None:
+    for short_exp, exp, roi in PILOT_CHAMBERS:
+        render_chamber_movie_p3(short_exp=short_exp, exp=exp, roi=roi)
+
+
 if __name__ == "__main__":
-    main()
+    main_p3()
