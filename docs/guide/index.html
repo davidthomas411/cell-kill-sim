@@ -1,0 +1,241 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Cell-Kill-Sim: Start Here</title><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:wght@600&family=Source+Sans+3:wght@400;600&display=swap">
+<style>:root{--paper:#fbfbfa;--ink:#1d2430;--muted:#5a6473;--rule:#dfe3e8;--accent:#1f4e79;--note:#eef3f8;
+    --serif:"Source Serif 4",Georgia,serif;--sans:"Source Sans 3","Segoe UI",system-ui,sans-serif}
+    @media (prefers-color-scheme:dark){:root{color-scheme:dark;--paper:#12161c;--ink:#e6eaf0;--muted:#a0aab8;--rule:#2b3340;--accent:#8fb8e6;--note:#1a2230}}
+    body{background:var(--paper);color:var(--ink);font:17px/1.6 var(--sans);margin:0;padding:2rem max(16px,env(safe-area-inset-left,0px)) 4rem}
+    main{max-width:46rem;margin:0 auto} h1,h2,h3{font-family:var(--serif);line-height:1.2;text-wrap:balance}
+    h1{font-size:2.3rem;margin:.2rem 0 1rem} h2{font-size:1.6rem;margin-top:3rem;padding-top:1rem;border-top:1px solid var(--rule)}
+    figure{margin:1.5rem 0} figure img,figure video{width:100%;height:auto;border-radius:4px;background:#000}
+    figcaption{font-size:.92rem;color:var(--muted);margin-top:.4rem} a{color:var(--accent)}
+    table{border-collapse:collapse;width:100%;font-size:.95rem} td,th{border-bottom:1px solid var(--rule);padding:.4rem .5rem;text-align:left;vertical-align:top}
+    .note{background:var(--note);border-radius:6px;padding:.8rem 1rem} .toc{font-size:.95rem}</style></head><body><main><h1>Cell-Kill-Sim: start here</h1>
+<p>A plain-language guide to what this project is and what has been done. It assumes
+no background in biology or in the code. Every picture comes from the real data.
+Last updated 28 October 2026.</p>
+<div class="toc">
+<p><strong>Contents:</strong>
+<a href="#1-the-question">1. The question</a> ·
+<a href="#2-the-data">2. The data</a> ·
+<a href="#3-turning-images-into-cells">3. Turning images into cells</a> ·
+<a href="#4-what-we-measured">4. What we measured</a> ·
+<a href="#5-what-we-found-and-why-it-is-on-hold">5. What we found, and why it is on hold</a> ·
+<a href="#6-how-work-is-checked-now">6. How work is checked now</a> ·
+<a href="#7-what-happens-next">7. What happens next</a> ·
+<a href="#8-glossary">8. Glossary</a></p>
+</div>
+<h2>1. The question</h2>
+<p>CAR-T cells are immune cells engineered to recognise and kill cancer cells.
+Some patients' CAR-T cells kill well, others poorly. One idea is that good
+killers push on their target in a particular way: they press harder, or press
+in a more focused spot, before they kill it.</p>
+<p>The goal is to build a <strong>4D digital twin</strong> of each encounter: a 3D model of
+the T cell and its target, changing over time. Then we can measure how each
+T cell pushes and ask whether that predicts killing.</p>
+<h2>2. The data</h2>
+<p>The data come from the Fei lab (Wang et al. 2024, <em>Nature Communications</em>),
+who made it public (ScienceDB 19235). They put T cells and leukaemia cells
+(Nalm6) together in tiny wells, called <strong>chambers</strong>, and filmed them in 3D with
+a light-sheet microscope.</p>
+<ul>
+<li>Each cell type glows in its own colour. In our pictures the <strong>T cell is green</strong>
+  (an actin label), the <strong>tumour cell is magenta</strong> (a membrane label), and a
+  <strong>death dye shows yellow</strong> once a cell has died.</li>
+<li>Each chamber was imaged every 10 minutes for about 3 hours: 20 <strong>visits</strong>.
+  At each visit the microscope takes a quick burst of about 5 3D images,
+  called <strong>sweeps</strong>, a few seconds apart.</li>
+<li>In total: 13 experiments, 10 blood donors, 502 chambers, 63,000 3D images,
+  4.7 TB of raw images.</li>
+</ul>
+<figure>
+<img src="img/f1_one_moment.jpg" alt="One 3D image seen from above: a magenta tumour cell with a green T cell pressed against it">
+<figcaption><b>One moment in one chamber</b> (experiment v01, chamber ROI 2, 2 hours in), seen from above.
+The 3D image is flattened by showing the brightest point along each line of sight.</figcaption>
+</figure>
+
+<figure>
+<img src="img/f2_time_strip.jpg" alt="Six snapshots 40 minutes apart showing the T cell moving around the tumour cell">
+<figcaption><b>The same chamber over 3 hours.</b> The T cell (green) stays on the tumour cell (magenta) and crawls
+around it. In this chamber the tumour cell survives.</figcaption>
+</figure>
+
+<figure>
+<video src="img/v01_MIP_ROI_32.mp4" controls loop muted playsinline></video>
+<figcaption><b>A chamber where the tumour cell is killed</b> (v01, ROI 32), all 20 visits. The death dye
+(yellow/white) appears at the end. The coloured outlines are the lab's computer-drawn cell outlines (section 3).</figcaption>
+</figure>
+
+<figure>
+<img src="img/f3_slice_vs_projection.jpg" alt="Left: a single thin slice showing the tumour cell membrane as a ring. Middle: top view of the whole volume. Right: side view">
+<figcaption><b>Three ways to look at one 3D image.</b> One thin slice (left) shows the tumour cell's membrane as a ring,
+because the label sits only on the cell's surface. The top and side views (middle, right) show the whole cell.
+Early in this project we reviewed single slices only, which can miss what happens elsewhere in the cell.</figcaption>
+</figure>
+
+<h2>3. Turning images into cells</h2>
+<p>To measure anything, the computer needs to know which voxels (3D pixels) belong
+to which cell. The Fei lab trained a neural network to label every voxel, and
+published these labels, called <strong>masks</strong>. We started from their masks.</p>
+<figure>
+<img src="img/f4_good_mask.jpg" alt="Top: raw image with blue and orange outlines that follow the cells closely. Bottom: the lab's mask labels">
+<figcaption><b>A good mask.</b> Top: the raw image with the outline of the tumour cell (blue) and T cell (orange).
+Bottom: the lab's labels. The outline follows the cell. (The top row shows only the magenta channel, so the T cell's outline has no green under it.)</figcaption>
+</figure>
+
+<p>When we looked closely, many masks turned out to be wrong in ways that matter:</p>
+<figure>
+<img src="img/f5_hollow.jpg" alt="A solid magenta cell whose mask is a broken hollow ring">
+<figcaption><b>Hollow mask.</b> The cell is solid, but the mask is a broken ring. Because the label marks only
+the membrane, the network sometimes fails to fill the inside. Donor hd10's experiments are mostly like this.</figcaption>
+</figure>
+
+<figure>
+<img src="img/f6_merged.jpg" alt="Two round tumour cells touching, outlined as one object">
+<figcaption><b>Two cells merged.</b> Two round tumour cells are labelled as one object. A T cell sitting in the
+groove between them then looks as if it has pushed a deep dent into "one" cell.</figcaption>
+</figure>
+
+<p>Other failures: a cell split into fragments, a mask extending where there is no
+cell, and cells cut off at the edge of the image. In a random check of visits
+that passed our first quality rule, only <strong>4 in 10 masks matched the raw image well</strong>.</p>
+<h2>4. What we measured</h2>
+<p><strong>Contact area:</strong> how much of the T cell touches the target. We reproduced the
+lab's published numbers exactly (395 of 395 chambers matched; area within 0.5%
+for 369 of 419 cells). This part is solid.</p>
+<p><strong>Cup depth:</strong> how deep a dent the T cell makes in the target. It is the
+distance from the target's "filled-in" outline (its convex hull) down to the
+contact surface.</p>
+<figure>
+<img src="img/f7_real_cup.jpg" alt="A tumour cell wrapping around a T cell, with a red arrow marking a 3.7 micrometre dent">
+<figcaption><b>A real deep cup</b> (3.7 µm). The target visibly wraps around the T cell. The green dashed line is
+the filled-in outline; the red arrow is the measured depth.</figcaption>
+</figure>
+
+<figure>
+<img src="img/f8_cup_test.jpg" alt="Synthetic sphere with a 2 micrometre dent and the measured depth">
+<figcaption><b>Testing the ruler.</b> On artificial cells with dents of known depth, the measurement is right to within
+one voxel (a 2 µm dent measures 1.96 µm). So the ruler is fine; the trouble is the bad masks it is applied to.</figcaption>
+</figure>
+
+<p><strong>Death:</strong> a target counts as killed when the death dye appears inside it and
+stays. Our kill rates match the paper's per group (52% vs 57.5%, 24% vs 27%,
+6% vs 4.5%), but the dye is faint and the calls depend on the threshold.</p>
+<figure>
+<img src="img/f9_death.jpg" alt="Death-dye images before, at and after a called death visit">
+<figcaption><b>A death call.</b> The death dye (bright) appears on the target at the called visit and grows after it.</figcaption>
+</figure>
+
+<p><strong>A mechanical model</strong> to turn dents into forces was built and tested, but it
+did not fit the real cells reliably: its cells drifted away from the real ones.
+It is parked until the measurements are trustworthy.</p>
+<figure>
+<img src="img/f10_model.jpg" alt="Model outlines displaced from the real cell outlines">
+<figcaption><b>Why the model is parked.</b> The model's cells (dashed) sit several micrometres away from the real ones (solid).</figcaption>
+</figure>
+
+<h2>5. What we found, and why it is on hold</h2>
+<table>
+<thead>
+<tr>
+<th>Result</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Reproduced the lab's contact areas and chamber counts</td>
+<td><strong>Solid</strong></td>
+</tr>
+<tr>
+<td>Deeper dents go with faster killing, within each experiment (about 1.4× per standard deviation)</td>
+<td><strong>On hold</strong>: bad masks inflate dents, and they become more common just before death, so this could be an artefact</td>
+</tr>
+<tr>
+<td>High-killing donors do <em>not</em> push in a more focused way than low-killing donors</td>
+<td><strong>On hold</strong>, and the test was inconclusive anyway</td>
+</tr>
+<tr>
+<td>Mechanical model</td>
+<td><strong>Parked</strong></td>
+</tr>
+</tbody>
+</table>
+<p>The lesson: earlier stages were accepted on numbers and reports, without
+looking at enough real images. Problems in the masks then flowed into every
+later result.</p>
+<h2>6. How work is checked now</h2>
+<p>The project is run like a lab:</p>
+<ul>
+<li><strong>Galleries and movies:</strong> every step is shown as real images, random examples plus
+  the most extreme ones, and every image is reviewed. Each gets a recorded verdict
+  (ok / problem / unsure) with a note.</li>
+<li><strong>Lab notebook:</strong> dated entries recording what was run, what was looked at and what was decided.</li>
+<li><strong>Data registry:</strong> every dataset has a status. Only verified data may be analysed.</li>
+<li><strong>Gates:</strong> a stage may feed the next only after its review passes.</li>
+</ul>
+<p>So far 256 panels have been reviewed (146 in the first gallery, 110 in the clean-cell gallery).</p>
+<h2>7. What happens next</h2>
+<ol>
+<li><strong>Better cell outlines.</strong> Instead of trusting the lab's masks, we redraw cells from the
+   raw images using several methods: the lab's masks repaired, Cellpose-SAM (a general
+   AI cell-outlining model), and a membrane-based method. For each cell we pick the
+   outline that matches the raw movie. A pilot on 8 chambers (4 killed, 4 not) is starting.</li>
+<li><strong>Movies as the standard view</strong> for every chamber, with the measurements plotted
+   alongside so each number can be checked against what the cells do.</li>
+<li><strong>Scale up</strong> by processing raw images as they download and keeping only the cell
+   outlines and summaries, so all 502 chambers fit on one computer.</li>
+<li>Then, and only then, re-ask the questions in section 5 and return to the mechanical model.</li>
+</ol>
+<p><strong>Open questions for the Fei lab:</strong> the true spacing between 3D slices (the paper
+says 0.6 µm, but the images look like about 0.2 µm), and whether deaths seen on only one visit were discarded.</p>
+<h2>8. Glossary</h2>
+<table>
+<thead>
+<tr>
+<th>Term</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Chamber</td>
+<td>One tiny well holding a T cell and target cells; one movie</td>
+</tr>
+<tr>
+<td>Visit</td>
+<td>One time point, every 10 minutes</td>
+</tr>
+<tr>
+<td>Sweep</td>
+<td>One 3D image; about 5 per visit, seconds apart</td>
+</tr>
+<tr>
+<td>Mask</td>
+<td>The computer's labelling of which voxels belong to which cell</td>
+</tr>
+<tr>
+<td>Projection (top/side view)</td>
+<td>A 3D image flattened by keeping the brightest point along each line</td>
+</tr>
+<tr>
+<td>Cup depth</td>
+<td>How deep the T cell dents the target</td>
+</tr>
+<tr>
+<td>Convex hull</td>
+<td>The shape you get by shrink-wrapping a cell; dents show up as gaps under it</td>
+</tr>
+<tr>
+<td>Donor</td>
+<td>The person the T cells came from; 10 donors, 5 high-killing and 5 low-killing</td>
+</tr>
+<tr>
+<td>Dasatinib</td>
+<td>A drug that weakens T-cell pushing; used as a control</td>
+</tr>
+<tr>
+<td>Digital twin</td>
+<td>A 3D model of the cells over time, built from the images</td>
+</tr>
+</tbody>
+</table></main></body></html>

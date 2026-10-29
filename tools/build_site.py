@@ -295,6 +295,7 @@ def _page_shell(
 ) -> str:
     """Wrap page content in the standard House Style header and layout."""
     nav_items = [
+        ("guide", "Start here", f"{root_prefix}guide/index.html"),
         ("gates", "Gates", f"{root_prefix}index.html"),
         ("notebook", "Notebook", f"{root_prefix}notebook/index.html"),
         ("protocols", "Protocols", f"{root_prefix}protocols/index.html"),
