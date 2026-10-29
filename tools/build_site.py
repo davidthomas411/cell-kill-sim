@@ -1518,6 +1518,10 @@ def build_site() -> None:
     registry = load_registry(REGISTRY_CSV)
     galleries = load_galleries(GALLERIES_CSV)
     movie_rows, movies_by_chamber = sync_movies_to_docs()
+    # Notebook entries embed media from figures/pilot/web/ as ../pilot/<file>.
+    pilot_web = REPO_ROOT / "figures" / "pilot" / "web"
+    if pilot_web.is_dir():
+        shutil.copytree(pilot_web, DOCS_DIR / "pilot", dirs_exist_ok=True)
 
     build_home_page(entries, registry, galleries)
     build_notebook_pages(entries)

@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>2026-10-28-09-re-segmentation-pilot-p1-four-candidates-on-v01-r</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<header class="top">
+  <div class="in">
+    <a class="brand" href="../index.html">Cell-Kill-Sim Lab</a>
+    <nav class="tabs" aria-label="Primary"><a href="../guide/index.html" class="">Start here</a>
+<a href="../index.html" class="">Gates</a>
+<a href="../notebook/index.html" class="on">Notebook</a>
+<a href="../protocols/index.html" class="">Protocols</a>
+<a href="../registry.html" class="">Registry</a>
+<a href="../galleries/index.html" class="">Galleries</a>
+<a href="../movies/index.html" class="">Movies</a>
+<a href="../handbook/index.html" class="">Handbook</a></nav>
+  </div>
+</header>
+<div class="wrap">
+  <aside class="side"><div class="section">Entries</div>
+<a href="index.html">All entries</a>
+<a href="2026-10-28-09-re-segmentation-pilot-p1-four-candidates-on-v01-r.html">2026-10-28-09 G1</a>
+<a href="2026-10-28-08-chamber-movies-first-9-chambers-reviewed.html">2026-10-28-08 G2</a>
+<a href="2026-10-28-07-clean-subset-gallery-review-mask-only-rule-fails.html">2026-10-28-07 G1</a>
+<a href="2026-10-28-06-cup-depth-measurement-validated-on-synthetic-sha.html">2026-10-28-06 G3</a>
+<a href="2026-10-28-05-clean-subset-rule.html">2026-10-28-05 G1</a>
+<a href="2026-10-28-04-visual-review-2026-10-28.html">2026-10-28-04 none</a>
+<a href="2026-10-28-03-step7-prereg-and-result.html">2026-10-28-03 G4</a>
+<a href="2026-10-28-02-step6b-runs-void.html">2026-10-28-02 G5</a>
+<a href="2026-10-28-01-step6a-choice.html">2026-10-28-01 G5</a>
+<a href="2026-10-27-04-step5b-result.html">2026-10-27-04 G4</a>
+<a href="2026-10-27-03-step5a-descriptors.html">2026-10-27-03 G3</a>
+<a href="2026-10-27-02-step4-v2-labels.html">2026-10-27-02 G2</a>
+<a href="2026-10-27-01-step3-reproduction.html">2026-10-27-01 G0</a></aside>
+  <main>
+    
+        <h1>Re-segmentation pilot P1: four candidates on v01 ROI 32</h1>
+        <div class="tblwrap">
+          <table class="data">
+            <tbody>
+              <tr><th>ID</th><td><code>2026-10-28-09-re-segmentation-pilot-p1-four-candidates-on-v01-r</code></td><th>Date</th><td>2026-10-28</td></tr>
+              <tr><th>Gate</th><td><strong>G1</strong></td><th>Status</th><td><span class="status-pill st-reviewed">reviewed</span></td></tr>
+              <tr><th>Author</th><td>claude</td><th>Reviewers</th><td>claude</td></tr>
+              <tr><th>Signoff</th><td>—</td><th>Commits</th><td><code>19e8f5b</code></td></tr>
+              <tr><th>Datasets</th><td><a href="../registry.html#ds-raw_volumes"><code>raw_volumes</code></a>, <a href="../registry.html#ds-lab_masks"><code>lab_masks</code></a></td><th>Protocols</th><td><a href="../protocols/index.html#gallery-review-v1"><code>gallery-review@v1</code></a></td></tr>
+              <tr><th>Galleries</th><td>—</td><th>Supersedes / By</th><td>— / —</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <h2>Question</h2>
+<p>Can we get better cell outlines than the lab's masks by re-segmenting the raw
+images? Four candidates were compared on one killed chamber (v01 ROI 32, sweep 1
+of all 20 visits):</p>
+<ul>
+<li><strong>C0</strong>: the lab's masks as deposited.</li>
+<li><strong>C1</strong>: the lab's masks repaired (holes filled, touching targets split).</li>
+<li><strong>C2</strong>: Cellpose-SAM 3D, a general AI cell-outlining model, used as is (zero-shot).</li>
+<li><strong>C3</strong>: PlantSeg 3D, a membrane-boundary network plus watershed.</li>
+</ul>
+<h2>What was run</h2>
+<p><code>src/seg/candidates.py</code> in conda env <code>seg</code> (torch MPS, cellpose 4.2.1, plantseg 2.0rc14),
+run by agy (Argon High); report <code>.agy_pilot1_report.md</code>. Outputs:
+data/pilot_seg/ (masks, metrics CSV, timing), figures/pilot/v01_MIP_ROI_32_candidates.mp4
+and figures/pilot/frames/.</p>
+<p>Time per 3D image (Apple MPS): C0 0.6 s, C1 2.4 s, C2 119 s, C3 10 s.</p>
+<h2>What was looked at</h2>
+<p>All 20 visit frames (top and side views, 4 candidates side by side), reviewed by Claude.
+In every frame: blue = tracked target, orange = tracked T cell, grey = other objects.</p>
+<figure>
+<video src="../pilot/v01_MIP_ROI_32_candidates.mp4" controls loop muted playsinline></video>
+<figcaption>All 20 visits. Columns: C0 lab, C1 lab repaired, C2 Cellpose-SAM, C3 PlantSeg. Top row: view from above; bottom row: side view.</figcaption>
+</figure>
+
+<h2>Observations</h2>
+<ul>
+<li><strong>C2 Cellpose-SAM fails in all 20 visits.</strong> Every cell is shattered into 9-21 pieces.
+  The tumour label marks only the cell membrane, so the model sees hollow shells.
+  It is also the slowest (2 minutes per image). Not usable without changes.</li>
+<li><strong>C3 PlantSeg fails.</strong></li>
+<li>In visits 7 and 9-12, plus 15, the T cell outline is a striped rectangle, a code bug.</li>
+<li>In about 11 of 20 visits the blue target covers both tumour cells in the top view.</li>
+<li>The agy report said C3 splits the two targets in 17/20 visits. Its CSV counts two
+    target objects, but the frames show the tracked one covering both cells. The images win.</li>
+<li><strong>C1 lab repaired is the best of the four, but not clean.</strong></li>
+<li>It separates the contacted target from its neighbour in the top view in nearly every visit.</li>
+<li>It still keeps parts of the mask that have no cell signal under them. These show
+    as outlines above or below the cells in the side view, in most visits.</li>
+<li>Usually these signal-free parts are grey "other" objects, but in visits 1, 16 and 17
+    they are attached to the blue target and would inflate its volume.</li>
+<li>C0 confirms the earlier gallery finding: the two touching targets are merged in most visits.</li>
+</ul>
+<figure>
+<img src="../pilot/visit10.jpg" alt="Visit 10: C3 T cell drawn as a striped rectangle">
+<figcaption><b>Visit 10.</b> C3 (right) draws the T cell as a striped rectangle: a bug. C2 is shattered. C1 (second) is the closest to the cells.</figcaption>
+</figure>
+
+<figure>
+<img src="../pilot/visit15.jpg" alt="Visit 15: C3 target covers both tumour cells; C1 side view has a grey outline below the cells with no signal">
+<figcaption><b>Visit 15.</b> C3 target (blue) covers both tumour cells. In C1's side view, a grey outline hangs below the cells where there is no signal.</figcaption>
+</figure>
+
+<figure>
+<img src="../pilot/visit17.jpg" alt="Visit 17: C0 and C1 blue target includes a lobe below the cells with no signal">
+<figcaption><b>Visit 17.</b> In C0 and C1 the blue target includes a lobe below the cells (side view) with no signal under it.</figcaption>
+</figure>
+
+<h2>Decision</h2>
+<ul>
+<li>No candidate passes. C1 is the base for the next round.</li>
+<li>Pilot P2:</li>
+<li>Add a raw-signal check to C1: drop mask parts with no signal under them.</li>
+<li>Score every candidate by agreement with the raw image: the share of mask voxels
+     that have signal, and the share of signal covered by the mask. This is also the
+     basis for clean rule v2.</li>
+<li>Fix the C3 rectangle bug and keep it only if it beats C1.</li>
+<li>Drop zero-shot C2.</li>
+<li>Run on all 8 pilot chambers, with a comparison movie for each.</li>
+<li>Lesson: agy's metric claims disagreed with its own frames. Candidate verdicts come from
+  the frames, not the CSV.</li>
+</ul>
+<h2>Open issues</h2>
+<ul>
+<li>Cellpose-SAM might work on a filled input (membrane image filled in, or the T-cell and
+  tumour channels combined). Revisit only if C1 with the raw-signal check falls short.</li>
+</ul>
+        
+  </main>
+</div>
+</body>
+</html>
