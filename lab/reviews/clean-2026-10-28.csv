@@ -1,1 +1,111 @@
 panel_id,reviewer,verdict,tags,note,timestamp
+clean_rand_01_v01_untr_1,claude,problem,misaligned,Target mask extends well beyond the raw target signal (upper region has no signal).,2026-10-28T20:32:28
+clean_rand_02_v01_untr_2,claude,ok,clean,Mask follows raw target signal closely.,2026-10-28T20:32:28
+clean_rand_03_v01_untr_3,claude,ok,clean,"Mask follows raw target; flat contact, 0.42 um.",2026-10-28T20:32:28
+clean_rand_04_v01_untr_4,claude,unsure,other,"Mask follows raw in XY; XZ mask ragged with holes; large target 1,331 um3; 2.2 um cup on broad contact.",2026-10-28T20:32:28
+clean_rand_05_v02_untr_1,claude,unsure,other,Mask covers only part of the faint raw target ring (under-segmented).,2026-10-28T20:32:28
+clean_rand_06_v02_untr_2,claude,ok,clean,Good match to raw.,2026-10-28T20:32:28
+clean_rand_07_v02_untr_3,claude,ok,clean,Good match to raw.,2026-10-28T20:32:28
+clean_rand_08_v02_untr_4,claude,ok,clean,Good match; flattened contact.,2026-10-28T20:32:28
+clean_rand_09_v03_untr_1,claude,unsure,other,"Mask includes dim lower region; faint ring visible in raw, plausibly real.",2026-10-28T20:32:28
+clean_rand_10_v03_untr_2,claude,problem,hollow,"Mask is a hollow U in XZ, smaller than raw target.",2026-10-28T20:32:28
+clean_rand_11_v03_untr_3,claude,ok,clean,Good match to raw; T-cell mask ragged.,2026-10-28T20:32:28
+clean_rand_12_v03_untr_4,claude,ok,clean,Good match.,2026-10-28T20:32:28
+clean_rand_13_v04_untr_1,claude,problem,misaligned,Target mask much larger than raw signal (extends upper-left with no signal).,2026-10-28T20:32:28
+clean_rand_14_v04_untr_2,claude,unsure,other,Mask includes a lobe beyond the raw signal.,2026-10-28T20:32:28
+clean_rand_15_v04_untr_3,claude,ok,clean,Target ok; T-cell mask fragmented.,2026-10-28T20:32:28
+clean_rand_16_v04_untr_4,claude,unsure,other,Mask covers only the left part of the raw target in XY (under-segmented).,2026-10-28T20:32:28
+clean_rand_17_v05_untr_1,claude,problem,misaligned,XZ: mask lower lobe lies outside the raw target signal.,2026-10-28T20:32:28
+clean_rand_18_v05_untr_2,claude,unsure,other,2.94 um cup over a broad 6.6 um patch; raw XZ noisy; T-cell mask fragmented.,2026-10-28T20:32:28
+clean_rand_19_v05_untr_3,claude,problem,misaligned,XZ: separate lower mask lobe with no raw signal.,2026-10-28T20:32:28
+clean_rand_20_v05_untr_4,claude,ok,clean,Good match to raw.,2026-10-28T20:32:28
+clean_rand_21_v06_untr_1,claude,ok,clean,Good match to raw.,2026-10-28T20:32:28
+clean_rand_22_v06_untr_2,claude,ok,clean,Good match to raw.,2026-10-28T20:32:28
+clean_rand_23_v06_untr_3,claude,problem,misaligned,XZ: separate lower mask lobe below the raw target signal.,2026-10-28T20:32:28
+clean_rand_24_v06_untr_4,claude,problem,misaligned,XY mask in pieces against an irregular raw target; XZ lower lobe beyond signal.,2026-10-28T20:32:28
+clean_rand_25_v07_untr_1,claude,unsure,other,XZ slice: target mask nearly absent where raw signal is present.,2026-10-28T20:32:28
+clean_rand_26_v07_untr_2,claude,ok,clean,Good match to raw.,2026-10-28T20:32:28
+clean_rand_27_v07_untr_3,claude,ok,clean,Good match to raw.,2026-10-28T20:32:28
+clean_rand_28_v07_untr_4,claude,ok,clean,Good match to raw.,2026-10-28T20:32:28
+clean_rand_29_v08_untr_1,claude,ok,clean,"Round target, good match.",2026-10-28T20:32:28
+clean_rand_30_v08_untr_2,claude,problem,misaligned,XZ: separate lower mask lobe below the raw signal.,2026-10-28T20:32:28
+clean_rand_31_v08_untr_3,claude,unsure,other,Irregular mask; 2.0 um cup may be real indentation.,2026-10-28T20:32:28
+clean_rand_32_v08_untr_4,claude,ok,clean,Good match to raw.,2026-10-28T20:32:28
+clean_rand_33_v09_untr_1,claude,problem,hollow,hd10: hollow target mask where raw shows little signal; bright raw cell nearby is unlabelled. Possible false target.,2026-10-28T20:32:28
+clean_rand_34_v09_untr_2,claude,unsure,other,XY good; XZ mask in two pieces along an elongated raw target.,2026-10-28T20:32:28
+clean_rand_35_v09_untr_3,claude,unsure,other,Mask has holes and covers part of the raw target.,2026-10-28T20:32:28
+clean_rand_36_v09_untr_4,claude,problem,hollow,C-shaped hollow mask covering part of a larger raw target.,2026-10-28T20:32:28
+clean_rand_37_v10_untr_1,claude,ok,clean,"Elongated target, mask follows raw.",2026-10-28T20:32:28
+clean_rand_38_v10_untr_2,claude,ok,clean,Good match to raw.,2026-10-28T20:32:28
+clean_rand_39_v10_untr_3,claude,ok,clean,Real deep cup: raw target wraps the T cell (3.7 um). Good positive example.,2026-10-28T20:32:28
+clean_rand_40_v10_untr_4,claude,problem,fragmented,Passes rule but mask is several lobes in slices; hull spans them; 5.0 um 'cup'.,2026-10-28T20:32:28
+clean_rand_41_v11_dasa_1,claude,problem,fragmented,Dasatinib: mask split in XZ; lower piece away from raw signal.,2026-10-28T20:32:28
+clean_rand_42_v11_dasa_2,claude,unsure,hollow,Mask follows raw in XY; XZ mask is a hollow ring.,2026-10-28T20:32:28
+clean_rand_43_v11_dasa_3,claude,problem,merged,Mask spans two separate raw cells (merged); passes rule.,2026-10-28T20:32:28
+clean_rand_44_v11_dasa_4,claude,problem,misaligned,Mask lies below the raw target in XZ; large neighbouring raw cell unlabelled.,2026-10-28T20:32:28
+clean_rand_45_v12_dasa_1,claude,unsure,edge,hd10 dasatinib target near right image edge; raw signal partly outside view.,2026-10-28T20:32:28
+clean_rand_46_v12_dasa_2,claude,problem,hollow,hd10 dasatinib: mask is scattered shell pieces inside a solid raw target (XZ).,2026-10-28T20:32:28
+clean_rand_47_v12_dasa_3,claude,problem,hollow,hd10 dasatinib: hollow ring mask inside a solid raw target.,2026-10-28T20:32:28
+clean_rand_48_v12_dasa_4,claude,problem,hollow,hd10 dasatinib: C-shaped hollow mask; raw target solid.,2026-10-28T20:32:28
+clean_rand_49_v13_dasa_1,claude,ok,clean,XY good; XZ mask has internal hole but follows raw outline.,2026-10-28T20:32:28
+clean_rand_50_v13_dasa_2,claude,unsure,hollow,Mask partly hollow in XZ; outline follows raw.,2026-10-28T20:32:28
+clean_rand_51_v13_dasa_3,claude,ok,clean,"Small target, mask follows raw.",2026-10-28T20:32:28
+clean_rand_52_v13_dasa_4,claude,unsure,hollow,C-shaped mask in XY with the hole labelled as other cell; raw target solid.,2026-10-28T20:32:28
+clean_ext_01_max_cup_depth_rank1,claude,unsure,merged,5.8 um: T cell pressed into a large lobed target; raw suggests two cells either side. Wrapping or merged.,2026-10-28T20:32:28
+clean_ext_02_max_cup_depth_rank2,claude,problem,merged,5.8 um: T cell between two raw target bodies joined into one mask (groove read as cup).,2026-10-28T20:32:28
+clean_ext_03_max_cup_depth_rank3,claude,problem,merged,5.3 um: elongated mask spans two raw target bodies; T cell in groove.,2026-10-28T20:32:28
+clean_ext_04_min_cup_depth_rank1,claude,problem,merged,Two round raw cells (figure-eight) merged into one target mask; passes volume rule (964 um3).,2026-10-28T20:32:28
+clean_ext_05_min_cup_depth_rank2,claude,ok,clean,"Flat contact, round target, good match.",2026-10-28T20:32:28
+clean_ext_06_min_cup_depth_rank3,claude,ok,clean,"Flat contact, good match.",2026-10-28T20:32:28
+clean_ext_07_max_depth_over_radius_rank1,claude,problem,fragmented,"4.1 um, depth/radius 1.96: mask scattered pieces over a diffuse raw blob.",2026-10-28T20:32:28
+clean_ext_08_max_depth_over_radius_rank2,claude,problem,merged,Same visit as clean_ext_03 (selected twice): two raw bodies merged.,2026-10-28T20:32:28
+clean_ext_09_max_depth_over_radius_rank3,claude,problem,other,"Dasatinib, very low-contrast raw; T cell and target barely touch in XZ; 1.06 ratio unreliable.",2026-10-28T20:32:28
+clean_ext_10_max_target_volume_rank1,claude,unsure,other,"Largest target (1,479 um3): round raw cell plus a mask lobe toward the T cell; contact sits on the lobe.",2026-10-28T20:32:28
+clean_ext_11_max_target_volume_rank2,claude,problem,merged,Mask includes a second lower cell (XZ); 4.2 um 'cup' from the gap.,2026-10-28T20:32:28
+clean_ext_12_max_target_volume_rank3,claude,problem,hollow,hd10 dasatinib: hollow pieces inside a solid raw cell.,2026-10-28T20:32:28
+clean_ext_13_min_target_volume_rank1,claude,ok,clean,"Small target (203 um3), mask follows raw; flat contact.",2026-10-28T20:32:28
+clean_ext_14_min_target_volume_rank2,claude,ok,clean,"Small target, good match.",2026-10-28T20:32:28
+clean_ext_15_min_target_volume_rank3,claude,ok,clean,"Small target, good match.",2026-10-28T20:32:28
+clean_ext_16_min_raw_largest_frac_rank1,claude,problem,fragmented,Mask pieces over a faint raw blob; separate round raw cell nearby unlabelled.,2026-10-28T20:32:28
+clean_ext_17_min_raw_largest_frac_rank2,claude,ok,clean,Mask follows raw.,2026-10-28T20:32:28
+clean_ext_18_min_raw_largest_frac_rank3,claude,unsure,other,2.07 um: round raw target; mask tail extends along the T cell.,2026-10-28T20:32:28
+rejected_cat1_01,claude,ok,tiny,Rejection correct: target fragment 89 um3; raw cell is larger than the mask.,2026-10-28T20:32:28
+rejected_cat1_02,claude,ok,tiny,Rejection correct: 73 um3 fragment.,2026-10-28T20:32:28
+rejected_cat1_03,claude,ok,edge,Rejection correct: T cell in 2 pieces and cut by edge; target mask itself reasonable.,2026-10-28T20:32:28
+rejected_cat1_04,claude,unsure,other,"Rejected for a 2-piece T cell, but the target is a round raw cell well segmented (XZ): repairable, not bad.",2026-10-28T20:32:28
+rejected_cat1_05,claude,ok,tiny,Rejection correct: 74 um3 at edge.,2026-10-28T20:32:28
+rejected_cat1_06,claude,ok,edge,Rejection correct: T cell in pieces and cut by edge.,2026-10-28T20:32:28
+rejected_cat1_07,claude,ok,merged,"Rejection correct: hd10 merged/fragmented target 2,359 um3, 5.9 um 'cup'.",2026-10-28T20:32:28
+rejected_cat1_08,claude,ok,merged,"Rejection correct: 2,791 um3 target, T cell in 2 pieces.",2026-10-28T20:32:28
+rejected_cat2_01,claude,problem,other,Over-rejected: target mask follows raw cell; the failing fraction comes from detached U-Net specks elsewhere.,2026-10-28T20:32:28
+rejected_cat2_02,claude,ok,hollow,Rejection reasonable: mask covers only part of the raw target.,2026-10-28T20:32:28
+rejected_cat2_03,claude,ok,fragmented,Rejection correct: hd10 fragmented target.,2026-10-28T20:32:28
+rejected_cat2_04,claude,unsure,other,Target well segmented in XY; detached piece below in XZ caused the fail.,2026-10-28T20:32:28
+rejected_cat2_05,claude,unsure,hollow,XY mask is a ring; XZ mask good. Partly hollow.,2026-10-28T20:32:28
+rejected_cat2_06,claude,problem,other,Over-rejected: good target mask; fail from a small detached piece.,2026-10-28T20:32:28
+rejected_cat2_07,claude,ok,tiny,Rejection correct: 106 um3 fragment at edge.,2026-10-28T20:32:28
+rejected_cat2_08,claude,problem,other,Over-rejected: good round target (0.8998 vs 0.90); a detached speck caused the fail.,2026-10-28T20:32:28
+rejected_cat3_01,claude,ok,edge,Rejection correct: cells cut at the volume bottom.,2026-10-28T20:32:28
+rejected_cat3_02,claude,ok,merged,"Rejection correct: 4,440 um3 merged mass at edge.",2026-10-28T20:32:28
+rejected_cat3_03,claude,ok,edge,Rejection correct: tiny fragment at image corner.,2026-10-28T20:32:28
+rejected_cat3_04,claude,ok,edge,"Rejection correct: target cut at edge, 1,514 um3.",2026-10-28T20:32:28
+rejected_cat3_05,claude,ok,merged,"Rejection correct: hd10 merged 1,949 um3 at edge.",2026-10-28T20:32:28
+rejected_cat3_06,claude,ok,edge,Rejection correct: target cut at image bottom.,2026-10-28T20:32:28
+rejected_cat3_07,claude,ok,other,Borderline (1 voxel at border); mask lobes beyond raw signal anyway.,2026-10-28T20:32:28
+rejected_cat3_08,claude,ok,merged,"Borderline edge; also two raw cells merged (2,706 um3).",2026-10-28T20:32:28
+rejected_cat4_01,claude,ok,tiny,Rejection correct: 178 um3 mask covers only part of a larger raw cell.,2026-10-28T20:32:28
+rejected_cat4_02,claude,ok,tiny,Rejection correct: 70 um3 partial mask.,2026-10-28T20:32:28
+rejected_cat4_03,claude,ok,tiny,Rejection correct: 30 um3 fragment.,2026-10-28T20:32:28
+rejected_cat4_04,claude,ok,merged,"Rejection correct: hd10, two cells merged (1,677 um3).",2026-10-28T20:32:28
+rejected_cat4_05,claude,ok,hollow,"Rejection correct: U-shaped hollow mask, 1,519 um3.",2026-10-28T20:32:28
+rejected_cat4_06,claude,ok,merged,"Rejection correct: two raw cells merged (1,564 um3).",2026-10-28T20:32:28
+rejected_cat4_07,claude,problem,other,"Over-rejected: borderline 198 um3 is a real small round cell, well segmented.",2026-10-28T20:32:28
+rejected_cat4_08,claude,ok,merged,"Rejection correct: borderline 1,513 um3 is two raw bodies merged.",2026-10-28T20:32:28
+rejected_cat5_01,claude,problem,other,Over-rejected: mask follows raw well (622 um3); chamber median 243 is pulled down by bad visits.,2026-10-28T20:32:28
+rejected_cat5_02,claude,unsure,hollow,578 vs median 279; mask hollow in XZ.,2026-10-28T20:32:28
+rejected_cat5_03,claude,unsure,other,753 vs median 354; slice shows only a sliver of the mask.,2026-10-28T20:32:28
+rejected_cat5_04,claude,problem,other,"Over-rejected: target mask follows raw (1,110 um3); median 616 likely from bad visits.",2026-10-28T20:32:28
+rejected_cat5_05,claude,problem,other,Over-rejected: small cell well segmented (237 um3); chamber median 92 from fragments.,2026-10-28T20:32:28
+rejected_cat5_06,claude,ok,misaligned,Rejection correct: mask covers only part of the raw target.,2026-10-28T20:32:28
+rejected_cat5_07,claude,problem,other,Over-rejected: borderline 0.699; mask follows raw well.,2026-10-28T20:32:28
+rejected_cat5_08,claude,ok,hollow,Rejection correct: ring-shaped mask plus a second dense body merged.,2026-10-28T20:32:28

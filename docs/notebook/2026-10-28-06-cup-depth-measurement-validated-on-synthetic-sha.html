@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>2026-10-28-06-cup-depth-measurement-validated-on-synthetic-sha</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<header class="top">
+  <div class="in">
+    <a class="brand" href="../index.html">Cell-Kill-Sim Lab</a>
+    <nav class="tabs" aria-label="Primary"><a href="../index.html" class="">Gates</a>
+<a href="../notebook/index.html" class="on">Notebook</a>
+<a href="../protocols/index.html" class="">Protocols</a>
+<a href="../registry.html" class="">Registry</a>
+<a href="../galleries/index.html" class="">Galleries</a>
+<a href="../handbook/index.html" class="">Handbook</a></nav>
+  </div>
+</header>
+<div class="wrap">
+  <aside class="side"><div class="section">Entries</div>
+<a href="index.html">All entries</a>
+<a href="2026-10-28-07-clean-subset-gallery-review-mask-only-rule-fails.html">2026-10-28-07 G1</a>
+<a href="2026-10-28-06-cup-depth-measurement-validated-on-synthetic-sha.html">2026-10-28-06 G3</a>
+<a href="2026-10-28-05-clean-subset-rule.html">2026-10-28-05 G1</a>
+<a href="2026-10-28-04-visual-review-2026-10-28.html">2026-10-28-04 none</a>
+<a href="2026-10-28-03-step7-prereg-and-result.html">2026-10-28-03 G4</a>
+<a href="2026-10-28-02-step6b-runs-void.html">2026-10-28-02 G5</a>
+<a href="2026-10-28-01-step6a-choice.html">2026-10-28-01 G5</a>
+<a href="2026-10-27-04-step5b-result.html">2026-10-27-04 G4</a>
+<a href="2026-10-27-03-step5a-descriptors.html">2026-10-27-03 G3</a>
+<a href="2026-10-27-02-step4-v2-labels.html">2026-10-27-02 G2</a>
+<a href="2026-10-27-01-step3-reproduction.html">2026-10-27-01 G0</a></aside>
+  <main>
+    
+        <h1>Cup-depth measurement validated on synthetic shapes</h1>
+        <div class="tblwrap">
+          <table class="data">
+            <tbody>
+              <tr><th>ID</th><td><code>2026-10-28-06-cup-depth-measurement-validated-on-synthetic-sha</code></td><th>Date</th><td>2026-10-28</td></tr>
+              <tr><th>Gate</th><td><strong>G3</strong></td><th>Status</th><td><span class="status-pill st-reviewed">reviewed</span></td></tr>
+              <tr><th>Author</th><td>claude</td><th>Reviewers</th><td>claude</td></tr>
+              <tr><th>Signoff</th><td>—</td><th>Commits</th><td><code>36b9484</code></td></tr>
+              <tr><th>Datasets</th><td><a href="../registry.html#ds-step5_descriptors"><code>step5_descriptors</code></a></td><th>Protocols</th><td><a href="../protocols/index.html#cup-measurement-v1"><code>cup-measurement@v1</code></a></td></tr>
+              <tr><th>Galleries</th><td><a href="../galleries/cup-validation-2026-10-28.html"><code>cup-validation-2026-10-28</code></a></td><th>Supersedes / By</th><td>— / —</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <h2>Question</h2>
+<p>Is <code>cup_depth_hull_p95_um</code> (src/contact_descriptors.py:709-715) biased? In
+particular, does restricting the distance to T-cell-facing hull facets inflate
+depth (suspected from qc_clean_02, a flat-looking contact recorded at 2.87 um)?</p>
+<h2>What was run</h2>
+<pre><code class="language-bash">python3 src/validate_cup_depth.py      # synthetic cases a-f + real-panel re-measure
+python3 -m unittest tests.test_cup_depth
+</code></pre>
+<p>Run by agy (Gemini 4 Argon High); report <code>.agy_cuptest_report.md</code>.</p>
+<h2>What was looked at</h2>
+<ul>
+<li>figures/cup_depth_validation.png (summary)</li>
+<li>figures/review/cup_validation/: b_dent_R5_a3_d2, case_f_hollow_shell,
+  f_hollow_R5_d1p0_filled_mask (reviewed by Claude).</li>
+</ul>
+<h2>Observations</h2>
+<ul>
+<li><strong>No facing-facet bias.</strong> On a flat cut (7 cases, expected 0) the result is
+  0.000. A spherical dent of 2 um measures 1.96 um; a 3 um dent measures
+  2.75-2.94 um; a tilted synapse axis (10-30 deg) gives no change; a wide bowl
+  with 0.3 um sag measures 0.196 um (one voxel). All-facets distance matches the
+  recorded value in 17/22 real panels. My concern was wrong.</li>
+<li><strong>Merged targets inflate depth.</strong> Two spheres with the T cell between them
+  (expected cleft 0) give 2.3-4.0 um. This matches gallery panels deep_07,
+  qc_edge_01, qc_edge_02 and dasa_vs_untr_untreated_02.</li>
+<li><strong>Visit means are contaminated by single bad sweeps.</strong> qc_clean_02 visit 2:
+  the displayed sweep measures 0.71 um; the visit mean of 2.87 um includes
+  sweeps 3-4 where a second target merged (2,450 um^3; 5.6-5.8 um "cups").
+  Per-visit descriptors average 5 sweeps, so QC must run per sweep.</li>
+<li>The sphere-reference depth (<code>cup_depth_sphere_p95_um</code>) is badly biased: 0.3-3.0
+  um on flat contacts. It should not be used.</li>
+<li>Hollow-shell case f: the shell without filling measures 0.98 um (expected 1.0).
+  After <code>fill_solid_cell_mask</code> it measures 0.196 um, and the figure shows the cup
+  filled in. How the synthetic shell was built is not clear, so this is an open
+  question, not a finding. Solid dented cells (case b) are measured correctly.</li>
+</ul>
+<h2>Decision</h2>
+<p>Keep the hull-depth definition. G3 work: QC per sweep (not per visit), exclude
+merged-target sweeps, drop the sphere-reference depth. Recompute visit
+descriptors from clean sweeps only.</p>
+<h2>Open issues</h2>
+<ul>
+<li>Confirm whether fill_solid_cell_mask can erase real cups on real hollow masks
+  (compare filled vs unfilled depth on the hollow panels dasatinib_09, 11, 14).</li>
+<li>The panel captions call raw channel 2 "561 nm membrane". Its signal is
+  brighter in the target core than at the rim (e.g. v01 ROI_2 stem 00495: core
+  560, rim 490, background 401), so it is likely a whole-cell label. Channel 1
+  marks the T cell, channel 0 the death dye. Correct the captions.</li>
+</ul>
+        
+  </main>
+</div>
+</body>
+</html>

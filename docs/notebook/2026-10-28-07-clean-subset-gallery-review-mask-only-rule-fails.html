@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>2026-10-28-07-clean-subset-gallery-review-mask-only-rule-fails</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<header class="top">
+  <div class="in">
+    <a class="brand" href="../index.html">Cell-Kill-Sim Lab</a>
+    <nav class="tabs" aria-label="Primary"><a href="../index.html" class="">Gates</a>
+<a href="../notebook/index.html" class="on">Notebook</a>
+<a href="../protocols/index.html" class="">Protocols</a>
+<a href="../registry.html" class="">Registry</a>
+<a href="../galleries/index.html" class="">Galleries</a>
+<a href="../handbook/index.html" class="">Handbook</a></nav>
+  </div>
+</header>
+<div class="wrap">
+  <aside class="side"><div class="section">Entries</div>
+<a href="index.html">All entries</a>
+<a href="2026-10-28-07-clean-subset-gallery-review-mask-only-rule-fails.html">2026-10-28-07 G1</a>
+<a href="2026-10-28-06-cup-depth-measurement-validated-on-synthetic-sha.html">2026-10-28-06 G3</a>
+<a href="2026-10-28-05-clean-subset-rule.html">2026-10-28-05 G1</a>
+<a href="2026-10-28-04-visual-review-2026-10-28.html">2026-10-28-04 none</a>
+<a href="2026-10-28-03-step7-prereg-and-result.html">2026-10-28-03 G4</a>
+<a href="2026-10-28-02-step6b-runs-void.html">2026-10-28-02 G5</a>
+<a href="2026-10-28-01-step6a-choice.html">2026-10-28-01 G5</a>
+<a href="2026-10-27-04-step5b-result.html">2026-10-27-04 G4</a>
+<a href="2026-10-27-03-step5a-descriptors.html">2026-10-27-03 G3</a>
+<a href="2026-10-27-02-step4-v2-labels.html">2026-10-27-02 G2</a>
+<a href="2026-10-27-01-step3-reproduction.html">2026-10-27-01 G0</a></aside>
+  <main>
+    
+        <h1>Clean-subset gallery review: mask-only rule fails against raw images</h1>
+        <div class="tblwrap">
+          <table class="data">
+            <tbody>
+              <tr><th>ID</th><td><code>2026-10-28-07-clean-subset-gallery-review-mask-only-rule-fails</code></td><th>Date</th><td>2026-10-28</td></tr>
+              <tr><th>Gate</th><td><strong>G1</strong></td><th>Status</th><td><span class="status-pill st-reviewed">reviewed</span></td></tr>
+              <tr><th>Author</th><td>claude</td><th>Reviewers</th><td>claude</td></tr>
+              <tr><th>Signoff</th><td>—</td><th>Commits</th><td><code>b1fde32</code></td></tr>
+              <tr><th>Datasets</th><td><a href="../registry.html#ds-clean_subset_v0.1"><code>clean_subset_v0.1</code></a>, <a href="../registry.html#ds-qc_flags"><code>qc_flags</code></a>, <a href="../registry.html#ds-lab_masks"><code>lab_masks</code></a>, <a href="../registry.html#ds-raw_volumes"><code>raw_volumes</code></a></td><th>Protocols</th><td><a href="../protocols/index.html#clean-cell-rule-v1"><code>clean-cell-rule@v1</code></a>, <a href="../protocols/index.html#gallery-review-v1"><code>gallery-review@v1</code></a></td></tr>
+              <tr><th>Galleries</th><td><a href="../galleries/clean-2026-10-28.html"><code>clean-2026-10-28</code></a></td><th>Supersedes / By</th><td>— / —</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <h2>Question</h2>
+<p>Does clean-cell rule v1 (status/clean_subset_criteria.md: one piece, lab raw
+label fraction &gt;= 0.9, not at the edge, volume 200-1500 um^3, volume within
+0.7-1.4x of the chamber median) keep only whole, correctly segmented targets?
+And does it reject only bad ones?</p>
+<h2>What was run</h2>
+<p>src/review/make_clean_gallery.py by agy (Argon High). 110 panels, each with raw
+channel 2 and the U-Net labels as deposited; report .agy_clean_gallery_report.md.</p>
+<h2>What was looked at</h2>
+<p>All 110 panels, reviewed by Claude. Verdicts are in lab/reviews/clean-2026-10-28.csv.</p>
+<h2>Observations</h2>
+<p><strong>Clean visits (rule says keep)</strong>
+- Random clean, 52 panels: 21 ok (40%), 17 problem, 14 unsure.
+- Extremes, 18 panels: 6 ok, 9 problem, 3 unsure.
+- Failure types the rule cannot see, because it uses mask properties only:
+  - a hollow mask inside a solid raw cell: all 3 hd10 dasatinib randoms
+    (clean_rand_46-48), plus 10, 36 and ext_12;
+  - mask lobes where the raw image shows no cell: clean_rand_01, 13, 17, 19,
+    23, 30, 44;
+  - two raw cells merged into one mask: clean_rand_43, ext_02, 03, 04, 08, 11.
+- Every one of the 5 deepest clean cups (5.3-5.8 um) is a merge or fragment.
+  Deep cups that are real exist: clean_rand_39 (3.7 um), with the raw target
+  visibly wrapping the T cell.
+- Good matches are common in v01-v05, v07 and v08.</p>
+<p><strong>Rejected visits (rule says drop)</strong>
+- C1 (extracted pieces): 7 of 8 correctly rejected.
+- C3 (edge): 8 of 8 correct.
+- C4 (volume): 7 of 8 correct. Borderline-small cat4_07 is a real small cell.
+- C2 (lab labels in pieces): only 3 of 8 correct. In 3 panels (cat2_01, 06, 08)
+  a good target failed because of detached U-Net specks elsewhere.
+- C5 (volume vs chamber median): only 2 of 8 correct. In 4 panels the median
+  is pulled by bad visits, so good masks are rejected.</p>
+<h2>Decision</h2>
+<p>Rule v1 is rejected. It keeps too many bad masks and drops good ones (C2, C5).
+The clean subset v0.1 is not usable.</p>
+<p>Next, rule v2 must use the raw image. Proposed: agreement between each target
+mask and raw channel 2. For example, the fraction of mask voxels above a local
+raw threshold, and the fraction of the raw target signal inside the mask. This
+would replace C2 and C5, and keep C1, C3 and C4 (bounds to be re-tuned).
+Calibrate the thresholds on these 110 verdicts, then validate on a fresh
+gallery. This needs raw volumes for every visit used, which is about 75 MB per
+sweep: tens of GB for a sweep-per-visit subset, so the size must be decided.</p>
+<h2>Open issues</h2>
+<ul>
+<li>Raw channel identity: channel 2 is brighter in the target core than at the
+  rim, so it is likely a whole-cell label, not membrane. Gallery captions say
+  "561 nm membrane". Confirm the channel meaning with the Fei lab.</li>
+<li>Per-sweep QC needed (see the cup-depth validation entry).</li>
+</ul>
+        
+  </main>
+</div>
+</body>
+</html>
