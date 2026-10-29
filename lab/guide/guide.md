@@ -275,13 +275,42 @@ single cells along lines that follow no visible gap, and it deleted some dead ce
 <figcaption><b>A dead cell loses its outline.</b> The tumour cell is full of death dye (yellow). Left: outlined. Right: no outline.</figcaption>
 </figure>
 
-We rejected this splitter and are rewriting it. The tracker mostly picked the same cells as
-before; it fixed a few mistakes and caused a few. Where tumour cells are still merged, it is
-not clear even by eye which cell "the target" is.
+We rejected this splitter and rewrote it.
+
+**Round 6: a more careful splitter, and setting aside what is too ambiguous.** The new version
+only cuts at a visible gap and never removes a dead cell. It changed little: of 311 frames in
+15 chambers it matched the old outlines in about 3 in 4, was better in about 1 in 8 and worse
+in about 1 in 16. Where it helps, it removes stray fragments so the target is one clean outline:
+
+<figure>
+<img src="img/f19_p6_cleaner.jpg" alt="Grey fragments inside the target on the left, one clean target outline on the right">
+<figcaption><b>Cleaner outline.</b> Left: grey fragments cut into the target (551 µm³). Right: one whole target (788 µm³).</figcaption>
+</figure>
+
+Where two tumour cells touch it still sometimes cuts along a straight line that follows no gap:
+
+<figure>
+<img src="img/f20_p6_bad_cut.jpg" alt="Two touching tumour cells merged on the left, cut by a straight vertical line through one of them on the right">
+<figcaption><b>A cut with no gap.</b> Left: two cells in one outline. Right: a straight cut through the right-hand cell.</figcaption>
+</figure>
+
+In some chambers two tumour cells both touch the T cell, so even by eye there is no single
+"target":
+
+<figure>
+<img src="img/f21_p6_ambiguous.jpg" alt="Two tumour cells touch the green T cell; the left column picks the upper one and the right column the lower one">
+<figcaption><b>Which one is the target?</b> Two tumour cells touch the T cell. The two methods pick different ones.</figcaption>
+</figure>
+
+We have decided to **leave out anything too ambiguous for now**. Ten of the 20 test chambers are
+set aside (the five we had already flagged as crowded or faint, plus five where the two methods
+follow different cells or the splitter cuts the pair). Eight chambers are clean, and two more are
+limited by merged cells that no method has fixed. On the eight clean ones the new outlines plus the
+whole-movie tracker are as good as or better than before.
 
 **After that:**
-1. Rewrite the splitter so it only cuts where there is a real gap and never removes a dead cell, then re-review and re-check the tracker on its outlines.
-2. Agree on what counts as a kill, then redo the death labels on the new outlines.
+1. Test on a larger sample how often a chamber has an unambiguous target, before redrawing all 502.
+2. Agree with the Fei lab on what counts as a kill, then redo the death labels on the clean chambers.
 3. **Scale up** by processing raw images as they download, keeping only the cell outlines
    and summaries, so all 502 chambers fit on one computer.
 4. Then, and only then, re-ask the questions in section 5 and return to the mechanical model.

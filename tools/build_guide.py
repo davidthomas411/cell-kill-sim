@@ -52,9 +52,9 @@ def crop_panel(src, box, name, scale=1.0):
     if scale != 1.0: im = im.resize((int(im.width * scale), int(im.height * scale)))
     return save(im, name)
 
-def p5_panel(chamber, visit, name, left="Round 3 outlines (C4)", right="With the touching-cell splitter"):
+def p5_panel(chamber, visit, name, left="Round 3 outlines (C4)", right="With the touching-cell splitter", rnd="p5"):
     """Round-5 frame with the developer header/footer text cut off and plain column labels."""
-    im = Image.open(R / f"figures/pilot/p5/frames/{chamber}/{visit:02d}.jpg").convert("RGB"); w, h = im.size
+    im = Image.open(R / f"figures/pilot/{rnd}/frames/{chamber}/{visit:02d}.jpg").convert("RGB"); w, h = im.size
     body = im.crop((0, 44, w, h - 92))
     out = Image.new("RGB", (w, 34 + body.height), (17, 17, 17)); out.paste(body, (0, 34))
     d = ImageDraw.Draw(out); d.text((30, 5), left, font=FONT, fill=(235, 235, 235)); d.text((495, 5), right, font=FONT, fill=(235, 235, 235))
@@ -106,6 +106,10 @@ def figures():
     p5_panel("v07_MIP_ROI_2", 2, "f16_p5_split_helps.jpg")
     p5_panel("v13_MIP_ROI_28", 7, "f17_p5_split_hurts.jpg")
     p5_panel("v02_MIP_ROI_3", 17, "f18_p5_dead_lost.jpg")
+    p6_right = "Round 6 (clean-up and tracker)"
+    p5_panel("v01_MIP_ROI_2", 5, "f19_p6_cleaner.jpg", right=p6_right, rnd="p6")
+    p5_panel("v07_MIP_ROI_2", 1, "f20_p6_bad_cut.jpg", right=p6_right, rnd="p6")
+    p5_panel("v10_MIP_ROI_28", 12, "f21_p6_ambiguous.jpg", right=p6_right, rnd="p6")
     shutil.copy2(R / "figures/pilot/web/p3_v02_MIP_ROI_3.mp4", IMG / "p3_v02_MIP_ROI_3.mp4")
     for name in ("v01_MIP_ROI_2", "v01_MIP_ROI_32"):
         subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", str(R / f"figures/movies/{name}.gif"), "-movflags", "+faststart",

@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>2026-10-29-05-p6-conservative-splitter-mostly-unchanged-clean-set-of-8-chambers</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<header class="top">
+  <div class="in">
+    <a class="brand" href="../index.html">Cell-Kill-Sim Lab</a>
+    <nav class="tabs" aria-label="Primary"><a href="../guide/index.html" class="">Start here</a>
+<a href="../index.html" class="">Gates</a>
+<a href="../notebook/index.html" class="on">Notebook</a>
+<a href="../protocols/index.html" class="">Protocols</a>
+<a href="../registry.html" class="">Registry</a>
+<a href="../galleries/index.html" class="">Galleries</a>
+<a href="../movies/index.html" class="">Movies</a>
+<a href="../handbook/index.html" class="">Handbook</a></nav>
+  </div>
+</header>
+<div class="wrap">
+  <aside class="side"><div class="section">Entries</div>
+<a href="index.html">All entries</a>
+<a href="2026-10-29-05-p6-conservative-splitter-mostly-unchanged-clean-set-of-8-chambers.html">2026-10-29-05 G1</a>
+<a href="2026-10-29-04-p5-splitter-rejected-tracking-gain-small-merging-still-open.html">2026-10-29-04 G1</a>
+<a href="2026-10-29-03-held-out-test-p4-c4-outlines-generalise-tar.html">2026-10-29-03 G1</a>
+<a href="2026-10-29-02-re-segmentation-pilot-p3-c4-fixes-plantseg-two.html">2026-10-29-02 G1</a>
+<a href="2026-10-29-01-re-segmentation-pilot-p2-eight-chambers-plantse.html">2026-10-29-01 G1</a>
+<a href="2026-10-28-09-re-segmentation-pilot-p1-four-candidates-on-v01-r.html">2026-10-28-09 G1</a>
+<a href="2026-10-28-08-chamber-movies-first-9-chambers-reviewed.html">2026-10-28-08 G2</a>
+<a href="2026-10-28-07-clean-subset-gallery-review-mask-only-rule-fails.html">2026-10-28-07 G1</a>
+<a href="2026-10-28-06-cup-depth-measurement-validated-on-synthetic-sha.html">2026-10-28-06 G3</a>
+<a href="2026-10-28-05-clean-subset-rule.html">2026-10-28-05 G1</a>
+<a href="2026-10-28-04-visual-review-2026-10-28.html">2026-10-28-04 none</a>
+<a href="2026-10-28-03-step7-prereg-and-result.html">2026-10-28-03 G4</a>
+<a href="2026-10-28-02-step6b-runs-void.html">2026-10-28-02 G5</a>
+<a href="2026-10-28-01-step6a-choice.html">2026-10-28-01 G5</a>
+<a href="2026-10-27-04-step5b-result.html">2026-10-27-04 G4</a>
+<a href="2026-10-27-03-step5a-descriptors.html">2026-10-27-03 G3</a>
+<a href="2026-10-27-02-step4-v2-labels.html">2026-10-27-02 G2</a>
+<a href="2026-10-27-01-step3-reproduction.html">2026-10-27-01 G0</a></aside>
+  <main>
+    
+        <h1>P6: the conservative splitter changes little and still cuts touching cells badly; ambiguous chambers set aside, 8 clean chambers remain</h1>
+        <div class="tblwrap">
+          <table class="data">
+            <tbody>
+              <tr><th>ID</th><td><code>2026-10-29-05-p6-conservative-splitter-mostly-unchanged-clean-set-of-8-chambers</code></td><th>Date</th><td>2026-10-29</td></tr>
+              <tr><th>Gate</th><td><strong>G1</strong></td><th>Status</th><td><span class="status-pill st-reviewed">reviewed</span></td></tr>
+              <tr><th>Author</th><td>claude</td><th>Reviewers</th><td>claude, independent-frame-reviewers</td></tr>
+              <tr><th>Signoff</th><td>—</td><th>Commits</th><td><code>ed035bf</code></td></tr>
+              <tr><th>Datasets</th><td><a href="../registry.html#ds-raw_volumes"><code>raw_volumes</code></a>, <a href="../registry.html#ds-lab_masks"><code>lab_masks</code></a></td><th>Protocols</th><td><a href="../protocols/index.html#gallery-review-v1"><code>gallery-review@v1</code></a></td></tr>
+              <tr><th>Galleries</th><td>—</td><th>Supersedes / By</th><td>— / —</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <h2>Question</h2>
+<p>P5's splitter cut single cells and deleted dead cells. Does a rewritten, conservative
+splitter (C6) fix that, and does the whole-series tracker hold up on its outlines?
+The PI also decided to <strong>leave out anything too ambiguous for now</strong>.</p>
+<h2>What was run</h2>
+<p>agy (Argon High) wrote <code>src/seg/split6.py</code>, which starts from C4's cached outlines:</p>
+<ul>
+<li>never splits objects that look like one round cell, and never splits without a
+  membrane gap and a real neck;</li>
+<li>never removes a dead (dye-filled), tracked or T-cell-touching object;</li>
+<li>removes small beads, haze and wall slabs, and re-merges over-split single cells.</li>
+</ul>
+<p>It ran on all 419 visits; the tracker (<code>track5</code>) was re-run on the C6 outlines, and
+C4 | C6 frames and movies were drawn in <code>figures/pilot/p6/</code>.</p>
+<h2>What was looked at</h2>
+<p>Before reviewing, the PI set aside the five chambers I had flagged as ambiguous
+(v05 ROI 8, v06 ROI 28, v11 ROI 15, v12 ROI 23, v13 ROI 28). Four fresh reviewers
+then opened every frame (311 visits) of the other 15 chambers. I re-checked
+four frames myself (v02 ROI 3 visit 20, v10 ROI 28 visit 12, v09 ROI 38 visit 5,
+v07 ROI 2 visit 1); they matched the reviewers.</p>
+<h2>Observations</h2>
+<p><strong>C6 is mostly identical to C4.</strong> On the target outline, over 311 visits: better 37
+(12%), same 230 (74%), mixed 24 (8%), worse 20 (6%). Better than P5's splitter, but
+the gains and losses sit in different places:</p>
+<ul>
+<li><strong>Where C6 helps</strong> (all in simple chambers): fragment clutter inside the target is
+  removed and the target becomes one clean outline (v01 ROI 2 visits 5, 8, 12);
+  v08 ROI 24 and v08 ROI 38 get slightly cleaner; small debris is removed without
+  deleting real tumour cells; the tracked T cell is corrected in v12 ROI 32 visits 1-4
+  (a small dim object was called the T cell). No dead dye-filled target lost its outline.</li>
+</ul>
+<figure>
+<img src="../pilot/p6_v01_MIP_ROI_2_v05.jpg" alt="C4 target has grey fragments inside; C6 target is one clean outline">
+<figcaption><b>v01 ROI 2, visit 5.</b> C4 (left) leaves grey fragments inside and below the T cell, target 551 µm³. C6 (right) gives one whole target, 788 µm³.</figcaption>
+</figure>
+
+<ul>
+<li><strong>Where C6 still cuts touching cells badly.</strong> In v07 ROI 2 (visits 1, 2, 17-19) and
+  v07 ROI 26 (visits 1, 2, 6, 7, 18) it cuts along straight lines that follow no
+  gap. C4 merges the pair there, so neither is right.</li>
+</ul>
+<figure>
+<img src="../pilot/p6_v07_MIP_ROI_2_v01.jpg" alt="Two touching tumour cells: C4 merges both; C6 cuts the right one with a straight vertical line">
+<figcaption><b>v07 ROI 2, visit 1.</b> C4 (left) merges two touching cells. C6 (right) draws a straight vertical cut through the right cell, where there is no gap.</figcaption>
+</figure>
+
+<ul>
+<li><strong>Where the two methods follow different cells.</strong> v09 ROI 38, v10 ROI 28,
+  v07 ROI 26 (from visit 10) and v09 ROI 29 (visits 16-22) follow different tumour
+  cells in C4 and C6, and a reviewer cannot say which is "the target": two tumour cells
+  touch the T cell, or neither does.</li>
+</ul>
+<figure>
+<img src="../pilot/p6_v10_MIP_ROI_28_v12.jpg" alt="Two tumour cells both touch the T cell; C4 and C6 pick different ones">
+<figcaption><b>v10 ROI 28, visit 12.</b> Two tumour cells touch the T cell. C4 (left) calls the upper one the target (725 µm³); C6 (right) calls the lower one (187 µm³).</figcaption>
+</figure>
+
+<figure>
+<img src="../pilot/p6_v09_MIP_ROI_38_v05.jpg" alt="Neither tumour cell touches the T cell; C4 and C6 pick different ones">
+<figcaption><b>v09 ROI 38, visit 5.</b> Neither tumour cell touches the T cell (contact 0). C4 picks the upper cell, C6 the right-hand one.</figcaption>
+</figure>
+
+<ul>
+<li><strong>One tracking-rule question.</strong> In v02 ROI 3 visit 20 the tracker drops the target
+  (volume 0); C4 kept the magenta cell. It is not yellow and does not touch the T cell.
+  This ties to the open kill-definition question.</li>
+</ul>
+<p>Per-group tallies (target, better / same / mixed / worse): group A (v01 ROI 2, v01
+ROI 32, v02 ROI 3, v02 ROI 32) 4 / 72 / 3 / 1; B (v03 ROI 6, v03 ROI 30, v04 ROI 24,
+v07 ROI 2) 1 / 75 / 1 / 5; C (v07 ROI 26, v08 ROI 24, v08 ROI 38, v09 ROI 29)
+12 / 50 / 18 / 4; D (v09 ROI 38, v10 ROI 28, v12 ROI 32) 20 / 33 / 2 / 10. Note that
+most of D's "better" frames are the choice of cell in v09 ROI 38, which cannot be
+scored.</p>
+<h2>Decision</h2>
+<ul>
+<li><strong>Set aside as too ambiguous (PI decision, extended on review):</strong> v05 ROI 8, v06 ROI 28,
+  v11 ROI 15, v12 ROI 23, v13 ROI 28 (decided before review), plus v07 ROI 2, v07 ROI 26,
+  v09 ROI 29, v09 ROI 38, v10 ROI 28 (the two methods follow different cells, or the
+  splitter cuts through the pair). I added these five; they are easy to bring back.</li>
+<li><strong>Merge-limited, not in the clean set:</strong> v01 ROI 32, v03 ROI 6 (merges that neither C4
+  nor C6 fixes).</li>
+<li><strong>Clean set (8 chambers):</strong> v01 ROI 2, v02 ROI 3, v02 ROI 32, v03 ROI 30, v04 ROI 24,
+  v08 ROI 24, v08 ROI 38, v12 ROI 32. There C6 with the whole-series tracker is
+  better in 12 frames, worse in 1 (v02 ROI 3 visit 20, tracking rule), and the same
+  elsewhere. It is adopted as the working method for this set, not as a general fix.</li>
+<li><strong>The splitter does not solve touching tumour cells.</strong> Chambers where the target
+  needs a split are set aside for now.</li>
+</ul>
+<h2>Open issues</h2>
+<ul>
+<li>Kill definition (Fei lab): v02 ROI 3 visit 20 and the late deaths in v02 ROI 3 and
+  v03 ROI 30.</li>
+<li>10 of 20 chambers are set aside. If the full 502 behave the same, about half the data
+  is unusable. P7 should first test how often a chamber has an unambiguous target.</li>
+<li>Reviewer counts are approximate and are model notes (<code>lab/reviews/p6_frames_{a,b,c,d}.md</code>);
+  I spot-checked four frames.</li>
+</ul>
+        
+  </main>
+</div>
+</body>
+</html>

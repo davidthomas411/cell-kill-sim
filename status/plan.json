@@ -1,7 +1,7 @@
 {
-  "updated": "2026-10-29 16:10",
+  "updated": "2026-10-29",
   "aim": "Build 3D-over-time digital twins of CAR-T cells killing leukaemia cells from the Fei lab light-sheet movies, and test whether how a T cell pushes on its target predicts killing.",
-  "now": "P6: rewriting the splitter (agy) after P5 review rejected it; then re-review every frame",
+  "now": "P6 done. 8 clean chambers, 10 set aside as ambiguous. Next: P7 pilot, how often does a chamber have an unambiguous target?",
   "total_chambers": 502,
   "phases": [
     {
@@ -14,7 +14,7 @@
       "id": "G1",
       "title": "Redraw the cells from raw images",
       "status": "in_progress",
-      "note": "Lab masks are often hollow, merged or have phantom lobes. Replacing them with membrane-based outlines (C4), reviewed frame by frame."
+      "note": "Membrane-based outlines (C4) with C6 clean-up and whole-series tracker, adopted for the 8 clean chambers only."
     },
     {
       "id": "P1-P3",
@@ -36,15 +36,15 @@
     },
     {
       "id": "P6",
-      "title": "Rewrite the splitter (cut only at a real gap, never delete dead cells); re-check tracking",
-      "status": "in_progress",
-      "note": "agy job running; every frame re-reviewed by fresh reviewers afterwards."
+      "title": "Conservative splitter (C6); re-check tracking",
+      "status": "done",
+      "note": "C6 equals C4 in 74% of frames, better 12%, worse 6%. Still cuts touching cells badly (v07). Ambiguous chambers set aside; 8 clean chambers remain."
     },
     {
       "id": "P7",
       "title": "Redraw all 502 chambers",
       "status": "todo",
-      "note": "Process each movie as it downloads."
+      "note": "Process each movie as it downloads. First measure how often a chamber has an unambiguous target."
     },
     {
       "id": "G2",
@@ -75,68 +75,72 @@
     {
       "id": "v01_MIP_ROI_2",
       "set": "pilot",
-      "verdict": "ok",
-      "issue": "faint target spills (visits 3-5)"
+      "verdict": "good",
+      "issue": ""
     },
     {
       "id": "v01_MIP_ROI_32",
       "set": "pilot",
       "verdict": "merge",
-      "issue": "touching tumour cells merge (visits 3, 7-9)"
+      "issue": "merge-limited: neither C4 nor C6 fixes the merge; not in the clean set"
     },
     {
       "id": "v02_MIP_ROI_3",
       "set": "pilot",
-      "verdict": "ok",
-      "issue": "clean; dead target must keep its outline"
+      "verdict": "good",
+      "issue": ""
     },
     {
       "id": "v02_MIP_ROI_32",
       "set": "pilot",
-      "verdict": "ok",
-      "issue": "T cell split once (visit 11)"
+      "verdict": "good",
+      "issue": ""
     },
     {
       "id": "v03_MIP_ROI_6",
       "set": "pilot",
       "verdict": "merge",
-      "issue": "C5 splitter turned the attacked cell grey; C4 merges lobes (visits 3-11)"
+      "issue": "merge-limited: neither C4 nor C6 fixes the merge; not in the clean set"
     },
     {
       "id": "v03_MIP_ROI_30",
       "set": "pilot",
-      "verdict": "ok",
+      "verdict": "good",
       "issue": ""
     },
     {
       "id": "v04_MIP_ROI_24",
       "set": "pilot",
-      "verdict": "track",
-      "issue": "ID changes in a simple chamber"
+      "verdict": "good",
+      "issue": ""
     },
     {
       "id": "v05_MIP_ROI_8",
       "set": "pilot",
-      "verdict": "track",
-      "issue": "target ID changes in 9/20 visits"
+      "verdict": "excluded",
+      "issue": "EXCLUDED for now (PI): crowded cluster; first-contact cell cannot be named by eye",
+      "prior_verdict": "track"
     },
     {
       "id": "v06_MIP_ROI_28",
       "set": "held-out",
-      "verdict": "poor",
-      "issue": "crowded, many dead cells"
+      "verdict": "excluded",
+      "issue": "EXCLUDED for now (PI): crowded, many dead cells; target cannot be named",
+      "prior_verdict": "poor"
     },
     {
       "id": "v07_MIP_ROI_2",
       "set": "held-out",
-      "verdict": "merge",
-      "issue": "merges at visits 1-3"
+      "verdict": "excluded",
+      "issue": "EXCLUDED for now: splitter cuts the pair with straight lines; target differs between methods",
+      "prior_verdict": "merge"
     },
     {
       "id": "v07_MIP_ROI_26",
       "set": "held-out",
-      "verdict": "merge",
-      "issue": "merges at visits 1-8 (lab masks separate them)"
+      "verdict": "excluded",
+      "issue": "EXCLUDED for now: splitter cuts the pair; methods follow different cells from visit 10",
+      "prior_verdict": "merge"
     },
     {
       "id": "v08_MIP_ROI_24",
@@ -147,56 +151,61 @@
     {
       "id": "v08_MIP_ROI_38",
       "set": "held-out",
-      "verdict": "track",
-      "issue": "wrong cell chosen at times"
+      "verdict": "good",
+      "issue": ""
     },
     {
       "id": "v09_MIP_ROI_29",
       "set": "held-out",
-      "verdict": "poor",
-      "issue": "merges"
+      "verdict": "excluded",
+      "issue": "EXCLUDED for now: methods follow different cells (visits 16-22)",
+      "prior_verdict": "poor"
     },
     {
       "id": "v09_MIP_ROI_38",
       "set": "held-out",
-      "verdict": "track",
-      "issue": "target is a distant cell"
+      "verdict": "excluded",
+      "issue": "EXCLUDED for now: target is a distant cell; methods pick different cells",
+      "prior_verdict": "track"
     },
     {
       "id": "v10_MIP_ROI_28",
       "set": "held-out",
-      "verdict": "track",
-      "issue": "target switches between two cells (visits 15-19)"
+      "verdict": "excluded",
+      "issue": "EXCLUDED for now: two tumour cells touch the T cell; methods pick different ones",
+      "prior_verdict": "track"
     },
     {
       "id": "v11_MIP_ROI_15",
       "set": "held-out",
-      "verdict": "poor",
-      "issue": "faint dasatinib cells merge"
+      "verdict": "excluded",
+      "issue": "EXCLUDED for now (PI): faint dasatinib cells merge; target ambiguous",
+      "prior_verdict": "poor"
     },
     {
       "id": "v12_MIP_ROI_23",
       "set": "held-out",
-      "verdict": "unclear",
-      "issue": "magenta body inside green cell: is it a tumour cell? (open)"
+      "verdict": "excluded",
+      "issue": "EXCLUDED for now (PI): magenta body inside green cell may not be a tumour cell",
+      "prior_verdict": "unclear"
     },
     {
       "id": "v12_MIP_ROI_32",
       "set": "held-out",
-      "verdict": "track",
-      "issue": "orange 'T cell' is a small dim object (visits 1-4)"
+      "verdict": "good",
+      "issue": ""
     },
     {
       "id": "v13_MIP_ROI_28",
       "set": "held-out",
-      "verdict": "poor",
-      "issue": "faint cells; splitter over-cuts; T cell barely visible in several visits"
+      "verdict": "excluded",
+      "issue": "EXCLUDED for now (PI): faint cells, T cell barely visible; target ambiguous",
+      "prior_verdict": "poor"
     }
   ],
   "needs_pi": [
     "Ask the Fei lab how a kill is defined: does a death after the T cell leaves count, and within how long? Is a death seen only at the last visit kept?",
-    "v12 ROI 23: what is the magenta signal inside the dividing green cell?",
-    "Crowded chambers (v05 ROI 8, v06 ROI 28) and faint dasatinib chambers (v11 ROI 15, v13 ROI 28): exclude from the measured set, or agree with the Fei lab how to name 'the target'?"
+    "Later: revisit the 10 set-aside chambers (v05 ROI 8, v06 ROI 28, v07 ROI 2, v07 ROI 26, v09 ROI 29, v09 ROI 38, v10 ROI 28, v11 ROI 15, v12 ROI 23, v13 ROI 28) only if the Fei lab can say how to name the target."
   ],
   "parked_note": "Step 6b mechanical model and step 7 focus test are parked until G4 (uncommitted edits in src/mech/run_step6b.py and src/step7_focus_test.py)."
 }
