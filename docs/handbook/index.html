@@ -202,7 +202,25 @@
 <li><strong>Per-chamber death rules</strong>:</li>
 <li><strong>Any-Visit (<code>ever_dead_any_visit_200m</code>)</strong>: <code>&gt;= 1</code> positive visit in <code>visits 1–20</code> (matches <code>summary.m</code> <code>C = max(B, [], 2)</code>).</li>
 <li><strong>Sustained (<code>ever_dead_200m</code>)</strong>: <code>&gt;= 2</code> consecutive positive visits in <code>visits 1–20</code>.</li>
-</ul></section><section id="known-issues" style="border-top:1px solid var(--ink);padding-top:16px;margin-top:28px"><h1>Known Issues (<code>lab/handbook/known-issues.md</code>)</h1>
+</ul>
+<h2>Channels (confirmed from the dataset paper, 2026-10-28)</h2>
+<p>Source: Sci Data dataset paper, https://pmc.ncbi.nlm.nih.gov/articles/PMC13009152/.
+- Channel 0, 405 nm: SYTOX Blue, the death dye (nuclei of dead cells).
+- Channel 1, 488 nm: Lifeact-EGFP, CAR-T cell actin. This makes the T cell visible.
+- Channel 2, 561 nm: mApple-Mem, the target (Nalm6) membrane. The paper also lists
+  SiR-tubulin in this channel, for the 6th volume of each sequence only.</p>
+<p>A membrane label explains the hollow target masks: a U-Net that fills the
+interior from a membrane signal fails when the shell is broken. An earlier note
+(notebook entry 2026-10-28-07) that channel 2 looked like a whole-cell label was
+wrong.</p>
+<h2>Z step conflict (open)</h2>
+<p>The folder names (e.g. <code>0-6</code>) and the paper give an axial scanning step of
+0.6 um. Measured cell shapes in the deposited volumes are nearly isotropic at
+dz = 0.196 um: targets span about 19% fewer slices than pixels. A raw 0.6 um z
+step would make cells look about 3x flattened, and they do not. The likely
+explanation is a skewed scan that is deskewed, giving an effective z of about
+0.2-0.24 um, but the paper does not state this. Ask the Fei lab. Until then,
+absolute volumes and depths carry this uncertainty.</p></section><section id="known-issues" style="border-top:1px solid var(--ink);padding-top:16px;margin-top:28px"><h1>Known Issues (<code>lab/handbook/known-issues.md</code>)</h1>
 <p>All issues below were identified by visual review of real-data gallery <code>review-2026-10-28</code> (<code>status/visual_review_2026-10-28.md</code>) and technical audits. Every issue links to the notebook entry where it was recorded or addressed.</p>
 <h2>1. Cell Identity &amp; Cup Measurement Issues (Gates <code>G1</code> &amp; <code>G3</code>)</h2>
 <ol>

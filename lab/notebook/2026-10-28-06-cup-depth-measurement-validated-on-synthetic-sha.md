@@ -67,7 +67,7 @@ descriptors from clean sweeps only.
 
 - Confirm whether fill_solid_cell_mask can erase real cups on real hollow masks
   (compare filled vs unfilled depth on the hollow panels dasatinib_09, 11, 14).
-- The panel captions call raw channel 2 "561 nm membrane". Its signal is
+- RESOLVED (handbook definitions.md): channel 2 is mApple-Mem membrane (561 nm), as the captions say. Earlier reading: its signal is
   brighter in the target core than at the rim (e.g. v01 ROI_2 stem 00495: core
   560, rim 490, background 401), so it is likely a whole-cell label. Channel 1
   marks the T cell, channel 0 the death dye. Correct the captions.

@@ -43,3 +43,26 @@
 - **Per-chamber death rules**:
   - **Any-Visit (`ever_dead_any_visit_200m`)**: `>= 1` positive visit in `visits 1–20` (matches `summary.m` `C = max(B, [], 2)`).
   - **Sustained (`ever_dead_200m`)**: `>= 2` consecutive positive visits in `visits 1–20`.
+
+## Channels (confirmed from the dataset paper, 2026-10-28)
+
+Source: Sci Data dataset paper, https://pmc.ncbi.nlm.nih.gov/articles/PMC13009152/.
+- Channel 0, 405 nm: SYTOX Blue, the death dye (nuclei of dead cells).
+- Channel 1, 488 nm: Lifeact-EGFP, CAR-T cell actin. This makes the T cell visible.
+- Channel 2, 561 nm: mApple-Mem, the target (Nalm6) membrane. The paper also lists
+  SiR-tubulin in this channel, for the 6th volume of each sequence only.
+
+A membrane label explains the hollow target masks: a U-Net that fills the
+interior from a membrane signal fails when the shell is broken. An earlier note
+(notebook entry 2026-10-28-07) that channel 2 looked like a whole-cell label was
+wrong.
+
+## Z step conflict (open)
+
+The folder names (e.g. `0-6`) and the paper give an axial scanning step of
+0.6 um. Measured cell shapes in the deposited volumes are nearly isotropic at
+dz = 0.196 um: targets span about 19% fewer slices than pixels. A raw 0.6 um z
+step would make cells look about 3x flattened, and they do not. The likely
+explanation is a skewed scan that is deskewed, giving an effective z of about
+0.2-0.24 um, but the paper does not state this. Ask the Fei lab. Until then,
+absolute volumes and depths carry this uncertainty.
