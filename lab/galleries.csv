@@ -1,3 +1,4 @@
 gallery_id,path,index_csv,created,produced_by,description
 review-2026-10-28,figures/review,figures/review/index.csv,2026-10-28,src/review/make_gallery.py,"146 real-data panels across 10 groups (128 review panels across 8 cases plus 18 QC clean/flagged panels)"
 clean-2026-10-28,figures/review_clean,figures/review_clean/index.csv,2026-10-28,src/review/make_clean_gallery.py,"Clean-cell subset (G1) verification gallery with raw 561-nm membrane and deposited U-Net label overlays on random, extreme, and rejected visits"
+cup-validation-2026-10-28,figures/review/cup_validation,,2026-10-28,src/validate_cup_depth.py,"Synthetic cup-depth validation cases a-f"
