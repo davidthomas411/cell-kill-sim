@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>2026-10-28-01-step6a-choice</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<header class="top">
+  <div class="in">
+    <a class="brand" href="../index.html">Cell-Kill-Sim Lab</a>
+    <nav class="tabs" aria-label="Primary"><a href="../index.html" class="">Gates</a>
+<a href="../notebook/index.html" class="on">Notebook</a>
+<a href="../protocols/index.html" class="">Protocols</a>
+<a href="../registry.html" class="">Registry</a>
+<a href="../galleries/index.html" class="">Galleries</a>
+<a href="../handbook/index.html" class="">Handbook</a></nav>
+  </div>
+</header>
+<div class="wrap">
+  <aside class="side"><div class="section">Entries</div>
+<a href="index.html">All entries</a>
+<a href="2026-10-28-05-clean-subset-rule.html">2026-10-28-05 G1</a>
+<a href="2026-10-28-04-visual-review-2026-10-28.html">2026-10-28-04 none</a>
+<a href="2026-10-28-03-step7-prereg-and-result.html">2026-10-28-03 G4</a>
+<a href="2026-10-28-02-step6b-runs-void.html">2026-10-28-02 G5</a>
+<a href="2026-10-28-01-step6a-choice.html">2026-10-28-01 G5</a>
+<a href="2026-10-27-04-step5b-result.html">2026-10-27-04 G4</a>
+<a href="2026-10-27-03-step5a-descriptors.html">2026-10-27-03 G3</a>
+<a href="2026-10-27-02-step4-v2-labels.html">2026-10-27-02 G2</a>
+<a href="2026-10-27-01-step3-reproduction.html">2026-10-27-01 G0</a></aside>
+  <main>
+    
+        <h1>Step 6a: Mechanics solver evaluation and selection of custom Python two-shell model (UNVERIFIED)</h1>
+        <div class="tblwrap">
+          <table class="data">
+            <tbody>
+              <tr><th>ID</th><td><code>2026-10-28-01-step6a-choice</code></td><th>Date</th><td>2026-10-28</td></tr>
+              <tr><th>Gate</th><td><strong>G5</strong></td><th>Status</th><td><span class="status-pill st-draft">draft</span></td></tr>
+              <tr><th>Author</th><td>agy (backfilled)</td><th>Reviewers</th><td>—</td></tr>
+              <tr><th>Signoff</th><td>—</td><th>Commits</th><td><code>159df33</code></td></tr>
+              <tr><th>Datasets</th><td><a href="../registry.html#ds-lab_masks"><code>lab_masks</code></a></td><th>Protocols</th><td>—</td></tr>
+              <tr><th>Galleries</th><td>—</td><th>Supersedes / By</th><td>— / —</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <h2>Question</h2>
+<p>Which 3D cell-mechanics solver architecture can take segmented T-cell and target meshes from <code>data/scidb_19235_masks/</code>, apply a local active synaptic pushing load on the T-cell contact patch, represent distinct T-cell vs target cortical stiffnesses (including <code>~2x</code> stiffer synaptic cortex per Jung et al. 2021), map explicitly to AFM cortical tension $T$, and solve fast enough (<code>&lt; 1 s</code> per relaxation) to fit hundreds of chamber-visits?</p>
+<p>** Verification Notice: Downstream Step 6 mechanics work is UNVERIFIED and parked at Gate <code>G5</code>.**</p>
+<h2>What was run</h2>
+<p>Source audit of <code>external/SimuCell3D</code>, <code>external/ShElastic</code>, <code>external/Phase_field_Apoptosis</code>, and timing/feasibility benchmarks documented in <code>.agy_step6a_report.md</code> and <code>status/plan.json</code>.</p>
+<p>Commits:
+- <code>159df33</code> (<code>Plan: step 6a tool evaluation outcome</code>)</p>
+<h2>What was looked at</h2>
+<ul>
+<li>C++ source files in <code>external/SimuCell3D/src/</code> (<code>io/mesh_reader.cpp</code>, <code>solver.cpp</code>, <code>forces/</code>).</li>
+<li>MATLAB/Python source in <code>external/ShElastic</code> and <code>external/Phase_field_Apoptosis</code>.</li>
+<li>Prototype L-BFGS-B triangulated cortical shell energy/gradient evaluation timings.</li>
+</ul>
+<h2>Observations</h2>
+<ol>
+<li><strong><code>SimuCell3D</code> (<code>external/SimuCell3D</code>, Candidate A) rejected without C++ rewrite</strong>:</li>
+<li>Requires legacy ASCII VTK polyhedra (<code>CELL_TYPES 42</code>) with strict genus-0 manifold topology and runs Ball-Pivoting / edge-refinement that fails on concave or handle-containing masks.</li>
+<li>Pressure <code>cell::pressure_</code> is uniform across the entire cell (<code>&lt;INMForce&gt;</code> is unimplemented in C++); face types reset to <code>0</code> at every time step (<code>solver.cpp:124</code>), preventing a <code>2x</code> stiffer synaptic patch without modifying C++ source.</li>
+<li>Explicit dynamic integration requires <code>10^4–10^5</code> steps (<code>~37.5–375 s</code> per forward relaxation), which is too slow for multi-chamber parameter fitting.</li>
+<li><strong><code>ShElastic</code> and <code>Phase_field_Apoptosis</code> rejected</strong>:</li>
+<li><code>ShElastic</code> assumes a single homogeneous spherical target interface; <code>Phase_field_Apoptosis</code> is a regular-grid phase-field solver that does not take segmented 3D surface meshes.</li>
+<li><strong>Custom Python quasi-static triangulated cortical shell (<code>scipy</code> L-BFGS-B, Candidate B1) selected</strong>:</li>
+<li>Consumes <code>marching_cubes</code> + <code>trimesh</code> surface meshes directly, supports heterogeneous tensions ($T_{\text{target}}$, $T_{T,\text{back}}$, $T_{T,\text{syn}} = 2\,T_{T,\text{back}}$) and local synaptic pressure $p_{\text{act}}$, and relaxes in <code>~0.17–0.25 s</code> per solve.</li>
+</ol>
+<h2>Decision</h2>
+<p>Selected the custom Python quasi-static two-shell cortical model (<code>src/mech/shell_model.py</code>) for Step 6b (<code>commit 159df33</code>). All subsequent Step 6b runs remain <strong>UNVERIFIED</strong> and parked at Gate <code>G5</code>.</p>
+<h2>Open issues</h2>
+<ul>
+<li>As later shown in <code>2026-10-28-02-step6b-runs-void</code> and <code>2026-10-28-04-visual-review-2026-10-28</code>, the two-shell solver lacked rigid-body pinning on the non-contact target hemisphere and exhibited path-dependent equilibria on real masks.</li>
+</ul>
+        
+  </main>
+</div>
+</body>
+</html>

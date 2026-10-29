@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>2026-10-28-02-step6b-runs-void</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<header class="top">
+  <div class="in">
+    <a class="brand" href="../index.html">Cell-Kill-Sim Lab</a>
+    <nav class="tabs" aria-label="Primary"><a href="../index.html" class="">Gates</a>
+<a href="../notebook/index.html" class="on">Notebook</a>
+<a href="../protocols/index.html" class="">Protocols</a>
+<a href="../registry.html" class="">Registry</a>
+<a href="../galleries/index.html" class="">Galleries</a>
+<a href="../handbook/index.html" class="">Handbook</a></nav>
+  </div>
+</header>
+<div class="wrap">
+  <aside class="side"><div class="section">Entries</div>
+<a href="index.html">All entries</a>
+<a href="2026-10-28-05-clean-subset-rule.html">2026-10-28-05 G1</a>
+<a href="2026-10-28-04-visual-review-2026-10-28.html">2026-10-28-04 none</a>
+<a href="2026-10-28-03-step7-prereg-and-result.html">2026-10-28-03 G4</a>
+<a href="2026-10-28-02-step6b-runs-void.html">2026-10-28-02 G5</a>
+<a href="2026-10-28-01-step6a-choice.html">2026-10-28-01 G5</a>
+<a href="2026-10-27-04-step5b-result.html">2026-10-27-04 G4</a>
+<a href="2026-10-27-03-step5a-descriptors.html">2026-10-27-03 G3</a>
+<a href="2026-10-27-02-step4-v2-labels.html">2026-10-27-02 G2</a>
+<a href="2026-10-27-01-step3-reproduction.html">2026-10-27-01 G0</a></aside>
+  <main>
+    
+        <h1>Step 6b: Two-shell mechanical model runs and Gate A/B checks — VOID / UNVERIFIED</h1>
+        <div class="tblwrap">
+          <table class="data">
+            <tbody>
+              <tr><th>ID</th><td><code>2026-10-28-02-step6b-runs-void</code></td><th>Date</th><td>2026-10-28</td></tr>
+              <tr><th>Gate</th><td><strong>G5</strong></td><th>Status</th><td><span class="status-pill st-draft">draft</span></td></tr>
+              <tr><th>Author</th><td>agy (backfilled)</td><th>Reviewers</th><td>claude</td></tr>
+              <tr><th>Signoff</th><td>—</td><th>Commits</th><td><code>40486f6, 62770f3, 6d76475</code></td></tr>
+              <tr><th>Datasets</th><td><a href="../registry.html#ds-lab_masks"><code>lab_masks</code></a>, <a href="../registry.html#ds-step5_descriptors"><code>step5_descriptors</code></a>, <a href="../registry.html#ds-step6b_fits"><code>step6b_fits</code></a></td><th>Protocols</th><td><a href="../protocols/index.html#cup-measurement-v1"><code>cup-measurement@v1</code></a>, <a href="../protocols/index.html#gallery-review-v1"><code>gallery-review@v1</code></a></td></tr>
+              <tr><th>Galleries</th><td><a href="../galleries/review-2026-10-28.html"><code>review-2026-10-28</code></a></td><th>Supersedes / By</th><td>— / —</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <h2>Question</h2>
+<p>Does a coupled two-shell cortical mechanics solver (<code>src/mech/shell_model.py</code>, fitting dimensionless active push $\Pi = p_{\text{act}} R_{\text{target}} / T_{\text{target}}$ per contact visit) pass analytical/numerical validation and beat proportional geometric baselines on held-out shapes (<code>status/step6b_heldout_design.md</code>)?</p>
+<p>** Verification Notice: All Step 6b model runs (<code>data/step6b/</code>) are VOID / REJECTED (<code>status: rejected</code> in <code>lab/registry.csv</code>) and parked at Gate <code>G5</code>.**</p>
+<h2>What was run</h2>
+<pre><code class="language-bash">python3 src/mech/run_step6b.py --workers 6
+python3 src/mech/run_gateA_check.py --workers 6
+python3 src/mech/run_gateB_check.py --workers 6
+</code></pre>
+<p>Commits:
+- <code>40486f6</code> (<code>Step 6b: write down model and held-out test before building</code>)
+- <code>62770f3</code> (<code>Plan: step 6b first run rejected on review, rerun in progress</code>)
+- <code>6d76475</code> (<code>Step 6b: two-shell solver with live contact, converged solves, validation benchmarks; addendum before final held-out run</code>)</p>
+<h2>What was looked at</h2>
+<ul>
+<li>Pre-specified held-out design and Gate A/B addenda in <code>status/step6b_heldout_design.md</code>.</li>
+<li>Reports <code>.agy_step6b_report.md</code>, <code>.agy_step6b_gateA.md</code>, <code>.agy_step6b_gateB.md</code>, and <code>data/step6b/gateB.json</code>.</li>
+<li>Real-data visual review gallery <code>review-2026-10-28</code>:</li>
+<li><code>fit_reachable</code>: <code>fit_reach_01</code>..<code>16</code></li>
+<li><code>fit_unreachable</code>: <code>fit_unreach_01</code>..<code>16</code></li>
+<li><code>initial_overlap</code>: <code>overlap_01</code>..<code>12</code></li>
+<li><code>mesh_size</code>: <code>mesh_size_01</code>..<code>06</code></li>
+</ul>
+<h2>Observations</h2>
+<ol>
+<li><strong>First run (<code>commit 40486f6</code> -&gt; <code>62770f3</code>) rejected on code review</strong>:</li>
+<li>The T-cell shell was not included as a live contacting body during optimization (<code>kappa_c = 0</code>), L-BFGS-B was capped at <code>maxiter = 60</code> (<code>0%</code> convergence), and <code>84%</code> of visits saturated at the grid ceiling <code>Pi = 4.0</code>.</li>
+<li><strong>Gate A run (<code>.agy_step6b_gateA.md</code>) failed coverage gate</strong>:</li>
+<li>Enforcing live two-shell contact (<code>kappa_c = 50</code>) and full L-BFGS-B convergence reduced maximum attainable indentation on concave pre-contact meshes to <code>~1.0–1.5 um</code>, leaving <code>69.9%</code> of visits at the <code>Pi = 12</code> ceiling (<code>30.1%</code> in-range vs <code>&gt;= 95%</code> requirement).</li>
+<li><strong>Gate B run (<code>commit 6d76475</code>, <code>.agy_step6b_gateB.md</code>) passed synthetic benchmarks (<code>1.63%</code> error vs analytical spherical cap; <code>0.00%</code> two-shell symmetry error) but FAILED visual review on real data (<code>review-2026-10-28</code>)</strong>:</li>
+<li><strong>Unpinned rigid-body drift (<code>drift</code>)</strong>: Because nothing pins rigid-body translation of the target shell, the synaptic push translates the solved target <code>2–3 um</code> off the real target mask (<code>fit_reach_03</code>, <code>fit_reach_04</code>, <code>fit_reach_05</code>, <code>fit_unreach_10</code>, <code>fit_unreach_12</code>).</li>
+<li><strong>Path-dependent equilibria (<code>drift</code>)</strong>: Re-solving a visit afresh at its fitted <code>pi_solved</code> disagrees with the 9-node continuation curve in <code>9 / 32</code> fit panels (<code>fit_reach_01</code>: <code>0.37</code> vs <code>0.88 um</code>; <code>fit_reach_03</code>: <code>1.61</code> vs <code>2.00 um</code>; <code>fit_reach_07</code>: <code>1.10</code> vs <code>1.51 um</code>; <code>fit_reach_08</code>: <code>0.98</code> vs <code>0.75 um</code>; <code>fit_reach_09, 10, 11, 13</code>; <code>fit_unreach_09</code>: <code>1.44</code> vs <code>0.08 um</code>).</li>
+<li><strong>Reference target misalignment &amp; huge initial overlap (<code>misaligned</code>)</strong>: Placing the reference target from another visit by centroid and volume alone creates initial overlaps up to <code>11.0 um</code> (<code>overlap_01</code>: <code>11.0 um</code>, <code>overlap_03</code>: <code>7.7 um</code>, <code>overlap_12</code>: <code>6.3 um</code>); pushing apart then shifts the T cell <code>~4 um</code> off its mask (<code>fit_unreach_03, 10, 12, 13, 15</code>).</li>
+<li><strong>Curve inversion bug (<code>other</code>)</strong>: In <code>fit_reach_14</code>, the continuation curve stays near <code>0.05 um</code> up to <code>Pi = 10</code>, yet <code>pi_solved = 6.75</code> is reported for an observed depth of <code>0.50 um</code>.</li>
+<li><strong>Corrupted target masks</strong>: Several "unreachable" visits (<code>fit_unreach_01, 06, 07, 08, 14, 16</code>) had bogus observed cup depths from fragmented/merged/hollow masks.</li>
+</ol>
+<h2>Decision</h2>
+<p>All Step 6b runs are <strong>VOID / REJECTED</strong> (<code>status: rejected</code> in <code>lab/registry.csv</code>). The final 365-chamber run was stopped, and Gate <code>G5</code> is <strong>parked</strong>. Mechanical modelling will only resume if Gate <code>G4</code> (associations rerun on <code>G1</code>–<code>G3</code> verified data) still shows a biological effect that requires a mechanical explanation.</p>
+<h2>Open issues</h2>
+<ul>
+<li>If Gate <code>G5</code> is reopened after <code>G4</code>: (1) pin rigid-body motion on the non-contact target hemisphere, (2) register reference shape orientation and cap initial overlap, (3) enforce path-independent re-solve reproducibility, (4) fix curve inversion in <code>fit_reach_14</code>, and (5) pass a full real-data fit gallery review.</li>
+</ul>
+        
+  </main>
+</div>
+</body>
+</html>

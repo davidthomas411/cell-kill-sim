@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Known issues</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<header class="top">
+  <div class="in">
+    <a class="brand" href="../index.html">Cell-Kill-Sim Lab</a>
+    <nav class="tabs" aria-label="Primary"><a href="../index.html" class="">Gates</a>
+<a href="../notebook/index.html" class="">Notebook</a>
+<a href="../protocols/index.html" class="">Protocols</a>
+<a href="../registry.html" class="">Registry</a>
+<a href="../galleries/index.html" class="">Galleries</a>
+<a href="../handbook/index.html" class="on">Handbook</a></nav>
+  </div>
+</header>
+<div class="wrap">
+  <aside class="side"><div class="section">Handbook</div>
+<a href="#data">Dataset layers</a>
+<a href="#definitions">Definitions and caveats</a>
+<a href="#known-issues">Known issues</a>
+<a href="#open-questions">Open questions</a></aside>
+  <main>
+    <p class="meta"><a href="index.html">Handbook index</a></p><h1>Known Issues (<code>lab/handbook/known-issues.md</code>)</h1>
+<p>All issues below were identified by visual review of real-data gallery <code>review-2026-10-28</code> (<code>status/visual_review_2026-10-28.md</code>) and technical audits. Every issue links to the notebook entry where it was recorded or addressed.</p>
+<h2>1. Cell Identity &amp; Cup Measurement Issues (Gates <code>G1</code> &amp; <code>G3</code>)</h2>
+<ol>
+<li><strong>Fragmented target masks inflate 3D convex-hull cup depth</strong></li>
+<li><strong>Notebook entries</strong>: <a href="../notebook/2026-10-28-04-visual-review-2026-10-28.html">2026-10-28-04-visual-review-2026-10-28</a>, <a href="../notebook/2026-10-27-03-step5a-descriptors.html">2026-10-27-03-step5a-descriptors</a>, <a href="../notebook/2026-10-28-05-clean-subset-rule.html">2026-10-28-05-clean-subset-rule</a></li>
+<li><strong>Panels</strong>: <code>cup_01</code> (<code>10.15 um</code> depth, target <code>2,821 um^3</code>), <code>cup_03</code> (<code>9.18 um</code>, <code>2,550 um^3</code>), <code>cup_09</code>, <code>cup_10</code> (<code>5.10 um</code>, <code>depth/radius = 2.75</code>), <code>fit_unreach_01</code>, <code>deep_01</code>.</li>
+<li><strong>Mechanism &amp; risk</strong>: When the target mask consists of multiple disconnected pieces, the 3D convex hull bridges across the pieces and <code>cup_depth_hull_p95_um</code> measures the inter-piece gap rather than a synaptic dent. Across <code>4,523</code> <code>trace_num == 1</code> contact visits, median cup depth is <code>1.35 um</code> when <code>target_sphericity &lt; 0.5</code> (<code>n = 1,925</code>) vs <code>0.72 um</code> when <code>target_sphericity &gt;= 0.8</code> (<code>n = 292</code>; Spearman <code>rho = -0.26</code>). If dying targets fragment before SYTOX uptake, pre-death fragmentation could create part of the Step 5b / 7B Cox association (<a href="../notebook/2026-10-27-04-step5b-result.html">2026-10-27-04-step5b-result</a>).</li>
+<li><strong>Cells truncated by the field-of-view boundary (<code>edge</code>)</strong></li>
+<li><strong>Notebook entries</strong>: <a href="../notebook/2026-10-28-04-visual-review-2026-10-28.html">2026-10-28-04-visual-review-2026-10-28</a>, <a href="../notebook/2026-10-28-05-clean-subset-rule.html">2026-10-28-05-clean-subset-rule</a></li>
+<li><strong>Panels</strong>: <code>cup_05</code>, <code>cup_13</code>.</li>
+<li><strong>Mechanism</strong>: Cell bodies cut by the X/Y/Z crop border yield corrupted volumes, convex hulls, and indentation depths. Excluded by criterion 3 (<code>touches_fov_edge == False</code>) in <code>clean-cell-rule@v1</code>.</li>
+<li><strong>Two target cells merged into one mask (<code>merged</code>)</strong></li>
+<li><strong>Notebook entries</strong>: <a href="../notebook/2026-10-28-04-visual-review-2026-10-28.html">2026-10-28-04-visual-review-2026-10-28</a>, <a href="../notebook/2026-10-28-05-clean-subset-rule.html">2026-10-28-05-clean-subset-rule</a></li>
+<li><strong>Panels</strong>: <code>dasa_vs_untr_untreated_02</code>, <code>deep_06</code>, <code>deep_07</code> (<code>5.60 um</code> depth), <code>deep_08</code>.</li>
+<li><strong>Mechanism</strong>: Two adjacent round target cells fuse into a bilobed object with the T cell sitting in the cleft between them; the 3D hull bridges the cleft and records a spurious deep cup.</li>
+<li><strong>Hollow ring-shaped or broken-shell target masks (<code>hollow</code>)</strong></li>
+<li><strong>Notebook entries</strong>: <a href="../notebook/2026-10-28-04-visual-review-2026-10-28.html">2026-10-28-04-visual-review-2026-10-28</a>, <a href="../notebook/2026-10-28-05-clean-subset-rule.html">2026-10-28-05-clean-subset-rule</a></li>
+<li><strong>Panels</strong>: <code>dasa_vs_untr_dasatinib_09</code>, <code>dasa_vs_untr_dasatinib_11</code> (<code>6.75 um</code> depth), <code>dasa_vs_untr_dasatinib_14</code>, <code>dasa_vs_untr_dasatinib_15</code>, <code>deep_vs_shallow_shallow_10</code>, <code>deep_vs_shallow_shallow_11</code>.</li>
+<li><strong>Mechanism</strong>: Target membrane class (<code>pred == 4</code>) forms an open ring or broken shell with missing interior (<code>pred == 2</code>), producing <code>5.8–6.8 um</code> false cup depths.</li>
+<li><strong>Severe experiment-specific mask degradation in donor <code>hd10</code> and <code>tiny</code> debris fragments</strong></li>
+<li><strong>Notebook entries</strong>: <a href="../notebook/2026-10-28-04-visual-review-2026-10-28.html">2026-10-28-04-visual-review-2026-10-28</a>, <a href="../notebook/2026-10-28-03-step7-prereg-and-result.html">2026-10-28-03-step7-prereg-and-result</a>, <a href="../notebook/2026-10-28-05-clean-subset-rule.html">2026-10-28-05-clean-subset-rule</a></li>
+<li><strong>Panels</strong>: <code>dasa_vs_untr_untreated_01</code>, <code>03</code>, <code>06</code>, <code>07</code>; <code>dasa_vs_untr_dasatinib_09</code>, <code>11</code>, <code>13</code> (<code>154 um^3</code>), <code>14</code>, <code>15</code>, <code>16</code> (<code>37 um^3</code>).</li>
+<li><strong>Mechanism</strong>: Donor <code>hd10</code> (<code>v09</code> untreated clean fraction <code>0.05</code>, <code>v12</code> dasatinib clean fraction <code>0.16</code>) is predominantly fragmented or hollow, which drove the <code>hd10</code> donor outlier (<code>cup_depth_over_radius = 0.50</code>) and the single-donor dasatinib reduction in Step 7 (<a href="../notebook/2026-10-28-03-step7-prereg-and-result.html">2026-10-28-03-step7-prereg-and-result</a>).</li>
+</ol>
+<h2>2. Death Label Issues (Gate <code>G2</code>)</h2>
+<ol>
+<li><strong>Gallery target-outline mismatch with v2 chamber labels (<code>label_mismatch</code>)</strong></li>
+<li><strong>Notebook entries</strong>: <a href="../notebook/2026-10-28-04-visual-review-2026-10-28.html">2026-10-28-04-visual-review-2026-10-28</a>, <a href="../notebook/2026-10-27-02-step4-v2-labels.html">2026-10-27-02-step4-v2-labels</a></li>
+<li><strong>Panels</strong>: <code>death_surviving_24</code> (visits 11–12 show <code>296/251</code> and <code>104/236 px</code> overlap in panel but chamber label has <code>ever_dead_any_visit_200m == False</code>), <code>death_surviving_19</code> (visits 12–14 positive in panel, labelled single-visit), <code>death_killed_07</code> (positive at v7 in panel, v8 in table).</li>
+<li><strong>Mechanism</strong>: Gallery Case 6 projected all raw target voxels <code>(pred == 2) | (pred == 4)</code> whereas <code>per_chamber_death_labels_all_v2.csv</code> projected only the contacted target instance (<code>instance_seg_matlab_xyz</code>).</li>
+<li><strong>Possible overlap calculation discrepancy (<code>other</code>)</strong></li>
+<li><strong>Notebook entries</strong>: <a href="../notebook/2026-10-28-04-visual-review-2026-10-28.html">2026-10-28-04-visual-review-2026-10-28</a>, <a href="../notebook/2026-10-27-02-step4-v2-labels.html">2026-10-27-02-step4-v2-labels</a></li>
+<li><strong>Panels</strong>: <code>death_dasatinib_30</code> (visit 5 reports <code>27 px</code> overlap while the dye contour appears outside the target outline in both XY and XZ views).</li>
+<li><strong>2D projection overlap from dye-positive bystander cells (<code>neighbour_overlap</code>)</strong></li>
+<li><strong>Notebook entries</strong>: <a href="../notebook/2026-10-28-04-visual-review-2026-10-28.html">2026-10-28-04-visual-review-2026-10-28</a>, <a href="../notebook/2026-10-27-02-step4-v2-labels.html">2026-10-27-02-step4-v2-labels</a></li>
+<li><strong>Panels</strong>: <code>death_surviving_17</code> (v19 <code>304/928 px</code> overlap from a dead bystander underneath), <code>death_surviving_18</code> (v18 transient smear), <code>death_killed_05</code>, <code>death_killed_09</code>.</li>
+<li><strong>Narrow 405-nm signal-to-background margin (<code>404.0 ADU</code> vs <code>~400 ADU</code>)</strong></li>
+<li><strong>Notebook entries</strong>: <a href="../notebook/2026-10-28-04-visual-review-2026-10-28.html">2026-10-28-04-visual-review-2026-10-28</a>, <a href="../notebook/2026-10-27-02-step4-v2-labels.html">2026-10-27-02-step4-v2-labels</a></li>
+<li><strong>Panels</strong>: <code>death_killed_01</code> (peak Gaussian intensity <code>404.3 ADU</code> vs threshold <code>404.0 ADU</code>).</li>
+<li><strong><code>MIP_ROI_0</code> late 405-nm left-edge saturation band (<code>visit &gt;= 19</code>)</strong><ul>
+<li><strong>Notebook entries</strong>: <a href="../notebook/2026-10-27-02-step4-v2-labels.html">2026-10-27-02-step4-v2-labels</a></li>
+<li><strong>Scope</strong>: All <code>39 / 39</code> visits at <code>visit &gt;= 19</code> (<code>t &gt;= 190 min</code>) in <code>MIP_ROI_0</code> across all 13 experiments exhibit a <code>14,505–25,317 ADU</code> left-edge band. Excluded in <code>src/death_labels.py</code> v2 (<code>roi0_artifact_flag</code>).</li>
+</ul>
+</li>
+</ol>
+<h2>3. Mechanical Model Issues (Gate <code>G5</code> — Parked / Void)</h2>
+<ol>
+<li><strong>Unpinned rigid-body drift (<code>drift</code>)</strong><ul>
+<li><strong>Notebook entries</strong>: <a href="../notebook/2026-10-28-04-visual-review-2026-10-28.html">2026-10-28-04-visual-review-2026-10-28</a>, <a href="../notebook/2026-10-28-02-step6b-runs-void.html">2026-10-28-02-step6b-runs-void</a></li>
+<li><strong>Panels</strong>: <code>fit_reach_03</code>, <code>fit_reach_04</code>, <code>fit_reach_05</code>, <code>fit_unreach_10</code>, <code>fit_unreach_12</code>.</li>
+<li><strong>Mechanism</strong>: Without rigid-body pinning on the non-contact target hemisphere, synaptic pushing translates the entire target shell <code>2–3 um</code> away from its real mask.</li>
+</ul>
+</li>
+<li><strong>Path-dependent equilibria / re-solve non-reproducibility (<code>drift</code>)</strong><ul>
+<li><strong>Notebook entries</strong>: <a href="../notebook/2026-10-28-04-visual-review-2026-10-28.html">2026-10-28-04-visual-review-2026-10-28</a>, <a href="../notebook/2026-10-28-02-step6b-runs-void.html">2026-10-28-02-step6b-runs-void</a></li>
+<li><strong>Panels</strong>: <code>9 / 32</code> fit panels (<code>fit_reach_01</code> <code>0.37</code> vs <code>0.88 um</code>, <code>fit_reach_03</code> <code>1.61</code> vs <code>2.00 um</code>, <code>fit_reach_07</code> <code>1.10</code> vs <code>1.51 um</code>, <code>fit_reach_08</code> <code>0.98</code> vs <code>0.75 um</code>, <code>fit_reach_09</code>, <code>fit_reach_10</code>, <code>fit_reach_11</code>, <code>fit_reach_13</code>, <code>fit_unreach_09</code> <code>1.44</code> vs <code>0.08 um</code>).</li>
+</ul>
+</li>
+<li><strong>Misaligned starting reference target and excessive initial overlap (<code>misaligned</code>)</strong><ul>
+<li><strong>Notebook entries</strong>: <a href="../notebook/2026-10-28-04-visual-review-2026-10-28.html">2026-10-28-04-visual-review-2026-10-28</a>, <a href="../notebook/2026-10-28-02-step6b-runs-void.html">2026-10-28-02-step6b-runs-void</a></li>
+<li><strong>Panels</strong>: <code>fit_unreach_03</code>, <code>fit_unreach_10</code>, <code>fit_unreach_12</code>, <code>fit_unreach_13</code>, <code>fit_unreach_15</code>, <code>overlap_01</code> (<code>11.0 um</code> push-apart), <code>overlap_03</code> (<code>7.7 um</code>), <code>overlap_12</code> (<code>6.3 um</code>).</li>
+</ul>
+</li>
+<li><strong>Curve inversion discrepancy (<code>other</code>)</strong><ul>
+<li><strong>Notebook entries</strong>: <a href="../notebook/2026-10-28-04-visual-review-2026-10-28.html">2026-10-28-04-visual-review-2026-10-28</a>, <a href="../notebook/2026-10-28-02-step6b-runs-void.html">2026-10-28-02-step6b-runs-void</a></li>
+<li><strong>Panels</strong>: <code>fit_reach_14</code> (continuation curve flat near <code>0.05 um</code> up to <code>Pi = 10</code>, yet <code>pi_solved = 6.75</code> for observed depth <code>0.50 um</code>).</li>
+</ul>
+</li>
+</ol>
+  </main>
+</div>
+</body>
+</html>

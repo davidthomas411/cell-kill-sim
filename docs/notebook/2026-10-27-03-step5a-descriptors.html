@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>2026-10-27-03-step5a-descriptors</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<header class="top">
+  <div class="in">
+    <a class="brand" href="../index.html">Cell-Kill-Sim Lab</a>
+    <nav class="tabs" aria-label="Primary"><a href="../index.html" class="">Gates</a>
+<a href="../notebook/index.html" class="on">Notebook</a>
+<a href="../protocols/index.html" class="">Protocols</a>
+<a href="../registry.html" class="">Registry</a>
+<a href="../galleries/index.html" class="">Galleries</a>
+<a href="../handbook/index.html" class="">Handbook</a></nav>
+  </div>
+</header>
+<div class="wrap">
+  <aside class="side"><div class="section">Entries</div>
+<a href="index.html">All entries</a>
+<a href="2026-10-28-05-clean-subset-rule.html">2026-10-28-05 G1</a>
+<a href="2026-10-28-04-visual-review-2026-10-28.html">2026-10-28-04 none</a>
+<a href="2026-10-28-03-step7-prereg-and-result.html">2026-10-28-03 G4</a>
+<a href="2026-10-28-02-step6b-runs-void.html">2026-10-28-02 G5</a>
+<a href="2026-10-28-01-step6a-choice.html">2026-10-28-01 G5</a>
+<a href="2026-10-27-04-step5b-result.html">2026-10-27-04 G4</a>
+<a href="2026-10-27-03-step5a-descriptors.html">2026-10-27-03 G3</a>
+<a href="2026-10-27-02-step4-v2-labels.html">2026-10-27-02 G2</a>
+<a href="2026-10-27-01-step3-reproduction.html">2026-10-27-01 G0</a></aside>
+  <main>
+    
+        <h1>Step 5a: 3D mask contact and cup descriptors across 502 chambers (UNVERIFIED)</h1>
+        <div class="tblwrap">
+          <table class="data">
+            <tbody>
+              <tr><th>ID</th><td><code>2026-10-27-03-step5a-descriptors</code></td><th>Date</th><td>2026-10-27</td></tr>
+              <tr><th>Gate</th><td><strong>G3</strong></td><th>Status</th><td><span class="status-pill st-draft">draft</span></td></tr>
+              <tr><th>Author</th><td>agy (backfilled)</td><th>Reviewers</th><td>—</td></tr>
+              <tr><th>Signoff</th><td>—</td><th>Commits</th><td><code>88199ec, b3be277</code></td></tr>
+              <tr><th>Datasets</th><td><a href="../registry.html#ds-lab_masks"><code>lab_masks</code></a>, <a href="../registry.html#ds-step3_reproduction"><code>step3_reproduction</code></a>, <a href="../registry.html#ds-step5_descriptors"><code>step5_descriptors</code></a></td><th>Protocols</th><td><a href="../protocols/index.html#cup-measurement-v1"><code>cup-measurement@v1</code></a></td></tr>
+              <tr><th>Galleries</th><td><a href="../galleries/review-2026-10-28.html"><code>review-2026-10-28</code></a></td><th>Supersedes / By</th><td>— / —</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <h2>Question</h2>
+<p>What surface detail do the deposited 3D U-Net masks retain compared with raw 561-nm membrane images, and can we compute macro-scale (<code>&gt;= 1.4 um</code>) 3D contact patch and target cup indentation descriptors across all 502 chambers (<code>10,510</code> visits, <code>52,545</code> sweeps)?</p>
+<p>** Verification Notice: All Step 5a descriptor tables (<code>data/step5/</code>) reported in this entry are UNVERIFIED and blocked at Gates <code>G1</code> and <code>G3</code>.**</p>
+<h2>What was run</h2>
+<pre><code class="language-bash">python3 src/mask_resolution_check.py
+python3 src/contact_descriptors.py --workers 6
+</code></pre>
+<p>Commits:
+- <code>88199ec</code> (<code>Check how much surface detail the deposited masks keep</code>)
+- <code>b3be277</code> (<code>Step 5a: mask contact descriptors for all chambers; pre-register the 5b association check</code>)</p>
+<h2>What was looked at</h2>
+<ul>
+<li>Resolution benchmark output <code>data/step5_resolution/</code> and <code>figures/step5_mask_resolution_check.png</code> (20 sweeps across 7 chambers with local 3D raw <code>.h5</code> volumes).</li>
+<li>Descriptor overview <code>figures/step5_descriptors_overview.png</code> and <code>data/step5/descriptor_dictionary.csv</code>.</li>
+<li>Subsequently inspected on real-data gallery <code>review-2026-10-28</code>:</li>
+<li><code>cup_measurement</code>: <code>cup_01</code>..<code>cup_16</code></li>
+<li><code>dasatinib_vs_untreated</code>: <code>dasa_vs_untr_untreated_01</code>..<code>08</code>, <code>dasa_vs_untr_dasatinib_09</code>..<code>16</code></li>
+<li><code>deep_vs_shallow</code>: <code>deep_vs_shallow_deep_01</code>..<code>08</code>, <code>deep_vs_shallow_shallow_09</code>..<code>16</code></li>
+</ul>
+<h2>Observations</h2>
+<ol>
+<li><strong>Mask surface resolution cutoff (<code>commit 88199ec</code>)</strong>: On 20 raw-vs-mask volumes, the 3D U-Net mask dilates the target boundary outward by <code>+0.72 um</code> (<code>+3.69</code> voxels) relative to the raw 561-nm membrane half-maximum contour and attenuates <code>&gt; 50%</code> of surface roughness power below spatial wavelength <code>lambda_50% = 1.38 um</code> on the contact patch (<code>1.45 um</code> away from contact). Sub-micron microvilli (<code>0.1–0.5 um</code>) are erased; only macro-scale descriptors (<code>&gt;= 1.4 um</code>) are retained.</li>
+<li><strong>Axial pitch check (<code>commit 88199ec</code>, <code>b3be277</code>)</strong>: Uncontacted targets have bounding-box ratio <code>Delta Z / Delta XY = 0.807</code> (<code>0.1962 / 0.807 = 0.243 um</code>). All 33 descriptors were computed at both <code>z = 0.1962 um</code> and <code>z = 0.2400 um</code> (<code>_z024</code>) across <code>52,545</code> sweeps (<code>22,808</code> contact sweeps, <code>5,447</code> contact visits, <code>502</code> chambers).</li>
+<li><strong>Severe mask-quality artefacts found in visual review (<code>review-2026-10-28</code>, UNVERIFIED)</strong>:</li>
+<li><strong>Fragmented targets</strong>: When a target mask is split into multiple pieces (<code>cup_01</code>: <code>10.15 um</code> depth, <code>2,821 um^3</code>; <code>cup_03</code>: <code>9.18 um</code>, <code>2,550 um^3</code>; <code>cup_09</code>; <code>cup_10</code>: <code>5.10 um</code>, <code>depth/radius = 2.75</code>; <code>deep_01</code>), the 3D convex hull bridges the gap between pieces rather than measuring a synaptic dent. Across <code>4,523</code> <code>trace_num == 1</code> contact visits, median <code>cup_depth_hull_p95_um</code> is <code>1.35 um</code> for <code>target_sphericity &lt; 0.5</code> (<code>n = 1,925</code>) vs <code>0.72 um</code> for <code>target_sphericity &gt;= 0.8</code> (<code>n = 292</code>; Spearman <code>rho = -0.26</code>).</li>
+<li><strong>Merged targets</strong>: Two target cells fused into one mask (<code>dasa_vs_untr_untreated_02</code>, <code>deep_06</code>, <code>deep_07</code> at <code>5.60 um</code>, <code>deep_08</code>) cause the inter-cell cleft to be measured as a deep cup.</li>
+<li><strong>Hollow targets</strong>: Ring-shaped or broken-shell masks (<code>dasa_vs_untr_dasatinib_09, 11, 14, 15</code>; <code>shallow_10, 11</code>) produce <code>5.8–6.8 um</code> bogus cup depths.</li>
+<li><strong>FOV edge truncation</strong>: Cells cut by the crop border (<code>cup_05</code>, <code>cup_13</code>) distort hulls and volumes.</li>
+<li><strong>Donor <code>hd10</code> (<code>v09</code>, <code>v12</code>)</strong>: Dominated by fragmented and hollow target masks.</li>
+</ol>
+<h2>Decision</h2>
+<p><code>step5_descriptors</code> is <strong>UNVERIFIED</strong> (<code>status: unverified</code> in <code>lab/registry.csv</code>, blocked at Gates <code>G1</code> and <code>G3</code>). Descriptors must be recomputed/filtered on Gate <code>G1</code>-verified clean cells (<code>clean-cell-rule@v1</code>) and visually verified before any downstream use.</p>
+<h2>Open issues</h2>
+<ul>
+<li>Complete Gate <code>G1</code> clean-cell verification (<code>clean-2026-10-28</code>), then recompute and re-verify <code>G3</code> cup descriptors on whole, single, solid cells only.</li>
+</ul>
+        
+  </main>
+</div>
+</body>
+</html>

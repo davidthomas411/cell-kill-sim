@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>cup-measurement@v1</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<header class="top">
+  <div class="in">
+    <a class="brand" href="../index.html">Cell-Kill-Sim Lab</a>
+    <nav class="tabs" aria-label="Primary"><a href="../index.html" class="">Gates</a>
+<a href="../notebook/index.html" class="">Notebook</a>
+<a href="../protocols/index.html" class="on">Protocols</a>
+<a href="../registry.html" class="">Registry</a>
+<a href="../galleries/index.html" class="">Galleries</a>
+<a href="../handbook/index.html" class="">Handbook</a></nav>
+  </div>
+</header>
+<div class="wrap">
+  <aside class="side"><div class="section">Protocols</div>
+<a href="#clean-cell-rule-v1">clean-cell-rule@v1</a>
+<a href="#cup-measurement-v1">cup-measurement@v1</a>
+<a href="#death-calling-v1">death-calling@v1</a>
+<a href="#gallery-review-v1">gallery-review@v1</a></aside>
+  <main>
+    <p class="meta"><a href="index.html">All protocols</a> · <code>cup-measurement@v1</code> · Date 2026-10-28 · <span class="status-pill st-draft">draft</span></p><h1>Protocol: 3D Contact Patch and Cup Depth Measurement (<code>cup-measurement-v1</code>)</h1>
+<h2>Purpose</h2>
+<p>Quantify macro-scale (<code>&gt;= 1.4 um</code> spatial wavelength) 3D synaptic contact geometry and target cell indentation depth from segmented T-cell and target masks (<code>*_predictions.h5</code>), as currently implemented in <code>src/contact_descriptors.py</code>.</p>
+<p><strong>Status</strong>: <code>draft</code> (unverified; blocked at Gates <code>G1</code> and <code>G3</code> because 3D convex-hull cup depth is inflated when the target mask is fragmented, merged, hollow, or truncated by the FOV edge).</p>
+<h2>1. Resolution Cutoff &amp; Axial Pitch Dual-Evaluation</h2>
+<ol>
+<li><strong>Spatial wavelength cutoff (<code>&gt;= 1.4 um</code>)</strong>:
+   Spectral comparison against raw 561-nm membrane stacks (<code>.agy_step5res_report.md</code>) showed that the 3D U-Net masks attenuate <code>&gt; 50%</code> of surface roughness power below <code>lambda_50% = 1.38 um</code> (synapse) / <code>1.45 um</code> (non-contact) and dilate the target boundary outward by <code>~0.72 um</code>. All geometric descriptors are restricted to whole-cell and macro-cup scales (<code>&gt;= 1.4 um</code> wavelength; smallest trustworthy bump diameter <code>&gt;= 0.7–1.0 um</code> laterally, <code>&gt;= 0.9–1.2 um</code> axially). High-frequency residual variance below <code>1.4 um</code> is recorded solely as a discretization noise check (<code>rough_below_cutoff_noise_um2</code>, <code>rough_below_cutoff_frac</code>).</li>
+<li><strong>Dual axial voxel pitch (<code>z = 0.1962 um</code> vs <code>z = 0.2400 um</code>)</strong>:
+   Lateral voxel pitch is <code>VOXEL_UM = 0.1962 um</code> (<code>sqrt(0.0385 um^2)</code>). Because uncontacted targets span <code>~19%</code> fewer Z slices than XY pixels (<code>Delta Z / Delta XY = 0.807</code>), every descriptor is evaluated at both nominal isotropic <code>dz = 0.1962 um</code> and alternative <code>dz = 0.2400 um</code> (<code>_z024</code> columns). Descriptors whose median shifts by <code>&gt; 10%</code> between the two axial pitches are flagged in <code>data/step5/descriptor_dictionary.csv</code>.</li>
+</ol>
+<h2>2. Cell &amp; Contact Surface Extraction (<code>process_one_chamber_descriptors</code>)</h2>
+<ol>
+<li><strong>Instance segmentation</strong>:
+   Runs <code>instance_seg_matlab_xyz</code> in MATLAB <code>(X, Y, Z)</code> dimension order (<code>transpose(2, 1, 0)</code>):</li>
+<li>T-cell instances from nucleus <code>pred == 1</code> (<code>bwareaopen &gt;= 3000</code> voxels) and membrane <code>pred == 3</code> (Voronoi assignment within 25-voxel sphere of nucleus, <code>&gt;= 1000</code> voxels, 26-connected hole fill).</li>
+<li>Target instances from nucleus <code>pred == 2</code> and membrane <code>pred == 4</code>.</li>
+<li><strong>Tracked T cell and contacted target body</strong>:</li>
+<li>Selects the tracked T-cell instance (<code>tracked_tcell_id</code> from <code>src/reproduce_contact_area_tracked.py</code>).</li>
+<li>Computes the Voronoi contact surface <code>surface_mask = (map_exp == 2) &amp; imdilate(map_exp == 3, sphere(1))</code> and overwrites the peripheral radius-5 rim (<code>edge_mask = surface_mask &amp; imdilate(map_exp == 1, sphere(5))</code>) with <code>-j</code>, leaving interior synaptic contact voxels <code>s_real = (surface == +j)</code>.</li>
+<li>Selects the largest 26-connected patch component <code>s_largest_mask</code> of <code>s_real</code> and identifies the contacted target body <code>b_body</code> (<code>fill_solid_cell_mask</code>: 26-connected target component containing the contacted target instance, 3D hole-filled plus 2D slice hole-filled along Z, Y, and X).</li>
+<li>Extracts target surface boundary voxels <code>b_surf = b_body &amp; ~binary_erosion(b_body, STRUCT6)</code> and marks contact patch boundary voxels <code>is_contact_on_b_surf</code>.</li>
+</ol>
+<h2>3. Geometric &amp; Indentation Descriptors (<code>compute_descriptors_for_z_pitch</code>)</h2>
+<p>Let <code>pts_b_surf_um</code> be the physical coordinates <code>(z * dz, y * dxy, x * dxy)</code> of all target boundary voxels and <code>pts_c_um</code> the physical coordinates of the synaptic contact patch voxels on the target surface:</p>
+<ol>
+<li><strong>Contact patch size &amp; orientation</strong>:</li>
+<li><code>contact_area_um2 = s_largest_vox * 0.0385 * area_stretch</code></li>
+<li><code>patch_equiv_radius_um = sqrt(contact_area_um2 / pi)</code> (<code>a</code>)</li>
+<li>Unit synaptic normal <code>n_syn</code>: unit vector from target centroid <code>b_center_um</code> toward T-cell centroid <code>t_center_um</code> (representing the inward indentation direction into the target).</li>
+<li>Orthonormal tangent plane basis <code>(e1, e2)</code> perpendicular to <code>n_syn</code>; <code>patch_elongation = sqrt(lambda_max / lambda_min)</code> of the 2D covariance of <code>pts_c_um</code> in <code>(e1, e2)</code>.</li>
+<li><strong>3D Convex-Hull Indentation (<code>cup_depth_hull_p95_um</code>)</strong>:</li>
+<li>Computes the 3D convex hull <code>hull_b = scipy.spatial.ConvexHull(pts_b_surf_um)</code>.</li>
+<li>Selects hull facets facing the T cell: <code>facing = (eqs[:, :3] @ n_syn) &gt; 0.05</code>.</li>
+<li>For each contact patch point <code>x in pts_c_um</code>, computes the inward perpendicular distance to the closest facing hull plane:
+     <code>d_hull_c(x) = max(0, min_{f in facing} -(n_f . x + offset_f))</code>.</li>
+<li><code>cup_depth_hull_p95_um</code>: 95th percentile of <code>d_hull_c</code> across the contact patch (<code>d</code>).</li>
+<li><code>cup_depth_hull_max_um</code>: maximum of <code>d_hull_c</code>.</li>
+<li><code>cup_volume_hull_um3</code>: <code>sum(d_hull_c) * (contact_area_um2 / N_c)</code>.</li>
+<li><code>cup_depth_over_radius</code>: dimensionless focusing ratio <code>cup_depth_hull_p95_um / max(0.20, patch_equiv_radius_um)</code> (<code>d / a</code>).</li>
+<li><code>tcell_protrusion_vol_um3</code> and <code>tcell_protrusion_frac</code>: volume and fraction of tracked T-cell voxels lying strictly inside <code>hull_b</code>.</li>
+<li><strong>Regularized Reference-Sphere Indentation (<code>cup_depth_sphere_p95_um</code>)</strong>:</li>
+<li>Fits a sphere <code>(c_sph, R_sph)</code> to the non-contact target boundary points <code>pts_nc_um</code> regularized toward <code>(b_center_um, r_eq_target)</code>.</li>
+<li><code>d_sph_pos(x) = max(0, R_sph - ||x - c_sph||)</code>, summarized by its 95th percentile <code>cup_depth_sphere_p95_um</code> and integrated volume <code>cup_volume_sphere_um3</code>.</li>
+<li><strong>Per-Visit and Per-Chamber Aggregation</strong>:</li>
+<li>Per-visit descriptors average across contact sweeps (<code>in_contact == True</code>) within each visit (<code>data/step5/per_visit_descriptors.csv</code>).</li>
+<li>Pre-death chamber summaries (<code>src/step5b_association_check.py</code>) evaluate <code>(A)</code> the first contact visit strictly before death and <code>(B)</code> the mean across all contact visits strictly before death (<code>visits 1–20</code>).</li>
+</ol>
+<h2>4. Known Failure Modes Blocking Gates <code>G1</code> &amp; <code>G3</code></h2>
+<p>Visual review (<code>status/visual_review_2026-10-28.md</code>) established that <code>cup_depth_hull_p95_um</code> measures false indentation whenever the target mask violates single-cell solidity:
+- <strong>Fragmented target masks</strong> (<code>cup_01</code>: <code>10.15 um</code>, <code>cup_03</code>: <code>9.18 um</code>, <code>cup_10</code>: <code>5.10 um</code>): <code>hull_b</code> bridges across separate pieces and measures the inter-piece gap.
+- <strong>Two merged targets</strong> (<code>deep_07</code>: <code>5.60 um</code>): <code>hull_b</code> bridges the groove between two distinct cells.
+- <strong>Hollow shell masks</strong> (<code>dasatinib_11</code>: <code>6.75 um</code>): interior void inflates hull distance.
+- <strong>FOV edge truncation</strong> (<code>cup_05</code>, <code>cup_13</code>): flat image border distorts hull geometry.
+Must be restricted to <code>clean-cell-rule@v1</code> verified visits before <code>G3</code> signoff.</p>
+  </main>
+</div>
+</body>
+</html>

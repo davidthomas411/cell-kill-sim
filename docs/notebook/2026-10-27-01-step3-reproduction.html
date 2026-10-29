@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>2026-10-27-01-step3-reproduction</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<header class="top">
+  <div class="in">
+    <a class="brand" href="../index.html">Cell-Kill-Sim Lab</a>
+    <nav class="tabs" aria-label="Primary"><a href="../index.html" class="">Gates</a>
+<a href="../notebook/index.html" class="on">Notebook</a>
+<a href="../protocols/index.html" class="">Protocols</a>
+<a href="../registry.html" class="">Registry</a>
+<a href="../galleries/index.html" class="">Galleries</a>
+<a href="../handbook/index.html" class="">Handbook</a></nav>
+  </div>
+</header>
+<div class="wrap">
+  <aside class="side"><div class="section">Entries</div>
+<a href="index.html">All entries</a>
+<a href="2026-10-28-05-clean-subset-rule.html">2026-10-28-05 G1</a>
+<a href="2026-10-28-04-visual-review-2026-10-28.html">2026-10-28-04 none</a>
+<a href="2026-10-28-03-step7-prereg-and-result.html">2026-10-28-03 G4</a>
+<a href="2026-10-28-02-step6b-runs-void.html">2026-10-28-02 G5</a>
+<a href="2026-10-28-01-step6a-choice.html">2026-10-28-01 G5</a>
+<a href="2026-10-27-04-step5b-result.html">2026-10-27-04 G4</a>
+<a href="2026-10-27-03-step5a-descriptors.html">2026-10-27-03 G3</a>
+<a href="2026-10-27-02-step4-v2-labels.html">2026-10-27-02 G2</a>
+<a href="2026-10-27-01-step3-reproduction.html">2026-10-27-01 G0</a></aside>
+  <main>
+    
+        <h1>Step 3: Reproduce the Fei lab&#x27;s published chamber counts, contact area, and actin metrics</h1>
+        <div class="tblwrap">
+          <table class="data">
+            <tbody>
+              <tr><th>ID</th><td><code>2026-10-27-01-step3-reproduction</code></td><th>Date</th><td>2026-10-27</td></tr>
+              <tr><th>Gate</th><td><strong>G0</strong></td><th>Status</th><td><span class="status-pill st-draft">draft</span></td></tr>
+              <tr><th>Author</th><td>agy (backfilled)</td><th>Reviewers</th><td>—</td></tr>
+              <tr><th>Signoff</th><td>—</td><th>Commits</th><td><code>e1330b3, 5b373cd, 72c4f0c, d3c2408, ba2d963</code></td></tr>
+              <tr><th>Datasets</th><td><a href="../registry.html#ds-lab_masks"><code>lab_masks</code></a>, <a href="../registry.html#ds-raw_volumes"><code>raw_volumes</code></a>, <a href="../registry.html#ds-step3_reproduction"><code>step3_reproduction</code></a></td><th>Protocols</th><td>—</td></tr>
+              <tr><th>Galleries</th><td>—</td><th>Supersedes / By</th><td>— / —</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <h2>Question</h2>
+<p>Can we reproduce the Fei lab's published per-chamber row counts (<code>summary.csv</code> / <code>Source_Data</code>, <code>n = 419</code> across 13 groups), per-chamber peak synaptic contact area (<code>CA</code>), and raw 488-nm actin depletion (<code>ADC</code>) and retrograde flow (<code>ARFS</code>) directly from the deposited ScienceDB <code>19235</code> 3D U-Net masks (<code>*_predictions.h5</code>) and local 3D raw volumes?</p>
+<h2>What was run</h2>
+<pre><code class="language-bash">python3 src/reproduce_contact_area.py --all-experiments --workers 6
+python3 src/reproduce_actin_measures.py
+python3 src/reproduce_contact_area_tracked.py --all-experiments --workers 6
+python3 src/map_chambers_to_paper_rows.py
+</code></pre>
+<p>Commits:
+- <code>e1330b3</code> (<code>Reproduce the lab's contact area from deposited masks (group 1)</code>)
+- <code>5b373cd</code> (<code>Map chambers to paper rows for every processed group</code>)
+- <code>72c4f0c</code> (<code>Reproduce the lab's actin flow and actin depletion exactly (2 chambers)</code>)
+- <code>d3c2408</code> (<code>Chamber-to-row map for all 13 groups</code>)
+- <code>ba2d963</code> (<code>Step 3: port lab T-cell tracker; single-track rule reproduces paper chamber selection</code>)</p>
+<h2>What was looked at</h2>
+<ul>
+<li>External comparison against published summary tables (<code>external/feilab_CART_analysis/main/analysis/summary/summary.csv</code>) across all 13 groups (<code>502</code> deposited chambers, <code>52,545</code> sweeps).</li>
+<li>Diagnostic figures <code>figures/step3_contact_surface_sanity_slice.png</code>, <code>figures/step3_contact_area_reproduction.png</code>, <code>figures/step3_tracked_vs_masks_only.png</code>, and <code>figures/step3_actin_reproduction.png</code>.</li>
+<li>No stage-gate gallery existed at the time of this run (visual review of the underlying masks was subsequently assigned to Gate <code>G1</code> on gallery <code>review-2026-10-28</code>).</li>
+</ul>
+<h2>Observations</h2>
+<ol>
+<li><strong>Single-track chamber selection (<code>trace_num == 1</code>, commit <code>ba2d963</code>)</strong>: Porting the lab's 3D T-cell centroid tracker (<code>synapse_tracking.m</code>) in MATLAB <code>(X, Y, Z)</code> dimension order yields <code>416</code> chambers with <code>trace_num == 1</code> (<code>25</code> with <code>0</code>, <code>56</code> with <code>2</code>, <code>5</code> with <code>3</code> across <code>502</code> chambers). In all <code>12 / 12</code> completely deposited experimental groups (<code>v01</code>–<code>v06</code>, <code>v08</code>–<code>v13</code>), <code>trace_num == 1</code> matches the paper's published row count (<code>395 / 395</code> rows, <code>0</code> difference in every group). Group 7 (<code>v07_6_39_120_0-6_hd9</code>) has <code>22</code> deposited ROIs (<code>15</code> with <code>trace_num == 1</code>) vs <code>39</code> rows in the paper (<code>24</code> ROIs not in the ScienceDB upload).</li>
+<li><strong>Masks-only contact area (<code>CA</code>, commits <code>e1330b3</code>, <code>d3c2408</code>, <code>ba2d963</code>)</strong>: Excluding the peripheral radius-5 rim (<code>s_edge = -j</code> in <code>step2_instance_seg.m</code> lines 89–90) and matching MATLAB <code>(X, Y, Z)</code> <code>bwdist</code> tie-breaking maps <code>415 / 419</code> paper rows firmly/probably (<code>395 / 395</code> in the 12 complete groups), with masks-only <code>CA</code> within <code>0.5%</code> of the published number for <code>369 / 419</code> rows (<code>median |rel_err| = 0.08%</code>).</li>
+<li><strong>Exact reproduction with raw 488-nm actin (<code>commit 72c4f0c</code>)</strong>: On the two Group 1 chambers with local 3D raw volumes (<code>v01/MIP_ROI_32</code> and <code>v01/MIP_ROI_2</code>), running the full <code>cl_factor.m</code> actin-slope component selection and <code>optical_flow.m</code> reproduces all six published numbers (<code>CA = 129.114</code> and <code>93.547 um^2</code>, <code>ADC = 0.1807</code> and <code>1.0965</code>, <code>ARFS = 53.877</code> and <code>137.110 nm/s</code>) to <code>0.00%</code> error.</li>
+</ol>
+<h2>Decision</h2>
+<p>Gate <code>G0</code> (external numerical reproduction of the Fei lab's pipeline and published tables) <strong>passed</strong>. <code>step3_reproduction</code> is marked <code>verified</code> by external check in <code>lab/registry.csv</code>. However, matching the lab's numbers does not validate the 3D U-Net masks themselves (since the lab used the same masks); visual verification of cell identity is required under Gate <code>G1</code>.</p>
+<h2>Open issues</h2>
+<ul>
+<li><code>24</code> rows of Group 7 (<code>v07_6_39_120_0-6_hd9</code>) are absent from the ScienceDB <code>19235</code> deposition (logged in <code>lab/handbook/open-questions.md</code>).</li>
+<li>Visual quality of the underlying U-Net masks (<code>lab_masks</code>) must pass Gate <code>G1</code> before downstream geometric measurements are trusted.</li>
+</ul>
+        
+  </main>
+</div>
+</body>
+</html>

@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>2026-10-28-05-clean-subset-rule</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<header class="top">
+  <div class="in">
+    <a class="brand" href="../index.html">Cell-Kill-Sim Lab</a>
+    <nav class="tabs" aria-label="Primary"><a href="../index.html" class="">Gates</a>
+<a href="../notebook/index.html" class="on">Notebook</a>
+<a href="../protocols/index.html" class="">Protocols</a>
+<a href="../registry.html" class="">Registry</a>
+<a href="../galleries/index.html" class="">Galleries</a>
+<a href="../handbook/index.html" class="">Handbook</a></nav>
+  </div>
+</header>
+<div class="wrap">
+  <aside class="side"><div class="section">Entries</div>
+<a href="index.html">All entries</a>
+<a href="2026-10-28-05-clean-subset-rule.html">2026-10-28-05 G1</a>
+<a href="2026-10-28-04-visual-review-2026-10-28.html">2026-10-28-04 none</a>
+<a href="2026-10-28-03-step7-prereg-and-result.html">2026-10-28-03 G4</a>
+<a href="2026-10-28-02-step6b-runs-void.html">2026-10-28-02 G5</a>
+<a href="2026-10-28-01-step6a-choice.html">2026-10-28-01 G5</a>
+<a href="2026-10-27-04-step5b-result.html">2026-10-27-04 G4</a>
+<a href="2026-10-27-03-step5a-descriptors.html">2026-10-27-03 G3</a>
+<a href="2026-10-27-02-step4-v2-labels.html">2026-10-27-02 G2</a>
+<a href="2026-10-27-01-step3-reproduction.html">2026-10-27-01 G0</a></aside>
+  <main>
+    
+        <h1>Gate G1 clean-cell subset rule fixed from mask properties before outcomes (UNVERIFIED)</h1>
+        <div class="tblwrap">
+          <table class="data">
+            <tbody>
+              <tr><th>ID</th><td><code>2026-10-28-05-clean-subset-rule</code></td><th>Date</th><td>2026-10-28</td></tr>
+              <tr><th>Gate</th><td><strong>G1</strong></td><th>Status</th><td><span class="status-pill st-draft">draft</span></td></tr>
+              <tr><th>Author</th><td>agy (backfilled)</td><th>Reviewers</th><td>claude</td></tr>
+              <tr><th>Signoff</th><td>—</td><th>Commits</th><td><code>71251e7, a0b0a94</code></td></tr>
+              <tr><th>Datasets</th><td><a href="../registry.html#ds-lab_masks"><code>lab_masks</code></a>, <a href="../registry.html#ds-qc_flags"><code>qc_flags</code></a>, <a href="../registry.html#ds-clean_subset_v0.1"><code>clean_subset_v0.1</code></a></td><th>Protocols</th><td><a href="../protocols/index.html#clean-cell-rule-v1"><code>clean-cell-rule@v1</code></a>, <a href="../protocols/index.html#gallery-review-v1"><code>gallery-review@v1</code></a></td></tr>
+              <tr><th>Galleries</th><td><a href="../galleries/review-2026-10-28.html"><code>review-2026-10-28</code></a>, <a href="../galleries/clean-2026-10-28.html"><code>clean-2026-10-28</code></a></td><th>Supersedes / By</th><td>— / —</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <h2>Question</h2>
+<p>Can we define an objective, pre-outcome mask quality rule (<code>clean-cell-rule@v1</code>) from mask properties alone (<code>data/qc/per_visit_qc.csv</code>, without consulting death labels or associations) that selects contact visits where both the tracked T cell and contacted target are single, whole, un-truncated cells, without biasing cup depth by filtering on target solidity or sphericity?</p>
+<p>** Verification Notice: Both <code>qc_flags</code> and <code>clean_subset_v0.1</code> are UNVERIFIED (<code>status: unverified</code> in <code>lab/registry.csv</code>) until gallery <code>clean-2026-10-28</code> is reviewed panel by panel with raw membrane overlays.**</p>
+<h2>What was run</h2>
+<pre><code class="language-bash">python3 src/mask_qc.py
+</code></pre>
+<p>Commits:
+- <code>71251e7</code> (<code>Clean-cell subset criteria, fixed from mask properties before any outcome</code>)
+- <code>a0b0a94</code> (<code>Figure: clean-cell rule failures by experiment, cup depth clean vs rejected</code>)</p>
+<h2>What was looked at</h2>
+<ul>
+<li><code>status/clean_subset_criteria.md</code> and <code>figures/qc_clean_subset_overview.png</code> (<code>commit a0b0a94</code>).</li>
+<li>Gallery <code>clean-2026-10-28</code> (<code>figures/review_clean/</code>, being rendered by <code>src/review/make_clean_gallery.py</code> with raw 561-nm membrane and deposited U-Net classes 0–4 on stratified random clean visits, extreme clean visits, and 40 rejected visits across the 5 failure rules).</li>
+</ul>
+<h2>Observations</h2>
+<ol>
+<li><strong>Five pre-outcome criteria (<code>clean-cell-rule@v1</code>)</strong>:</li>
+<li>(1) <code>target_n_components == 1</code> and <code>tcell_n_components == 1</code></li>
+<li>(2) <code>target_raw_largest_frac &gt;= 0.9</code></li>
+<li>(3) <code>touches_fov_edge == False</code></li>
+<li>(4) <code>200 &lt;= target_volume_um3 &lt;= 1500</code></li>
+<li>(5) <code>0.7 &lt;= target_vol_ratio_to_own_median &lt;= 1.4</code></li>
+<li>Target solidity/sphericity is deliberately excluded because a real synaptic indentation lowers sphericity (<code>Spearman rho = -0.26</code> with cup depth).</li>
+<li><strong>Subset yield from masks (<code>UNVERIFIED</code>)</strong>:</li>
+<li><code>1,213</code> of <code>4,523</code> <code>trace_num == 1</code> contact visits (<code>26.8%</code>) pass all five criteria across <code>243</code> chambers (<code>111</code> chambers with <code>&gt;= 4</code> clean visits).</li>
+<li>Clean fraction by experiment: <code>v01</code> <code>0.28</code>, <code>v02</code> <code>0.34</code>, <code>v03</code> <code>0.34</code>, <code>v04</code> <code>0.40</code>, <code>v05</code> <code>0.29</code>, <code>v06</code> <code>0.19</code>, <code>v07</code> <code>0.16</code>, <code>v08</code> <code>0.38</code>, <code>v09</code> (<code>hd10</code>) <code>0.05</code>, <code>v10</code> <code>0.31</code>, <code>v11</code> (<code>hd2_ds</code>) <code>0.04</code>, <code>v12</code> (<code>hd10ds</code>) <code>0.16</code>, <code>v13</code> (<code>hd5_ds</code>) <code>0.14</code>.</li>
+<li><strong>Consequences for downstream analyses</strong>:</li>
+<li>The candidate clean subset supports within-experiment analyses in <code>v01</code>–<code>v05</code>, <code>v08</code>, and <code>v10</code>, but leaves donor <code>hd10</code> (<code>18</code> untreated visits) and pooled dasatinib (<code>60</code> visits) too thin to support the 5-vs-5 donor comparison or the dasatinib control on its own.</li>
+</ol>
+<h2>Decision</h2>
+<p>Criteria locked in <code>status/clean_subset_criteria.md</code> and <code>lab/protocols/clean-cell-rule-v1.md</code>. Dataset <code>clean_subset_v0.1</code> remains <strong>UNVERIFIED</strong> (<code>status: unverified</code>) until every panel of gallery <code>clean-2026-10-28</code> is reviewed against raw 561-nm membrane images.</p>
+<h2>Open issues</h2>
+<ul>
+<li>Complete panel-by-panel review of <code>clean-2026-10-28</code> in <code>tools/review_app.py</code>.</li>
+<li>Quantify per-experiment failure rates by layer: (a) U-Net segmentation failure while raw cell is whole, (b) extraction failure while U-Net labels are sound, and (c) biological blebbing/fragmentation of the raw cell itself.</li>
+</ul>
+        
+  </main>
+</div>
+</body>
+</html>

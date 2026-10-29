@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Open questions</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<header class="top">
+  <div class="in">
+    <a class="brand" href="../index.html">Cell-Kill-Sim Lab</a>
+    <nav class="tabs" aria-label="Primary"><a href="../index.html" class="">Gates</a>
+<a href="../notebook/index.html" class="">Notebook</a>
+<a href="../protocols/index.html" class="">Protocols</a>
+<a href="../registry.html" class="">Registry</a>
+<a href="../galleries/index.html" class="">Galleries</a>
+<a href="../handbook/index.html" class="on">Handbook</a></nav>
+  </div>
+</header>
+<div class="wrap">
+  <aside class="side"><div class="section">Handbook</div>
+<a href="#data">Dataset layers</a>
+<a href="#definitions">Definitions and caveats</a>
+<a href="#known-issues">Known issues</a>
+<a href="#open-questions">Open questions</a></aside>
+  <main>
+    <p class="meta"><a href="index.html">Handbook index</a></p><h1>Open Questions for the Fei Lab (<code>lab/handbook/open-questions.md</code>)</h1>
+<p>Technical questions regarding the ScienceDB <code>19235</code> deposition and the analysis pipeline in Wang et al. (<em>Nat. Commun.</em> 2024 / <em>Sci. Data</em> 2026):</p>
+<h2>1. Post-Deskew Axial Voxel Pitch (<code>dz</code>)</h2>
+<ul>
+<li>In <code>summary.m</code> (line 18), contact area is scaled by <code>0.0385 um^2</code> per voxel face (<code>sqrt(0.0385) = 0.1962 um</code> lateral pitch), and <code>ARFS</code> is scaled by <code>19.6 nm/s</code>.</li>
+<li>Across all uncontacted Nalm6 target cells in <code>*_predictions.h5</code>, the 3D bounding-box ratio is <code>Delta Z / Delta XY = 0.807</code> (median <code>Z</code> span ~19% fewer slices than <code>X</code> or <code>Y</code> pixels).</li>
+<li><strong>Question</strong>: After light-sheet deskewing and rotation into the <code>(Z, 256, 256)</code> ROI crop, is the true axial voxel step <code>dz = 0.1962 um</code> (implying targets are physically oblate on the microgrid floor) or <code>dz ≈ 0.240–0.243 um</code>?</li>
+</ul>
+<h2>2. Un-deposited ROIs in Group 7 (<code>v07_6_39_120_0-6_hd9</code>)</h2>
+<ul>
+<li>Across 12 of the 13 experimental groups (<code>v01</code>–<code>v06</code>, <code>v08</code>–<code>v13</code>), our port of <code>synapse_tracking.m</code> (<code>trace_num == 1</code> in <code>src/reproduce_contact_area_tracked.py</code>) matches the published row count in <code>summary.csv</code> / <code>Source_Data</code> exactly (<code>395 / 395</code> rows across 12 groups).</li>
+<li>In Group 7 (<code>v07_6_39_120_0-6_hd9</code>), the published table contains <code>39</code> rows, whereas ScienceDB <code>19235</code> contains only <code>22</code> ROI folders (<code>MIP_ROI_0</code>..<code>MIP_ROI_21</code>, yielding <code>15</code> chambers with <code>trace_num == 1</code>, a deficit of <code>24</code> rows).</li>
+<li><strong>Question</strong>: Were additional ROIs (<code>MIP_ROI_22</code>..<code>MIP_ROI_55</code>) imaged for <code>v07_6_39_120_0-6_hd9</code> that were omitted from the ScienceDB <code>19235</code> upload?</li>
+</ul>
+<h2>3. U-Net Segmentation Quality in Donor <code>hd10</code> (<code>v09</code> and <code>v12</code>) and Dasatinib (<code>v11</code>)</h2>
+<ul>
+<li>Panel-by-panel visual review (<code>figures/review/</code>) and pre-outcome QC (<code>src/mask_qc.py</code>) show that while <code>28–40%</code> of contact visits in <code>v01</code>–<code>v05</code>, <code>v08</code>, and <code>v10</code> have single, solid, un-truncated cell masks, only <code>5%</code> of visits in <code>v09_6_40_120_0-6_hd10</code> (<code>18</code> visits) and <code>4%</code> in <code>v11_6_36_120_0-6_hd2_ds</code> pass the same single-cell criteria; most target masks in <code>v09</code> and <code>v12</code> are fragmented into multiple pieces or hollow shells.</li>
+<li><strong>Question</strong>: Did <code>v09</code>, <code>v11</code>, and <code>v12</code> have lower raw 561-nm mApple-Mem expression or different illumination settings that degraded the 3D U-Net predictions (<code>classes 2, 4</code>), and were any manual QC exclusions applied in <code>Figure 5</code>?</li>
+</ul>
+<h2>4. <code>MIP_ROI_0</code> Late 405-nm Left-Edge Saturation Band (<code>visit &gt;= 19</code>)</h2>
+<ul>
+<li>In every one of the 13 experiments (<code>39 / 39</code> visits at <code>visit &gt;= 19</code>, <code>t &gt;= 190 min</code>), <code>MIP_ROI_0</code> (and no other ROI) displays a vertical saturation band along the left edge (<code>X = 0..W-1</code>, peaking at <code>14,505–25,317 ADU</code> vs <code>&lt; 3,000 ADU</code> in all other <code>10,471</code> chamber-visits).</li>
+<li><strong>Question</strong>: Does <code>MIP_ROI_0</code> sit at the physical edge of the microgrid chip where the 405-nm excitation sheet or stage homed at <code>t &gt;= 190 min</code>?</li>
+</ul>
+<h2>5. 405-nm Dead-Dye Threshold Calibration (<code>398 ADU</code>) and <code>Figure 5g</code> Kill Counts</h2>
+<ul>
+<li>In <code>step2_instance_seg.m</code> (line 45), the 3D dead-dye mask thresholds the <code>[3,3,1]</code> Gaussian-smoothed 405-nm volume at <code>&gt; 398 ADU</code>, while camera background median is <code>~396–400 ADU</code> and clearly dead targets read <code>410–490 ADU</code>.</li>
+<li>Furthermore, in <code>dead_count.m</code>, any overlap with the 10-voxel dilated dye mask (<code>d_dil10_3d</code>) can be triggered by a dead bystander cell within <code>2 um</code> of the contacted target.</li>
+<li><strong>Question</strong>: Were the per-condition kill fractions in <code>Figure 5g</code> (<code>57.5%</code> high-killing, <code>27.0%</code> low-killing, <code>4.5%</code> drug-treated) taken directly from <code>summary.m</code> (<code>C = max(B, [], 2)</code> on <code>dead_count.m</code>), or were false kills from adjacent bystander cells and <code>MIP_ROI_0</code> curated manually?</li>
+</ul>
+  </main>
+</div>
+</body>
+</html>

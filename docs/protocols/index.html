@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Protocols</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<header class="top">
+  <div class="in">
+    <a class="brand" href="../index.html">Cell-Kill-Sim Lab</a>
+    <nav class="tabs" aria-label="Primary"><a href="../index.html" class="">Gates</a>
+<a href="../notebook/index.html" class="">Notebook</a>
+<a href="../protocols/index.html" class="on">Protocols</a>
+<a href="../registry.html" class="">Registry</a>
+<a href="../galleries/index.html" class="">Galleries</a>
+<a href="../handbook/index.html" class="">Handbook</a></nav>
+  </div>
+</header>
+<div class="wrap">
+  <aside class="side"><div class="section">Protocols</div>
+<a href="#clean-cell-rule-v1">clean-cell-rule@v1</a>
+<a href="#cup-measurement-v1">cup-measurement@v1</a>
+<a href="#death-calling-v1">death-calling@v1</a>
+<a href="#gallery-review-v1">gallery-review@v1</a></aside>
+  <main>
+    
+    <h1>Protocols</h1>
+    <div class="tblwrap">
+      <table class="data">
+        <thead>
+          <tr>
+            <th>Protocol</th>
+            <th>Date</th>
+            <th>Status</th>
+            <th>Page</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td><a href="#clean-cell-rule-v1"><strong>clean-cell-rule@v1</strong></a></td><td>2026-10-28</td><td><span class="status-pill st-draft">draft</span></td><td><a href="clean-cell-rule-v1.html">Standalone page</a></td></tr><tr><td><a href="#cup-measurement-v1"><strong>cup-measurement@v1</strong></a></td><td>2026-10-28</td><td><span class="status-pill st-draft">draft</span></td><td><a href="cup-measurement-v1.html">Standalone page</a></td></tr><tr><td><a href="#death-calling-v1"><strong>death-calling@v1</strong></a></td><td>2026-10-28</td><td><span class="status-pill st-draft">draft</span></td><td><a href="death-calling-v1.html">Standalone page</a></td></tr><tr><td><a href="#gallery-review-v1"><strong>gallery-review@v1</strong></a></td><td>2026-10-28</td><td><span class="status-pill st-reviewed">reviewed</span></td><td><a href="gallery-review-v1.html">Standalone page</a></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <section id="clean-cell-rule-v1" style="border-top:1px solid var(--ink);padding-top:20px;margin-top:32px"><p class="meta">Protocol <code>clean-cell-rule@v1</code> · Date 2026-10-28 · <span class="status-pill st-draft">draft</span></p><h1>Protocol: Gate G1 Clean-Cell Subset Rule (<code>clean-cell-rule-v1</code>)</h1>
+<h2>Purpose</h2>
+<p>Filter <code>trace_num == 1</code> contact visits (<code>n = 4,523</code> across 13 experiments) using strictly pre-outcome mask and geometry quality criteria (<code>data/qc/per_visit_qc.csv</code>, <code>src/mask_qc.py</code>) so that downstream cup-depth (<code>G3</code>) and killing-association (<code>G4</code>) analyses run only on visits where the tracked T cell and its contacted target are each one whole, separate, un-truncated cell.</p>
+<p>No death labels (<code>step4</code>) or outcome associations (<code>step5b</code>, <code>step7</code>) were consulted when defining these criteria.</p>
+<h2>1. Inclusion Criteria (Per Contact Visit, <code>trace_num == 1</code>)</h2>
+<p>A contact visit is classified as <strong>clean</strong> (<code>is_clean_visit == True</code>) if and only if all five conditions hold simultaneously:</p>
+<ol>
+<li><strong>Single connected extracted objects</strong>:
+   <code>target_n_components == 1</code> and <code>tcell_n_components == 1</code>
+   Both our extracted contacted target mask and our extracted tracked T-cell mask consist of a single 26-connected 3D component.</li>
+<li><strong>Cohesive deposited U-Net target mask</strong>:
+   <code>target_raw_largest_frac &gt;= 0.9</code>
+   In the Fei lab's raw deposited U-Net predictions (<code>(pred == 2) | (pred == 4)</code> within the contacted target region), the largest connected component contains at least 90% of the target voxels. This rejects visits where the U-Net itself segmented the target into disconnected fragments.</li>
+<li><strong>Not truncated by the field-of-view boundary</strong>:
+   <code>touches_fov_edge == False</code>
+   Neither the tracked T cell nor the contacted target touches the X, Y, or Z boundary of the 3D ROI crop.</li>
+<li><strong>Plausible single-cell Nalm6 target volume</strong>:
+   <code>200 &lt;= target_volume_um3 &lt;= 1500</code>
+   Target volume at nominal voxel pitch (<code>0.1962 um</code>) lies between <code>200 um^3</code> (rejecting tiny subcellular debris fragments such as <code>dasatinib_16</code> at <code>37 um^3</code> or <code>dasatinib_13</code> at <code>154 um^3</code>) and <code>1,500 um^3</code> (rejecting two-target merges such as <code>cup_01</code> at <code>2,821 um^3</code> and <code>cup_03</code> at <code>2,550 um^3</code>).</li>
+<li><strong>Chamber-level target volume stability</strong>:
+   <code>0.7 &lt;= target_vol_ratio_to_own_median &lt;= 1.4</code>
+   The target's volume at the current visit is within <code>0.7x</code> to <code>1.4x</code> of the median target volume across visits in the same chamber, rejecting sudden single-visit merges or splits with neighbouring cells.</li>
+</ol>
+<h2>2. Deliberately Excluded Criteria</h2>
+<ul>
+<li><strong>Target solidity and sphericity (<code>target_sphericity</code>) are NOT used as filters.</strong>
+  A genuine deep synaptic indentation lowers target solidity and sphericity (<code>Spearman rho = -0.26</code> with <code>cup_depth_hull_p95_um</code> and <code>-0.34</code> with <code>cup_depth_over_radius</code>). Filtering on sphericity or solidity would selectively discard real deep cups and bias the primary biological quantity under study.</li>
+</ul>
+<h2>3. Resulting Cohort Size (from Masks Only)</h2>
+<ul>
+<li><strong>Overall</strong>: <code>1,213</code> of <code>4,523</code> <code>trace_num == 1</code> contact visits (<code>26.8%</code>) pass all five criteria; <code>243</code> chambers have <code>&gt;= 1</code> clean contact visit and <code>111</code> chambers have <code>&gt;= 4</code> clean contact visits.</li>
+<li><strong>Clean fraction by experiment</strong>:</li>
+<li>Untreated high-killing: <code>v01</code> (<code>hd1</code>) <code>0.28</code>, <code>v02</code> (<code>hd3</code>) <code>0.34</code>, <code>v03</code> (<code>hd4</code>) <code>0.34</code>, <code>v04</code> (<code>hd6</code>) <code>0.40</code>, <code>v05</code> (<code>hd7</code>) <code>0.29</code></li>
+<li>Untreated low-killing: <code>v06</code> (<code>hd8</code>) <code>0.19</code>, <code>v07</code> (<code>hd9</code>) <code>0.16</code>, <code>v08</code> (<code>hd2</code>) <code>0.38</code>, <code>v09</code> (<code>hd10</code>) <code>0.05</code>, <code>v10</code> (<code>hd5</code>) <code>0.31</code></li>
+<li>Dasatinib 50 nM: <code>v11</code> (<code>hd2_ds</code>) <code>0.04</code>, <code>v12</code> (<code>hd10ds</code>) <code>0.16</code>, <code>v13</code> (<code>hd5_ds</code>) <code>0.14</code></li>
+<li><strong>Analytical scope</strong>: The clean subset provides sufficient sample size for within-experiment analyses in <code>v01</code>–<code>v05</code>, <code>v08</code>, and <code>v10</code>, but leaves donor <code>hd10</code> (<code>18</code> untreated clean visits) and pooled dasatinib (<code>60</code> clean visits) too thin to support the 5-vs-5 donor comparison or the dasatinib control on their own without mask repair or re-segmentation from raw volumes.</li>
+</ul>
+<h2>4. Verification Requirement (<code>G1</code>)</h2>
+<p>This subset remains <code>status: draft</code> (<code>unverified</code> in <code>lab/registry.csv</code>) until the <code>clean-2026-10-28</code> gallery (<code>figures/review_clean/</code>, containing stratified random clean visits, extreme clean visits, and 40 rejected visits across the 5 failure rules with raw 561-nm membrane images under every panel) is reviewed panel by panel under <code>gallery-review@v1</code>.</p></section><section id="cup-measurement-v1" style="border-top:1px solid var(--ink);padding-top:20px;margin-top:32px"><p class="meta">Protocol <code>cup-measurement@v1</code> · Date 2026-10-28 · <span class="status-pill st-draft">draft</span></p><h1>Protocol: 3D Contact Patch and Cup Depth Measurement (<code>cup-measurement-v1</code>)</h1>
+<h2>Purpose</h2>
+<p>Quantify macro-scale (<code>&gt;= 1.4 um</code> spatial wavelength) 3D synaptic contact geometry and target cell indentation depth from segmented T-cell and target masks (<code>*_predictions.h5</code>), as currently implemented in <code>src/contact_descriptors.py</code>.</p>
+<p><strong>Status</strong>: <code>draft</code> (unverified; blocked at Gates <code>G1</code> and <code>G3</code> because 3D convex-hull cup depth is inflated when the target mask is fragmented, merged, hollow, or truncated by the FOV edge).</p>
+<h2>1. Resolution Cutoff &amp; Axial Pitch Dual-Evaluation</h2>
+<ol>
+<li><strong>Spatial wavelength cutoff (<code>&gt;= 1.4 um</code>)</strong>:
+   Spectral comparison against raw 561-nm membrane stacks (<code>.agy_step5res_report.md</code>) showed that the 3D U-Net masks attenuate <code>&gt; 50%</code> of surface roughness power below <code>lambda_50% = 1.38 um</code> (synapse) / <code>1.45 um</code> (non-contact) and dilate the target boundary outward by <code>~0.72 um</code>. All geometric descriptors are restricted to whole-cell and macro-cup scales (<code>&gt;= 1.4 um</code> wavelength; smallest trustworthy bump diameter <code>&gt;= 0.7–1.0 um</code> laterally, <code>&gt;= 0.9–1.2 um</code> axially). High-frequency residual variance below <code>1.4 um</code> is recorded solely as a discretization noise check (<code>rough_below_cutoff_noise_um2</code>, <code>rough_below_cutoff_frac</code>).</li>
+<li><strong>Dual axial voxel pitch (<code>z = 0.1962 um</code> vs <code>z = 0.2400 um</code>)</strong>:
+   Lateral voxel pitch is <code>VOXEL_UM = 0.1962 um</code> (<code>sqrt(0.0385 um^2)</code>). Because uncontacted targets span <code>~19%</code> fewer Z slices than XY pixels (<code>Delta Z / Delta XY = 0.807</code>), every descriptor is evaluated at both nominal isotropic <code>dz = 0.1962 um</code> and alternative <code>dz = 0.2400 um</code> (<code>_z024</code> columns). Descriptors whose median shifts by <code>&gt; 10%</code> between the two axial pitches are flagged in <code>data/step5/descriptor_dictionary.csv</code>.</li>
+</ol>
+<h2>2. Cell &amp; Contact Surface Extraction (<code>process_one_chamber_descriptors</code>)</h2>
+<ol>
+<li><strong>Instance segmentation</strong>:
+   Runs <code>instance_seg_matlab_xyz</code> in MATLAB <code>(X, Y, Z)</code> dimension order (<code>transpose(2, 1, 0)</code>):</li>
+<li>T-cell instances from nucleus <code>pred == 1</code> (<code>bwareaopen &gt;= 3000</code> voxels) and membrane <code>pred == 3</code> (Voronoi assignment within 25-voxel sphere of nucleus, <code>&gt;= 1000</code> voxels, 26-connected hole fill).</li>
+<li>Target instances from nucleus <code>pred == 2</code> and membrane <code>pred == 4</code>.</li>
+<li><strong>Tracked T cell and contacted target body</strong>:</li>
+<li>Selects the tracked T-cell instance (<code>tracked_tcell_id</code> from <code>src/reproduce_contact_area_tracked.py</code>).</li>
+<li>Computes the Voronoi contact surface <code>surface_mask = (map_exp == 2) &amp; imdilate(map_exp == 3, sphere(1))</code> and overwrites the peripheral radius-5 rim (<code>edge_mask = surface_mask &amp; imdilate(map_exp == 1, sphere(5))</code>) with <code>-j</code>, leaving interior synaptic contact voxels <code>s_real = (surface == +j)</code>.</li>
+<li>Selects the largest 26-connected patch component <code>s_largest_mask</code> of <code>s_real</code> and identifies the contacted target body <code>b_body</code> (<code>fill_solid_cell_mask</code>: 26-connected target component containing the contacted target instance, 3D hole-filled plus 2D slice hole-filled along Z, Y, and X).</li>
+<li>Extracts target surface boundary voxels <code>b_surf = b_body &amp; ~binary_erosion(b_body, STRUCT6)</code> and marks contact patch boundary voxels <code>is_contact_on_b_surf</code>.</li>
+</ol>
+<h2>3. Geometric &amp; Indentation Descriptors (<code>compute_descriptors_for_z_pitch</code>)</h2>
+<p>Let <code>pts_b_surf_um</code> be the physical coordinates <code>(z * dz, y * dxy, x * dxy)</code> of all target boundary voxels and <code>pts_c_um</code> the physical coordinates of the synaptic contact patch voxels on the target surface:</p>
+<ol>
+<li><strong>Contact patch size &amp; orientation</strong>:</li>
+<li><code>contact_area_um2 = s_largest_vox * 0.0385 * area_stretch</code></li>
+<li><code>patch_equiv_radius_um = sqrt(contact_area_um2 / pi)</code> (<code>a</code>)</li>
+<li>Unit synaptic normal <code>n_syn</code>: unit vector from target centroid <code>b_center_um</code> toward T-cell centroid <code>t_center_um</code> (representing the inward indentation direction into the target).</li>
+<li>Orthonormal tangent plane basis <code>(e1, e2)</code> perpendicular to <code>n_syn</code>; <code>patch_elongation = sqrt(lambda_max / lambda_min)</code> of the 2D covariance of <code>pts_c_um</code> in <code>(e1, e2)</code>.</li>
+<li><strong>3D Convex-Hull Indentation (<code>cup_depth_hull_p95_um</code>)</strong>:</li>
+<li>Computes the 3D convex hull <code>hull_b = scipy.spatial.ConvexHull(pts_b_surf_um)</code>.</li>
+<li>Selects hull facets facing the T cell: <code>facing = (eqs[:, :3] @ n_syn) &gt; 0.05</code>.</li>
+<li>For each contact patch point <code>x in pts_c_um</code>, computes the inward perpendicular distance to the closest facing hull plane:
+     <code>d_hull_c(x) = max(0, min_{f in facing} -(n_f . x + offset_f))</code>.</li>
+<li><code>cup_depth_hull_p95_um</code>: 95th percentile of <code>d_hull_c</code> across the contact patch (<code>d</code>).</li>
+<li><code>cup_depth_hull_max_um</code>: maximum of <code>d_hull_c</code>.</li>
+<li><code>cup_volume_hull_um3</code>: <code>sum(d_hull_c) * (contact_area_um2 / N_c)</code>.</li>
+<li><code>cup_depth_over_radius</code>: dimensionless focusing ratio <code>cup_depth_hull_p95_um / max(0.20, patch_equiv_radius_um)</code> (<code>d / a</code>).</li>
+<li><code>tcell_protrusion_vol_um3</code> and <code>tcell_protrusion_frac</code>: volume and fraction of tracked T-cell voxels lying strictly inside <code>hull_b</code>.</li>
+<li><strong>Regularized Reference-Sphere Indentation (<code>cup_depth_sphere_p95_um</code>)</strong>:</li>
+<li>Fits a sphere <code>(c_sph, R_sph)</code> to the non-contact target boundary points <code>pts_nc_um</code> regularized toward <code>(b_center_um, r_eq_target)</code>.</li>
+<li><code>d_sph_pos(x) = max(0, R_sph - ||x - c_sph||)</code>, summarized by its 95th percentile <code>cup_depth_sphere_p95_um</code> and integrated volume <code>cup_volume_sphere_um3</code>.</li>
+<li><strong>Per-Visit and Per-Chamber Aggregation</strong>:</li>
+<li>Per-visit descriptors average across contact sweeps (<code>in_contact == True</code>) within each visit (<code>data/step5/per_visit_descriptors.csv</code>).</li>
+<li>Pre-death chamber summaries (<code>src/step5b_association_check.py</code>) evaluate <code>(A)</code> the first contact visit strictly before death and <code>(B)</code> the mean across all contact visits strictly before death (<code>visits 1–20</code>).</li>
+</ol>
+<h2>4. Known Failure Modes Blocking Gates <code>G1</code> &amp; <code>G3</code></h2>
+<p>Visual review (<code>status/visual_review_2026-10-28.md</code>) established that <code>cup_depth_hull_p95_um</code> measures false indentation whenever the target mask violates single-cell solidity:
+- <strong>Fragmented target masks</strong> (<code>cup_01</code>: <code>10.15 um</code>, <code>cup_03</code>: <code>9.18 um</code>, <code>cup_10</code>: <code>5.10 um</code>): <code>hull_b</code> bridges across separate pieces and measures the inter-piece gap.
+- <strong>Two merged targets</strong> (<code>deep_07</code>: <code>5.60 um</code>): <code>hull_b</code> bridges the groove between two distinct cells.
+- <strong>Hollow shell masks</strong> (<code>dasatinib_11</code>: <code>6.75 um</code>): interior void inflates hull distance.
+- <strong>FOV edge truncation</strong> (<code>cup_05</code>, <code>cup_13</code>): flat image border distorts hull geometry.
+Must be restricted to <code>clean-cell-rule@v1</code> verified visits before <code>G3</code> signoff.</p></section><section id="death-calling-v1" style="border-top:1px solid var(--ink);padding-top:20px;margin-top:32px"><p class="meta">Protocol <code>death-calling@v1</code> · Date 2026-10-28 · <span class="status-pill st-draft">draft</span></p><h1>Protocol: Target Cell Death Calling (<code>death-calling-v1</code>)</h1>
+<h2>Purpose</h2>
+<p>Determine per-visit and per-chamber target cell death labels and death times across all 502 chambers (<code>10,510</code> chamber-visits in 13 experiments) from deposited 2D 405-nm SYTOX Blue maximum-intensity projections (<code>*_MIPxy_405.tif</code>, <code>*_MIPxz_405.tif</code>) and 3D U-Net segmentation masks (<code>*_predictions.h5</code>), as currently implemented in <code>src/death_labels.py</code> (v2).</p>
+<p><strong>Status</strong>: <code>draft</code> (unverified; blocked at Gate <code>G2</code> pending gallery/label mismatch resolution, 3D vs 2D neighbour-overlap verification, and threshold sensitivity analysis).</p>
+<h2>1. Reference 3D Rule (Fei Lab MATLAB Code)</h2>
+<p>In <code>external/feilab_CART_analysis/main/step2_instance_seg.m</code> and <code>analysis/summary/dead_count.m</code>:</p>
+<ol>
+<li>Raw 3D Channel 0 (<code>405 nm</code> SYTOX dead-cell dye, <code>uint16</code>) is smoothed with an anisotropic 3D Gaussian filter (<code>sigma = [3, 3, 1]</code> voxels in <code>(Y, X, Z)</code>, kernel size <code>[7, 7, 3]</code>, replicate padding) and thresholded at <code>&gt; 398.0 ADU</code>.</li>
+<li>The binary mask is closed with a 6-connected radius-3 sphere (<code>strel('sphere', 3)</code>), area-opened to keep 26-connected components with <code>&gt;= 20</code> voxels (<code>bwareaopen(..., 20, 26)</code>), and dilated by radius <code>10</code> voxels (<code>d_dil10_3d</code>).</li>
+<li>A segmented target instance <code>b_inst == i_id</code> that touches the tracked T-cell synaptic contact surface (<code>s_mask &amp; sphere_dilate_edt(bi, 1.0)</code>) is called dead at that sweep if <code>any(bi &amp; d_dil10_3d)</code> is non-empty.</li>
+<li>Verified on all 20 local 3D raw volumes (<code>data/step4/calibration_20_raw_volumes.csv</code>): deposited 2D MIPs satisfy <code>MIPxy_405 == raw[0].max(axis=0).T</code> and <code>MIPxz_405 == raw[0].max(axis=1).T</code> with <code>0 ADU</code> maximum difference.</li>
+</ol>
+<h2>2. Current 2D Projection Implementation (<code>src/death_labels.py</code> v2)</h2>
+<p>Because 3D raw <code>.h5</code> volumes were initially available for only 20 sweeps whereas 2D 405-nm MIPs (<code>*_MIPxy_405.tif</code>, <code>*_MIPxz_405.tif</code>) are deposited for all <code>10,510</code> visits, <code>src/death_labels.py</code> implements a 2D projection rule:</p>
+<h3>Step 2.1: Contacted Target Instance Extraction (v2 update)</h3>
+<ul>
+<li>On sweeps <code>1..5</code> of each visit, 3D target instances are segmented via <code>instance_seg_matlab_xyz(pred == 2, pred == 4)</code> (<code>bwareaopen(nucleus, 3000, 26)</code> + Voronoi membrane assignment in MATLAB <code>(X, Y, Z)</code> order + 26-connected hole fill).</li>
+<li>For the <code>416</code> chambers with a single tracked T cell (<code>trace_num == 1</code> from <code>src/reproduce_contact_area_tracked.py</code>), only the target instance(s) contacted by Track 1 at that visit are retained. If no contact occurs on that visit, the chamber's primary contacted target instance (nearest centroid to the tracked target trajectory) is projected.</li>
+<li>For the <code>86</code> chambers with <code>trace_num != 1</code>, the target instance contacted by any T cell is used and flagged (<code>included_by_trace_rule = False</code>).</li>
+<li>The 3D contacted target mask is projected to match the MIP transpose convention:</li>
+<li><code>b_xy = target_3d.max(axis=0).T</code></li>
+<li><code>b_xz = target_3d.max(axis=1).T</code></li>
+<li><em>(Legacy v1 columns <code>*_all_targets_v1</code> projected all raw target voxels <code>(pred == 2) | (pred == 4)</code> without instance filtering).</em></li>
+</ul>
+<h3>Step 2.2: <code>MIP_ROI_0</code> Late Stage-Origin Saturation Band Exclusion</h3>
+<ul>
+<li>In all <code>13 / 13</code> experiments, <code>MIP_ROI_0</code> at <code>visit &gt;= 19</code> (<code>t &gt;= 190 min</code>, <code>39 / 39</code> visits) contains a left-edge vertical 405-nm saturation band across columns <code>0..W-1</code> (<code>W in [31, 121] px</code>, column-0 median <code>548–915 ADU</code>, peak <code>14,505–25,317 ADU</code>).</li>
+<li>Any visit satisfying <code>(np.median(mip_xy[:, 0]) &gt; 404.0) and (mip_xy.max() &gt; 5000)</code> is flagged as <code>roi0_artifact_flag = True</code> and excluded from triggering a positive death call (<code>9</code> artifact-only false-positive chamber deaths removed).</li>
+</ul>
+<h3>Step 2.3: 2D Dead-Dye Mask (<code>compute_2d_dead_mask</code>)</h3>
+<ul>
+<li>Applied independently to <code>mip_xy</code> and <code>mip_xz</code>:</li>
+<li>2D Gaussian filter (<code>scipy.ndimage.gaussian_filter</code>, <code>sigma = 3.0</code>, <code>mode = 'nearest'</code>, <code>truncate = 2.0</code>).</li>
+<li>Threshold strictly above <code>THRESH_2D_ADU = 404.0 ADU</code> (compensating for the <code>+4.6</code> to <code>+5.5 ADU</code> extreme-value shift of taking the maximum over <code>Z = 166–190</code> or <code>Y = 256</code> slices relative to the 3D threshold <code>398.0 ADU</code>).</li>
+<li>2D binary closing with a radius-3 disk (<code>disk(3)</code>).</li>
+<li>8-connected area opening keeping components with <code>&gt;= MIN_COMPONENT_AREA_2D = 20</code> pixels.</li>
+</ul>
+<h3>Step 2.4: Per-Visit and Per-Chamber Death Calls</h3>
+<ul>
+<li><strong>Per-visit positive call (<code>dead_visit</code>)</strong>:
+  <code>overlap_xy_px = sum(d_xy &amp; b_xy) &gt;= 20</code> AND <code>overlap_xz_px = sum(d_xz &amp; b_xz) &gt;= 20</code> (and not <code>roi0_artifact_flag</code>).</li>
+<li><strong>Per-chamber definitions</strong> (computed over both the <strong>Full Recording</strong> of <code>20–22</code> visits and the <strong>Fixed 200-Minute Window</strong> of <code>visits 1–20</code>):</li>
+<li><strong>Any-Visit rule (<code>ever_dead_any_visit_200m</code>)</strong>: <code>&gt;= 1</code> positive visit (matching <code>summary.m</code> <code>C = max(B, [], 2)</code>). <code>death_visit</code> is the first positive visit (<code>death_time_min = death_visit * 10.0</code>).</li>
+<li><strong>Sustained rule (<code>ever_dead_200m</code>)</strong>: <code>&gt;= 2</code> consecutive positive visits. <code>death_visit</code> is the first visit of the first sustained run.</li>
+</ul>
+<h2>3. Open Issues Blocking Gate <code>G2</code></h2>
+<ol>
+<li><strong>Gallery vs table mismatch (<code>label_mismatch</code>)</strong>: In <code>figures/review/death_labels/</code>, panels rendered raw <code>(pred == 2) | (pred == 4)</code> outlines while the v2 table used contacted target instances, causing <code>death_surviving_19</code>, <code>death_surviving_24</code>, and <code>death_killed_07</code> to disagree between panel overlay text and chamber label.</li>
+<li><strong>Possible overlap discrepancy</strong>: <code>death_dasatinib_30</code> visit 5 reports <code>27 px</code> overlap while the dye contour appears outside the target outline in both views.</li>
+<li><strong>2D projection neighbour overlap (<code>neighbour_overlap</code>)</strong>: A dye-positive bystander cell lying above/below or behind the contacted target can overlap in both XY and XZ projections (<code>death_surviving_17</code>, <code>death_killed_05</code>, <code>death_killed_09</code>).</li>
+<li><strong>Narrow threshold margin</strong>: Background median is <code>~400 ADU</code> vs threshold <code>404.0 ADU</code>; borderline calls (<code>death_killed_01</code> at <code>404.3 ADU</code>) require threshold sensitivity curves across <code>403–410 ADU</code> and <code>20–50 px</code>.</li>
+</ol></section><section id="gallery-review-v1" style="border-top:1px solid var(--ink);padding-top:20px;margin-top:32px"><p class="meta">Protocol <code>gallery-review@v1</code> · Date 2026-10-28 · <span class="status-pill st-reviewed">reviewed</span></p><h1>Protocol: Gallery Review (<code>gallery-review-v1</code>)</h1>
+<h2>Purpose</h2>
+<p>No dataset stage feeds the next until a real-image gallery for that stage has been inspected panel by panel and passes its stage gate (<code>G1</code>–<code>G5</code>). Matching summary numbers in a published table does not validate segmentation masks or extracted measurements.</p>
+<h2>1. Panel Selection (Stratified Random + Extremes + Borderlines)</h2>
+<p>Every stage-gate gallery renders real experimental data (<code>*_predictions.h5</code>, raw 561-nm membrane / 488-nm actin <code>.h5</code> volumes fetched via <code>src/download_raw.py --file-list</code>, and 405-nm SYTOX MIPs) across three mandatory strata using a fixed random seed (<code>20261028</code>):</p>
+<ol>
+<li><strong>Stratified random examples</strong>: sampled across all three biological conditions (Untreated high-killing CAR-T, Untreated low-killing CAR-T, Dasatinib 50 nM CAR-T) and across donors (<code>hd1</code>–<code>hd10</code>).</li>
+<li><strong>Extremes of each measured quantity</strong>: maximum and minimum values (top 2–3 and bottom 2–3) of the stage's primary metrics (e.g., <code>cup_depth_hull_p95_um</code>, <code>cup_depth_over_radius</code>, <code>target_volume_um3</code>, <code>target_raw_largest_frac</code>, <code>pi_solved</code>, <code>push_apart_um</code>).</li>
+<li><strong>Borderline threshold cases</strong>: visits or chambers closest to decision boundaries (e.g., within a few pixels of the 20-px 405-nm overlap cutoff, near the 404.0 ADU dye threshold, or closest to each of the five clean-cell QC thresholds).</li>
+</ol>
+<h2>2. Visual Standard Across All Panels</h2>
+<ol>
+<li><strong>Raw images underneath</strong>: Every 3D slice panel must show the raw fluorescence image (561-nm target membrane and/or 488-nm F-actin) beneath our extracted outlines, alongside the deposited U-Net labels (classes 0–4) when diagnosing segmentation failures.</li>
+<li><strong>Fixed colour scheme</strong>:</li>
+<li>Tracked target outline: blue solid (<code>#1F4E79</code>)</li>
+<li>Tracked T-cell outline: orange solid (<code>#C0561F</code>)</li>
+<li>Other cells in field: grey fill/outline (explicitly labelled)</li>
+<li>Contact patch voxels: purple squares (<code>#6B4C9A</code>)</li>
+<li>Target convex hull / reference surface: green dashed (<code>#2E7D5B</code>)</li>
+<li>Measured cup depth vector / dead-dye contour: red (<code>#B3261E</code>)</li>
+<li>Solved model shapes: dashed outlines in fixed plot colours (<code>#6B4C9A</code> target, <code>#111111</code> T cell)</li>
+<li>A complete legend/key and all numerical metrics from <code>index.csv</code> must appear on every panel.</li>
+</ol>
+<h2>3. Verdict Scale &amp; Controlled Tag Vocabulary</h2>
+<p>Each reviewer inspects every panel at full resolution (via <code>tools/review_app.py</code> or contact sheets) and records a row in <code>lab/reviews/&lt;gallery_id&gt;.csv</code> with:</p>
+<ul>
+<li><strong>Verdict (<code>verdict</code>)</strong>:</li>
+<li><code>ok</code> — Cell identity, segmentation contour, overlay alignment, and computed measurement are physically sound and match the underlying raw image.</li>
+<li><code>problem</code> — A segmentation error, truncation, merge, hollow shell, projection overlap artefact, label mismatch, or solver failure invalidates the measurement on this panel.</li>
+<li><code>unsure</code> — Ambiguous boundary, faint dye signal near threshold, or missing raw channel requiring secondary check.</li>
+<li><strong>Controlled tags (<code>tags</code>, semicolon-separated)</strong>:</li>
+<li><code>fragmented</code> — Target or T cell is split into multiple disconnected pieces.</li>
+<li><code>merged</code> — Two distinct cells are fused into a single mask object.</li>
+<li><code>hollow</code> — Ring-shaped or broken-shell mask with unfilled interior.</li>
+<li><code>edge</code> — Cell body is truncated by the field-of-view border.</li>
+<li><code>tiny</code> — Implausibly small cell fragment (<code>&lt; 200 um^3</code>).</li>
+<li><code>misaligned</code> — Reference or starting mesh does not align with the real cell.</li>
+<li><code>drift</code> — Solved mechanical mesh translates off the real cell mask (<code>2–3 um</code> rigid-body drift) or re-solve disagrees with continuation curve.</li>
+<li><code>label_mismatch</code> — Panel overlay numbers disagree with the chamber/visit table label.</li>
+<li><code>neighbour_overlap</code> — Dye-positive bystander cell overlaps target projection in XY/XZ without dye inside the contacted target.</li>
+<li><code>real_death</code> — Confirmed target death with SYTOX dye appearing inside the contacted target and persisting across visits.</li>
+<li><code>clean</code> — Whole, single, solid, well-segmented T cell and target away from FOV edges.</li>
+<li><code>other</code> — Issue not covered above (must be explained in <code>note</code>).</li>
+</ul>
+<h2>4. Independent Second Reviewer &amp; Gate Signoff</h2>
+<ol>
+<li><strong>Primary complete pass (<code>claude</code>)</strong>: Reviews 100% of panels in the gallery, logs per-panel findings, and summarizes failure rates by layer:</li>
+<li><em>(a)</em> U-Net labels wrong while raw cell is whole (lab segmentation error),</li>
+<li><em>(b)</em> U-Net labels sound but extracted object wrong (our extraction code bug),</li>
+<li><em>(c)</em> Raw cell itself blebbing/fragmenting (real biology / possible death signal).</li>
+<li><strong>Independent second reviewer (<code>user</code> / PI)</strong>: Reviews panels independently in <code>tools/review_app.py</code> on key stage gates (<code>G1</code>, <code>G2</code>, <code>G3</code>). The review app and static site display all reviewers' verdicts side by side and highlight any panel where reviewers disagree.</li>
+<li><strong>Iterate and lock</strong>: Code or subset rules are fixed to resolve identified problems, the same panels are re-rendered, and the gallery is re-reviewed until pass criteria hold and the notebook entry is signed off.</li>
+</ol></section>
+    
+  </main>
+</div>
+</body>
+</html>

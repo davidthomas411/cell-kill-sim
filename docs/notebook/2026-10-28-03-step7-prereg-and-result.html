@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>2026-10-28-03-step7-prereg-and-result</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<header class="top">
+  <div class="in">
+    <a class="brand" href="../index.html">Cell-Kill-Sim Lab</a>
+    <nav class="tabs" aria-label="Primary"><a href="../index.html" class="">Gates</a>
+<a href="../notebook/index.html" class="on">Notebook</a>
+<a href="../protocols/index.html" class="">Protocols</a>
+<a href="../registry.html" class="">Registry</a>
+<a href="../galleries/index.html" class="">Galleries</a>
+<a href="../handbook/index.html" class="">Handbook</a></nav>
+  </div>
+</header>
+<div class="wrap">
+  <aside class="side"><div class="section">Entries</div>
+<a href="index.html">All entries</a>
+<a href="2026-10-28-05-clean-subset-rule.html">2026-10-28-05 G1</a>
+<a href="2026-10-28-04-visual-review-2026-10-28.html">2026-10-28-04 none</a>
+<a href="2026-10-28-03-step7-prereg-and-result.html">2026-10-28-03 G4</a>
+<a href="2026-10-28-02-step6b-runs-void.html">2026-10-28-02 G5</a>
+<a href="2026-10-28-01-step6a-choice.html">2026-10-28-01 G5</a>
+<a href="2026-10-27-04-step5b-result.html">2026-10-27-04 G4</a>
+<a href="2026-10-27-03-step5a-descriptors.html">2026-10-27-03 G3</a>
+<a href="2026-10-27-02-step4-v2-labels.html">2026-10-27-02 G2</a>
+<a href="2026-10-27-01-step3-reproduction.html">2026-10-27-01 G0</a></aside>
+  <main>
+    
+        <h1>Step 7: Pre-registered focused-pushing test and inconclusive result (UNVERIFIED)</h1>
+        <div class="tblwrap">
+          <table class="data">
+            <tbody>
+              <tr><th>ID</th><td><code>2026-10-28-03-step7-prereg-and-result</code></td><th>Date</th><td>2026-10-28</td></tr>
+              <tr><th>Gate</th><td><strong>G4</strong></td><th>Status</th><td><span class="status-pill st-draft">draft</span></td></tr>
+              <tr><th>Author</th><td>agy (backfilled)</td><th>Reviewers</th><td>—</td></tr>
+              <tr><th>Signoff</th><td>—</td><th>Commits</th><td><code>6fa449f, 6bf7ee0</code></td></tr>
+              <tr><th>Datasets</th><td><a href="../registry.html#ds-step5_descriptors"><code>step5_descriptors</code></a>, <a href="../registry.html#ds-step4_death_labels_v2"><code>step4_death_labels_v2</code></a>, <a href="../registry.html#ds-step7_focused_pushing"><code>step7_focused_pushing</code></a></td><th>Protocols</th><td><a href="../protocols/index.html#cup-measurement-v1"><code>cup-measurement@v1</code></a>, <a href="../protocols/index.html#death-calling-v1"><code>death-calling@v1</code></a></td></tr>
+              <tr><th>Galleries</th><td><a href="../galleries/review-2026-10-28.html"><code>review-2026-10-28</code></a></td><th>Supersedes / By</th><td>— / —</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <h2>Question</h2>
+<p>Under the pre-registered focused-pushing hypothesis (<code>status/step7_preregistration.md</code>, committed in <code>6fa449f</code> before running the test, with <code>cup_depth_over_radius</code> as the sole confirmatory metric), do CAR-T cells from high-killing donors push in a more focused way than those from low-killing donors (Test 7A), does focused pushing predict faster killing within donors beyond contact area and duration (Test 7B), and does 50 nM dasatinib lower the focus metric in <code>3/3</code> paired donors (Test 7C)?</p>
+<p>** Verification Notice: All Step 7 results (<code>data/step7/</code>) are UNVERIFIED and on hold at Gate <code>G4</code> because the underlying masks and descriptors failed Gate <code>G1</code>/<code>G3</code> visual audit (in particular, outlier donor <code>hd10</code> is dominated by fragmented/hollow masks).**</p>
+<h2>What was run</h2>
+<pre><code class="language-bash">python3 src/step7_focus_test.py
+</code></pre>
+<p>Commits:
+- <code>6fa449f</code> (<code>Step 7 pre-registration: focused-pushing test, committed before analysis</code>)
+- <code>6bf7ee0</code> (<code>Step 7: focused-pushing test per pre-registration (result: inconclusive, control failed on primary metric)</code>)</p>
+<h2>What was looked at</h2>
+<ul>
+<li>Pre-registration <code>status/step7_preregistration.md</code> and report <code>.agy_step7_report.md</code>.</li>
+<li>Output tables <code>data/step7/test7a_donor_focus.csv</code>, <code>data/step7/test7b_within_donor_cox.csv</code>, <code>data/step7/test7c_dasatinib_control.csv</code>, <code>data/step7/stiffness_route_b_summary.csv</code>, and figure <code>figures/step7_focus.png</code>.</li>
+<li>Visual review gallery <code>review-2026-10-28</code> (<code>dasa_vs_untr_untreated_01</code>..<code>08</code>, <code>dasa_vs_untr_dasatinib_09</code>..<code>16</code>, <code>deep_vs_shallow_deep_01</code>..<code>08</code>, <code>deep_vs_shallow_shallow_09</code>..<code>16</code>).</li>
+</ul>
+<h2>Observations</h2>
+<ol>
+<li><strong>Test 7C — Positive control (<code>dasatinib 50 nM</code> in <code>hd2, hd10, hd5</code>, <code>UNVERIFIED</code>) FAILED on primary metric</strong>:</li>
+<li>On <code>cup_depth_over_radius</code> (<code>d / a</code>), dasatinib lowered the donor median in only <code>1 / 3</code> paired donors (<code>hd10</code>: <code>0.500 -&gt; 0.400</code>; whereas <code>hd2</code>: <code>0.303 -&gt; 0.383</code> and <code>hd5</code>: <code>0.316 -&gt; 0.345</code>; donor-stratified one-sided $p_{\text{lower}} = 0.749$).</li>
+<li>Secondary metrics <code>cup_depth_hull_p95_um</code> (<code>d</code>) and <code>tcell_protrusion_frac</code> fell in <code>3 / 3</code> donors (<code>p = 0.0049</code> and <code>p = 0.0022</code>), but because dasatinib simultaneously shrank patch radius <code>a</code> (<code>patch_equiv_radius_um</code>) by <code>27–38%</code> in <code>hd2</code> and <code>hd5</code>, the ratio <code>d / a</code> did not decrease.</li>
+<li><strong>Test 7A — Between-donor test (<code>5</code> high vs <code>5</code> low untreated donors, <code>UNVERIFIED</code>) NULL</strong>:</li>
+<li>High-killing donor median <code>cup_depth_over_radius</code> (<code>0.299</code>) vs low-killing (<code>0.336</code>): exact two-sided permutation <code>p = 0.246</code> (Summary B) and <code>p = 0.651</code> (Summary A), driven by untreated low-killing donor <code>hd10</code> (<code>v09</code>, donor median <code>0.500</code>).</li>
+<li><strong>Test 7B — Within-donor Cox model (<code>UNVERIFIED</code>, restatement of Step 5b on same data)</strong>:</li>
+<li>Adjusted for <code>contact_area_um2</code>: <code>HR = 1.375</code> per SD (<code>p = 0.0022</code>, Summary A) and <code>HR = 1.656</code> per SD (<code>p = 6.9e-6</code>, Summary B).</li>
+<li><strong>Visual review finding (<code>status/visual_review_2026-10-28.md</code>)</strong>:</li>
+<li>Donor <code>hd10</code> (<code>v09</code> untreated and <code>v12</code> dasatinib)—which produced the <code>0.500</code> outlier in Test 7A and was the only donor where dasatinib lowered <code>d / a</code> in Test 7C—is mostly fragmented or hollow masks (<code>v09</code> clean fraction <code>0.05</code>, <code>v12</code> clean fraction <code>0.16</code>).</li>
+</ol>
+<h2>Decision</h2>
+<p>Under the pre-registered decision rule, Step 7 returned the failed-control sentence (<em>"The focus metric does not respond to a known perturbation of T-cell pushing, so step 7 is inconclusive"</em>), and the entire result is marked <strong>UNVERIFIED</strong> (<code>status: unverified</code> in <code>lab/registry.csv</code>, blocked at Gate <code>G4</code>).</p>
+<h2>Open issues</h2>
+<ul>
+<li>Wait for Gates <code>G1</code>–<code>G3</code> to complete; note that <code>clean-cell-rule@v1</code> leaves only <code>18</code> untreated clean visits in <code>hd10</code> (<code>v09</code>) and <code>60</code> pooled dasatinib clean visits, which cannot support the 5-vs-5 donor test or dasatinib control without mask repair or re-segmentation from raw volumes.</li>
+</ul>
+        
+  </main>
+</div>
+</body>
+</html>

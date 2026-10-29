@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>clean-cell-rule@v1</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<header class="top">
+  <div class="in">
+    <a class="brand" href="../index.html">Cell-Kill-Sim Lab</a>
+    <nav class="tabs" aria-label="Primary"><a href="../index.html" class="">Gates</a>
+<a href="../notebook/index.html" class="">Notebook</a>
+<a href="../protocols/index.html" class="on">Protocols</a>
+<a href="../registry.html" class="">Registry</a>
+<a href="../galleries/index.html" class="">Galleries</a>
+<a href="../handbook/index.html" class="">Handbook</a></nav>
+  </div>
+</header>
+<div class="wrap">
+  <aside class="side"><div class="section">Protocols</div>
+<a href="#clean-cell-rule-v1">clean-cell-rule@v1</a>
+<a href="#cup-measurement-v1">cup-measurement@v1</a>
+<a href="#death-calling-v1">death-calling@v1</a>
+<a href="#gallery-review-v1">gallery-review@v1</a></aside>
+  <main>
+    <p class="meta"><a href="index.html">All protocols</a> · <code>clean-cell-rule@v1</code> · Date 2026-10-28 · <span class="status-pill st-draft">draft</span></p><h1>Protocol: Gate G1 Clean-Cell Subset Rule (<code>clean-cell-rule-v1</code>)</h1>
+<h2>Purpose</h2>
+<p>Filter <code>trace_num == 1</code> contact visits (<code>n = 4,523</code> across 13 experiments) using strictly pre-outcome mask and geometry quality criteria (<code>data/qc/per_visit_qc.csv</code>, <code>src/mask_qc.py</code>) so that downstream cup-depth (<code>G3</code>) and killing-association (<code>G4</code>) analyses run only on visits where the tracked T cell and its contacted target are each one whole, separate, un-truncated cell.</p>
+<p>No death labels (<code>step4</code>) or outcome associations (<code>step5b</code>, <code>step7</code>) were consulted when defining these criteria.</p>
+<h2>1. Inclusion Criteria (Per Contact Visit, <code>trace_num == 1</code>)</h2>
+<p>A contact visit is classified as <strong>clean</strong> (<code>is_clean_visit == True</code>) if and only if all five conditions hold simultaneously:</p>
+<ol>
+<li><strong>Single connected extracted objects</strong>:
+   <code>target_n_components == 1</code> and <code>tcell_n_components == 1</code>
+   Both our extracted contacted target mask and our extracted tracked T-cell mask consist of a single 26-connected 3D component.</li>
+<li><strong>Cohesive deposited U-Net target mask</strong>:
+   <code>target_raw_largest_frac &gt;= 0.9</code>
+   In the Fei lab's raw deposited U-Net predictions (<code>(pred == 2) | (pred == 4)</code> within the contacted target region), the largest connected component contains at least 90% of the target voxels. This rejects visits where the U-Net itself segmented the target into disconnected fragments.</li>
+<li><strong>Not truncated by the field-of-view boundary</strong>:
+   <code>touches_fov_edge == False</code>
+   Neither the tracked T cell nor the contacted target touches the X, Y, or Z boundary of the 3D ROI crop.</li>
+<li><strong>Plausible single-cell Nalm6 target volume</strong>:
+   <code>200 &lt;= target_volume_um3 &lt;= 1500</code>
+   Target volume at nominal voxel pitch (<code>0.1962 um</code>) lies between <code>200 um^3</code> (rejecting tiny subcellular debris fragments such as <code>dasatinib_16</code> at <code>37 um^3</code> or <code>dasatinib_13</code> at <code>154 um^3</code>) and <code>1,500 um^3</code> (rejecting two-target merges such as <code>cup_01</code> at <code>2,821 um^3</code> and <code>cup_03</code> at <code>2,550 um^3</code>).</li>
+<li><strong>Chamber-level target volume stability</strong>:
+   <code>0.7 &lt;= target_vol_ratio_to_own_median &lt;= 1.4</code>
+   The target's volume at the current visit is within <code>0.7x</code> to <code>1.4x</code> of the median target volume across visits in the same chamber, rejecting sudden single-visit merges or splits with neighbouring cells.</li>
+</ol>
+<h2>2. Deliberately Excluded Criteria</h2>
+<ul>
+<li><strong>Target solidity and sphericity (<code>target_sphericity</code>) are NOT used as filters.</strong>
+  A genuine deep synaptic indentation lowers target solidity and sphericity (<code>Spearman rho = -0.26</code> with <code>cup_depth_hull_p95_um</code> and <code>-0.34</code> with <code>cup_depth_over_radius</code>). Filtering on sphericity or solidity would selectively discard real deep cups and bias the primary biological quantity under study.</li>
+</ul>
+<h2>3. Resulting Cohort Size (from Masks Only)</h2>
+<ul>
+<li><strong>Overall</strong>: <code>1,213</code> of <code>4,523</code> <code>trace_num == 1</code> contact visits (<code>26.8%</code>) pass all five criteria; <code>243</code> chambers have <code>&gt;= 1</code> clean contact visit and <code>111</code> chambers have <code>&gt;= 4</code> clean contact visits.</li>
+<li><strong>Clean fraction by experiment</strong>:</li>
+<li>Untreated high-killing: <code>v01</code> (<code>hd1</code>) <code>0.28</code>, <code>v02</code> (<code>hd3</code>) <code>0.34</code>, <code>v03</code> (<code>hd4</code>) <code>0.34</code>, <code>v04</code> (<code>hd6</code>) <code>0.40</code>, <code>v05</code> (<code>hd7</code>) <code>0.29</code></li>
+<li>Untreated low-killing: <code>v06</code> (<code>hd8</code>) <code>0.19</code>, <code>v07</code> (<code>hd9</code>) <code>0.16</code>, <code>v08</code> (<code>hd2</code>) <code>0.38</code>, <code>v09</code> (<code>hd10</code>) <code>0.05</code>, <code>v10</code> (<code>hd5</code>) <code>0.31</code></li>
+<li>Dasatinib 50 nM: <code>v11</code> (<code>hd2_ds</code>) <code>0.04</code>, <code>v12</code> (<code>hd10ds</code>) <code>0.16</code>, <code>v13</code> (<code>hd5_ds</code>) <code>0.14</code></li>
+<li><strong>Analytical scope</strong>: The clean subset provides sufficient sample size for within-experiment analyses in <code>v01</code>–<code>v05</code>, <code>v08</code>, and <code>v10</code>, but leaves donor <code>hd10</code> (<code>18</code> untreated clean visits) and pooled dasatinib (<code>60</code> clean visits) too thin to support the 5-vs-5 donor comparison or the dasatinib control on their own without mask repair or re-segmentation from raw volumes.</li>
+</ul>
+<h2>4. Verification Requirement (<code>G1</code>)</h2>
+<p>This subset remains <code>status: draft</code> (<code>unverified</code> in <code>lab/registry.csv</code>) until the <code>clean-2026-10-28</code> gallery (<code>figures/review_clean/</code>, containing stratified random clean visits, extreme clean visits, and 40 rejected visits across the 5 failure rules with raw 561-nm membrane images under every panel) is reviewed panel by panel under <code>gallery-review@v1</code>.</p>
+  </main>
+</div>
+</body>
+</html>

@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>2026-10-27-04-step5b-result</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<header class="top">
+  <div class="in">
+    <a class="brand" href="../index.html">Cell-Kill-Sim Lab</a>
+    <nav class="tabs" aria-label="Primary"><a href="../index.html" class="">Gates</a>
+<a href="../notebook/index.html" class="on">Notebook</a>
+<a href="../protocols/index.html" class="">Protocols</a>
+<a href="../registry.html" class="">Registry</a>
+<a href="../galleries/index.html" class="">Galleries</a>
+<a href="../handbook/index.html" class="">Handbook</a></nav>
+  </div>
+</header>
+<div class="wrap">
+  <aside class="side"><div class="section">Entries</div>
+<a href="index.html">All entries</a>
+<a href="2026-10-28-05-clean-subset-rule.html">2026-10-28-05 G1</a>
+<a href="2026-10-28-04-visual-review-2026-10-28.html">2026-10-28-04 none</a>
+<a href="2026-10-28-03-step7-prereg-and-result.html">2026-10-28-03 G4</a>
+<a href="2026-10-28-02-step6b-runs-void.html">2026-10-28-02 G5</a>
+<a href="2026-10-28-01-step6a-choice.html">2026-10-28-01 G5</a>
+<a href="2026-10-27-04-step5b-result.html">2026-10-27-04 G4</a>
+<a href="2026-10-27-03-step5a-descriptors.html">2026-10-27-03 G3</a>
+<a href="2026-10-27-02-step4-v2-labels.html">2026-10-27-02 G2</a>
+<a href="2026-10-27-01-step3-reproduction.html">2026-10-27-01 G0</a></aside>
+  <main>
+    
+        <h1>Step 5b: Pre-registered association check between contact geometry and killing (UNVERIFIED)</h1>
+        <div class="tblwrap">
+          <table class="data">
+            <tbody>
+              <tr><th>ID</th><td><code>2026-10-27-04-step5b-result</code></td><th>Date</th><td>2026-10-27</td></tr>
+              <tr><th>Gate</th><td><strong>G4</strong></td><th>Status</th><td><span class="status-pill st-draft">draft</span></td></tr>
+              <tr><th>Author</th><td>agy (backfilled)</td><th>Reviewers</th><td>—</td></tr>
+              <tr><th>Signoff</th><td>—</td><th>Commits</th><td><code>b3be277, 8b91184</code></td></tr>
+              <tr><th>Datasets</th><td><a href="../registry.html#ds-step5_descriptors"><code>step5_descriptors</code></a>, <a href="../registry.html#ds-step4_death_labels_v2"><code>step4_death_labels_v2</code></a>, <a href="../registry.html#ds-step5b_associations"><code>step5b_associations</code></a></td><th>Protocols</th><td><a href="../protocols/index.html#cup-measurement-v1"><code>cup-measurement@v1</code></a>, <a href="../protocols/index.html#death-calling-v1"><code>death-calling@v1</code></a></td></tr>
+              <tr><th>Galleries</th><td><a href="../galleries/review-2026-10-28.html"><code>review-2026-10-28</code></a></td><th>Supersedes / By</th><td>— / —</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <h2>Question</h2>
+<p>Under the pre-registered analysis plan (<code>status/step5b_preregistration.md</code>, committed in <code>b3be277</code> before comparing any descriptor against outcomes), do pre-death contact shape and indentation descriptors associate with target cell death within experiments, hold out across experiments, separate high- vs low-killing donors, or respond to the drug control?</p>
+<p>** Verification Notice: All Step 5b association results (<code>data/step5b/</code>) are UNVERIFIED and on hold at Gate <code>G4</code> because both inputs (<code>step5_descriptors</code> and <code>step4_death_labels_v2</code>) failed visual audit (<code>G1</code>–<code>G3</code>).**</p>
+<h2>What was run</h2>
+<pre><code class="language-bash">python3 src/step5b_association_check.py
+</code></pre>
+<p>Commits:
+- <code>b3be277</code> (<code>Step 5a: mask contact descriptors for all chambers; pre-register the 5b association check</code>)
+- <code>8b91184</code> (<code>Step 5b: pre-registered association check (result: association present within experiment)</code>)</p>
+<h2>What was looked at</h2>
+<ul>
+<li>Pre-registration document <code>status/step5b_preregistration.md</code>.</li>
+<li>Output tables <code>data/step5b/test1_cox_death.csv</code>, <code>data/step5b/test2_loeo_auc.csv</code>, <code>data/step5b/test3_donor_association.csv</code>, <code>data/step5b/test4_latrunculin_control.csv</code>, and figure <code>figures/step5b_association_check.png</code>.</li>
+<li>Subsequent visual review on gallery <code>review-2026-10-28</code> (<code>deep_vs_shallow_deep_01</code>..<code>08</code>, <code>deep_vs_shallow_shallow_09</code>..<code>16</code>, <code>dasa_vs_untr_untreated_01</code>..<code>08</code>, <code>dasa_vs_untr_dasatinib_09</code>..<code>16</code>).</li>
+</ul>
+<h2>Observations</h2>
+<ol>
+<li><strong>Test 1 — Within-experiment Cox model (<code>UNVERIFIED</code>, <code>n = 365–366</code> pre-death <code>trace_num == 1</code> chambers)</strong>:</li>
+<li>On unverified descriptors, <code>7 / 12</code> primary descriptors had <code>BH q &lt; 0.05</code> in both Summary A (first contact visit strictly before death) and Summary B (mean over pre-death contact visits in <code>visits 1–20</code>):<ul>
+<li><code>cup_depth_over_radius</code>: Summary A unadjusted <code>HR = 1.420</code> per SD (<code>[1.171, 1.721]</code>, <code>q = 0.0034</code>, same direction in <code>3/3</code> condition blocks; CA-adjusted <code>HR = 1.375</code>, <code>q = 0.0200</code>); Summary B unadjusted <code>HR = 1.547</code> (<code>[1.268, 1.889]</code>, <code>q = 2.09e-4</code>).</li>
+<li><code>cup_depth_hull_p95_um</code>: Summary A unadjusted <code>HR = 1.388</code> (<code>q = 0.0034</code>, CA-adjusted <code>HR = 1.505</code>, <code>q = 0.0200</code>); Summary B unadjusted <code>HR = 1.621</code> (<code>q = 3.22e-5</code>).</li>
+<li><code>tcell_protrusion_frac</code>: Summary A unadjusted <code>HR = 1.382</code> (<code>q = 0.0035</code>, CA-adjusted <code>HR = 1.547</code>, <code>q = 0.0200</code>).</li>
+<li><code>target_sphericity</code>: Summary A <code>HR = 0.765</code> (<code>q = 0.0129</code>); Summary B <code>HR = 0.654</code> (<code>q = 1.18e-4</code>).</li>
+</ul>
+</li>
+<li><strong>Test 2 — Leave-one-experiment-out logistic AUC (<code>UNVERIFIED</code>)</strong>: Adding the primary descriptor family to contact area + condition did not improve held-out AUC (<code>Delta AUC = -0.025</code> in Summary A, <code>-0.009</code> in Summary B).</li>
+<li><strong>Test 3 — Donor separation (<code>n = 5</code> high vs <code>5</code> low untreated donors, <code>UNVERIFIED</code>)</strong>: No descriptor separated high- vs low-killing donor medians (<code>min Mann-Whitney p = 0.151</code>).</li>
+<li><strong>Test 4 — Drug control (<code>hd2</code>, <code>hd10</code>, <code>hd5</code>, <code>UNVERIFIED</code>)</strong>: In Summary B, dasatinib lowered <code>cup_depth_hull_p95_um</code> and <code>tcell_protrusion_frac</code> in <code>3/3</code> paired donors (<code>0/3</code> and <code>2/3</code> at first contact in Summary A).</li>
+<li><strong>Confounding risk identified in visual review (<code>status/visual_review_2026-10-28.md</code>)</strong>: Target fragmentation lowers <code>target_sphericity</code> and artificially inflates <code>cup_depth_hull_p95_um</code> via 3D hull bridging (<code>deep_01</code>, <code>deep_06</code>, <code>deep_07</code>, <code>deep_08</code>). If dying targets begin to bleb or fragment before 405-nm SYTOX dye crosses the threshold, pre-death fragmentation could generate part or all of the Test 1 association (<code>target_sphericity</code> itself had <code>HR = 0.654</code>).</li>
+</ol>
+<h2>Decision</h2>
+<p>Result is <strong>UNVERIFIED</strong> (<code>status: unverified</code> in <code>lab/registry.csv</code>) and placed on hold at Gate <code>G4</code>. The pre-registered analysis must be rerun on <code>G1</code>–<code>G3</code> verified clean cells and verified death labels, keeping these earlier numbers solely for before/after audit comparison.</p>
+<h2>Open issues</h2>
+<ul>
+<li>Rerun <code>src/step5b_association_check.py</code> after Gates <code>G1</code>, <code>G2</code>, and <code>G3</code> are signed off to test whether the within-experiment association survives when fragmented, merged, hollow, and edge-truncated masks are excluded.</li>
+</ul>
+        
+  </main>
+</div>
+</body>
+</html>

@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Definitions and caveats</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<header class="top">
+  <div class="in">
+    <a class="brand" href="../index.html">Cell-Kill-Sim Lab</a>
+    <nav class="tabs" aria-label="Primary"><a href="../index.html" class="">Gates</a>
+<a href="../notebook/index.html" class="">Notebook</a>
+<a href="../protocols/index.html" class="">Protocols</a>
+<a href="../registry.html" class="">Registry</a>
+<a href="../galleries/index.html" class="">Galleries</a>
+<a href="../handbook/index.html" class="on">Handbook</a></nav>
+  </div>
+</header>
+<div class="wrap">
+  <aside class="side"><div class="section">Handbook</div>
+<a href="#data">Dataset layers</a>
+<a href="#definitions">Definitions and caveats</a>
+<a href="#known-issues">Known issues</a>
+<a href="#open-questions">Open questions</a></aside>
+  <main>
+    <p class="meta"><a href="index.html">Handbook index</a></p><h1>Definitions and Caveats (<code>lab/handbook/definitions.md</code>)</h1>
+<h2>1. Voxel Size and Coordinate Conventions</h2>
+<ul>
+<li><strong>Lateral voxel pitch (<code>VOXEL_UM</code>)</strong>: <code>0.1962 um</code> (<code>src/constants.py</code>), derived directly from the Fei lab's contact-area voxel conversion factor <code>0.0385 um^2</code> in <code>external/feilab_CART_analysis/main/analysis/summary/summary.m</code> (<code>sqrt(0.0385) = 0.196214 um</code>).</li>
+<li><strong>Optical lateral FWHM (<code>OPTICAL_FWHM_UM</code>)</strong>: <code>0.32 um</code> (<code>320 nm</code> isotropic Bessel light-sheet resolution reported in Wang et al. 2024).</li>
+<li><strong>Array axis ordering</strong>:</li>
+<li>Deposited HDF5 files (<code>*_predictions.h5</code> and raw <code>&lt;stem&gt;.h5</code>) store 3D volumes in <code>(Z, Y, X)</code> order (<code>shape = (Z, 256, 256)</code>).</li>
+<li>MATLAB reads HDF5 arrays in transposed <code>(X, Y, Z)</code> order. Because <code>bwdist</code> (3D Euclidean distance transform) breaks equidistant Voronoi ties by linear scan-line index, exact numerical reproduction of the Fei lab's instance segmentation requires transposing <code>(Z, Y, X) -&gt; (X, Y, Z)</code> via <code>.transpose(2, 1, 0)</code> prior to <code>distance_transform_edt</code> (<code>edt_indices_matlab_xyz</code> in <code>src/reproduce_actin_measures.py</code>).</li>
+<li>Deposited 2D MIPs satisfy <code>MIPxy_405 == raw[0].max(axis=0).T</code> (shape <code>(256, 256)</code> in <code>(X, Y)</code>) and <code>MIPxz_405 == raw[0].max(axis=1).T</code> (shape <code>(256, Z)</code> in <code>(X, Z)</code>).</li>
+</ul>
+<h2>2. Axial Z-Spacing and U-Net Resolution Caveats</h2>
+<ol>
+<li><strong>Axial Z-spacing caveat (<code>z = 0.1962 um</code> vs <code>z = 0.2400 um</code>)</strong>:
+   Across uncontacted Nalm6 target cells, the 3D bounding box spans <code>~19%</code> fewer Z slices than XY pixels (<code>Delta Z / Delta XY = 0.807</code>). This corresponds either to mild physical oblateness of cells resting on the microgrid chamber floor at nominal isotropic <code>dz = 0.1962 um</code>, or to an effective post-deskew axial step of <code>~0.24 um</code> (<code>0.1962 / 0.807 = 0.243 um</code>). Every geometric descriptor in <code>src/contact_descriptors.py</code> is computed under both <code>dz = 0.1962 um</code> and <code>dz = 0.2400 um</code> (<code>_z024</code> columns). Relative descriptors (<code>cup_depth_over_radius</code>, <code>tcell_protrusion_frac</code>, <code>target_sphericity</code>) vary by <code>&lt; 6%</code> between the two axial pitches, whereas absolute volumes scale by <code>0.2400 / 0.1962 = 1.223</code>.</li>
+<li><strong>U-Net surface smoothing cutoff (<code>&gt;= 1.4 um</code> wavelength)</strong>:
+   Comparison of 3D U-Net mask boundaries against raw 561-nm membrane stacks across 20 sweeps (<code>.agy_step5res_report.md</code>) established:</li>
+<li>Outward boundary bias: the U-Net target mask (<code>(pred == 2) | (pred == 4)</code>) sits <code>+0.72 um</code> (<code>+3.69 voxels</code>) outside the raw 561-nm half-maximum membrane contour.</li>
+<li>Spectral half-power (<code>-3 dB</code>, <code>P_mask / P_raw = 0.50</code>) cutoff wavelength: <code>lambda_50% = 1.38 um</code> on the synaptic contact patch (<code>1.45 um</code> away from contact). Below <code>lambda = 1.15 um</code>, <code>&gt; 60%</code> of raw surface roughness power is erased by U-Net smoothing and voxel staircase discretization.</li>
+<li>Therefore, sub-micron microvillar fingers (<code>0.1–0.5 um</code>, de Jesus et al. 2024) cannot be measured from the deposited masks; all valid mask descriptors are restricted to macro-scale features (<code>&gt;= 1.4 um</code> wavelength).</li>
+</ol>
+<h2>3. Contact Patch and Cup Depth Definitions (<code>cup-measurement@v1</code>)</h2>
+<ul>
+<li><strong>Interior synaptic contact surface (<code>s_real</code>)</strong>:
+  In <code>step2_instance_seg.m</code> and <code>cl_factor.m</code>, the Voronoi interface between tracked T cell <code>j</code> and target (<code>map_exp == 2</code> adjacent to <code>map_exp == 3</code>) has its peripheral radius-5 rim (<code>imdilate(background, sphere(5))</code>) overwritten as <code>s_edge = -j</code>. Only interior voxels (<code>s_real = (surface == +j)</code>) count toward contact area (<code>CA_um2 = s_largest * 0.0385</code>). Omitting the <code>s_edge</code> rim exclusion inflates <code>CA_um2</code> by <code>25–30%</code>.</li>
+<li><strong>Equivalent patch radius (<code>a</code>)</strong>:
+  <code>patch_equiv_radius_um = sqrt(contact_area_um2 / pi)</code>.</li>
+<li><strong>Convex-hull cup depth (<code>d = cup_depth_hull_p95_um</code>)</strong>:
+  Given the 3D convex hull <code>ConvexHull(pts_b_surf_um)</code> of the solid contacted target cell and the unit synaptic normal <code>n_syn</code> pointing from target centroid to T-cell centroid, T-cell-facing hull facets are selected by <code>(n_facet . n_syn) &gt; 0.05</code>. For each target boundary voxel on the contact patch (<code>pts_c_um</code>), <code>d_hull_c</code> is the inward perpendicular distance from the closest facing hull facet. <code>cup_depth_hull_p95_um</code> is the 95th percentile of <code>d_hull_c</code> across the patch.</li>
+<li><strong>Focusing ratio (<code>cup_depth_over_radius</code>)</strong>:
+  <code>cup_depth_over_radius = cup_depth_hull_p95_um / max(0.20, patch_equiv_radius_um)</code> (<code>d / a</code>).</li>
+<li><strong>T-cell protrusion fraction (<code>tcell_protrusion_frac</code>)</strong>:
+  Fraction of tracked T-cell voxels lying strictly inside the contacted target's 3D convex hull.</li>
+<li><strong>Simple Laplace push proxy (<code>Route (b)</code>)</strong>:
+  On a spherical target shell of radius <code>R_target</code> and cortical tension <code>T_target</code> indented to depth <code>d</code> over patch radius <code>a</code>, quasi-static Laplace normal-stress balance gives dimensionless push <code>Pi_simple = p * R_target / T_target ≈ 2 + 4 * (R_target / a) * (d / a)</code> and net indentation push <code>Delta_Pi_indent = 4 * (R_target / a) * cup_depth_over_radius</code>.</li>
+</ul>
+<h2>4. Target Death Rule (<code>death-calling@v1</code>)</h2>
+<ul>
+<li><strong>2D dead-dye mask (<code>compute_2d_dead_mask</code> in <code>src/death_labels.py</code>)</strong>:
+  2D Gaussian filter (<code>sigma = 3.0</code>, <code>truncate = 2.0</code>), threshold <code>&gt; 404.0 ADU</code> (calibrated to match the Fei lab's 3D <code>&gt; 398.0 ADU</code> threshold after the <code>+4.6</code> to <code>+5.5 ADU</code> 2D max-projection extreme-value shift), morphological closing with <code>disk(3)</code>, and 8-connected area opening <code>&gt;= 20 px</code>.</li>
+<li><strong>Per-visit positive call (<code>dead_visit</code>)</strong>:
+  Both <code>overlap_xy_px &gt;= 20</code> and <code>overlap_xz_px &gt;= 20</code> between the cleaned 2D dead-dye masks (<code>d_xy</code>, <code>d_xz</code>) and the 2D projections (<code>b_xy</code>, <code>b_xz</code>) of the 3D target instance contacted by the tracked T cell, after excluding <code>MIP_ROI_0</code> <code>visit &gt;= 19</code> saturation-band frames.</li>
+<li><strong>Per-chamber death rules</strong>:</li>
+<li><strong>Any-Visit (<code>ever_dead_any_visit_200m</code>)</strong>: <code>&gt;= 1</code> positive visit in <code>visits 1–20</code> (matches <code>summary.m</code> <code>C = max(B, [], 2)</code>).</li>
+<li><strong>Sustained (<code>ever_dead_200m</code>)</strong>: <code>&gt;= 2</code> consecutive positive visits in <code>visits 1–20</code>.</li>
+</ul>
+  </main>
+</div>
+</body>
+</html>

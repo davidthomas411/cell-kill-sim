@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Handbook</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<header class="top">
+  <div class="in">
+    <a class="brand" href="../index.html">Cell-Kill-Sim Lab</a>
+    <nav class="tabs" aria-label="Primary"><a href="../index.html" class="">Gates</a>
+<a href="../notebook/index.html" class="">Notebook</a>
+<a href="../protocols/index.html" class="">Protocols</a>
+<a href="../registry.html" class="">Registry</a>
+<a href="../galleries/index.html" class="">Galleries</a>
+<a href="../handbook/index.html" class="on">Handbook</a></nav>
+  </div>
+</header>
+<div class="wrap">
+  <aside class="side"><div class="section">Handbook</div>
+<a href="#data">Dataset layers</a>
+<a href="#definitions">Definitions and caveats</a>
+<a href="#known-issues">Known issues</a>
+<a href="#open-questions">Open questions</a></aside>
+  <main>
+    
+    <h1>Handbook</h1>
+    <ul>
+      <li><a href="#data">Dataset layers</a> (<a href="data.html">page</a>)</li>
+      <li><a href="#definitions">Definitions and caveats</a> (<a href="definitions.html">page</a>)</li>
+      <li><a href="#known-issues">Known issues</a> (<a href="known-issues.html">page</a>)</li>
+      <li><a href="#open-questions">Open questions for the Fei lab</a> (<a href="open-questions.html">page</a>)</li>
+    </ul>
+    <section id="data" style="border-top:1px solid var(--ink);padding-top:16px;margin-top:28px"><h1>Dataset Layers (<code>lab/handbook/data.md</code>)</h1>
+<p>All dataset layers in this project derive from the Fei lab's light-sheet single-cell CAR-T / Nalm6 cytotoxicity dataset deposited at ScienceDB (<code>19235</code>; Wang et al., <em>Nat. Commun.</em> 2024 / <em>Sci. Data</em> 2026) and tracked in <code>lab/registry.csv</code>.</p>
+<h2>1. Experimental Cohort Overview</h2>
+<ul>
+<li><strong>13 experiments (<code>v01</code>–<code>v13</code>)</strong> spanning three biological regimes:</li>
+<li><strong>Untreated high-killing CAR-T (<code>5</code> donors, Groups 1–5)</strong>: <code>v01_6_40_120_0-6_hd1</code>, <code>v02_6_40_120_0-6_hd3</code>, <code>v03_6_40_120_0-6_hd4</code>, <code>v04_6_40_120_0-6_hd6</code>, <code>v05_6_40_120_0-6_hd7</code> (<code>200</code> chambers total; <code>167</code> with <code>trace_num == 1</code>).</li>
+<li><strong>Untreated low-killing CAR-T (<code>5</code> donors, Groups 6–10)</strong>: <code>v06_6_40_120_0-6_hd8</code>, <code>v07_6_39_120_0-6_hd9</code> (<code>22</code> deposited ROIs), <code>v08_6_40_120_0-6_hd2</code>, <code>v09_6_40_120_0-6_hd10</code>, <code>v10_6_40_120_0-6_hd5</code> (<code>182</code> chambers total; <code>160</code> with <code>trace_num == 1</code>).</li>
+<li><strong>Dasatinib 50 nM CAR-T (<code>3</code> paired donors <code>hd2, hd10, hd5</code>, Groups 8*–10*)</strong>: <code>v11_6_36_120_0-6_hd2_ds</code>, <code>v12_6_35_120_0-6_hd10ds</code>, <code>v13_6_40_120_0-6_hd5_ds</code> (<code>120</code> chambers total; <code>89</code> with <code>trace_num == 1</code>).</li>
+<li><strong>Temporal sampling</strong>: <code>502</code> total microgrid chambers (<code>MIP_ROI_*</code>), imaged for <code>20–22</code> visits at <code>10 min</code> intervals (<code>200–220 min</code> total) with <code>5</code> actin sweeps per visit at <code>15 s</code> intervals (<code>10,510</code> complete chamber-visits; <code>52,545</code> complete sweeps; <code>63,053</code> total deposited sweep files including partial ROIs).</li>
+</ul>
+<h2>2. Registered Dataset Layers (<code>lab/registry.csv</code>)</h2>
+<table>
+<thead>
+<tr>
+<th>Dataset ID</th>
+<th>Layer</th>
+<th>Path Pattern</th>
+<th style="text-align: right;">Items</th>
+<th>Gate</th>
+<th>Current Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>lab_masks</code></td>
+<td>Raw segmentation</td>
+<td><code>data/scidb_19235_masks/&lt;exp&gt;/&lt;roi&gt;/&lt;stem&gt;_predictions.h5</code></td>
+<td style="text-align: right;">63,053</td>
+<td>G1</td>
+<td><code>unverified</code></td>
+</tr>
+<tr>
+<td><code>raw_volumes</code></td>
+<td>Raw microscopy</td>
+<td><code>data/scidb_19235_raw/&lt;exp&gt;/&lt;roi&gt;/&lt;stem&gt;.h5</code>; <code>data/scidb_19235_chambers/*/&lt;stem&gt;.h5</code>; <code>data/scidb_19235_mips/&lt;exp&gt;/&lt;roi&gt;/&lt;stem&gt;_MIP*_405.tif</code></td>
+<td style="text-align: right;">950 (3D) + 21,036 (MIPs)</td>
+<td>G1/G2</td>
+<td><code>unverified</code> (partial 3D download)</td>
+</tr>
+<tr>
+<td><code>step3_reproduction</code></td>
+<td>Step 3 reproduction</td>
+<td><code>data/step3_tracked/per_chamber_all.csv</code>; <code>data/step3_actin/per_chamber_actin_summary.csv</code>; <code>results/chamber_to_row_map_tracked.csv</code></td>
+<td style="text-align: right;">502</td>
+<td>G0</td>
+<td><code>verified</code> (external check)</td>
+</tr>
+<tr>
+<td><code>step4_death_labels_v2</code></td>
+<td>Step 4 death labels</td>
+<td><code>data/step4/per_chamber_death_labels_all_v2.csv</code>; <code>data/step4/per_visit_death_labels_all_v2.csv</code></td>
+<td style="text-align: right;">502</td>
+<td>G2</td>
+<td><code>unverified</code></td>
+</tr>
+<tr>
+<td><code>step5_descriptors</code></td>
+<td>Step 5a descriptors</td>
+<td><code>data/step5/per_chamber_descriptors.csv</code>; <code>data/step5/per_visit_descriptors.csv</code>; <code>data/step5/per_sweep_descriptors.csv</code></td>
+<td style="text-align: right;">502</td>
+<td>G3</td>
+<td><code>unverified</code></td>
+</tr>
+<tr>
+<td><code>qc_flags</code></td>
+<td>Mask QC</td>
+<td><code>data/qc/per_visit_qc.csv</code></td>
+<td style="text-align: right;">4,523</td>
+<td>G1</td>
+<td><code>unverified</code></td>
+</tr>
+<tr>
+<td><code>clean_subset_v0.1</code></td>
+<td>Clean subset</td>
+<td><code>data/clean_subset/clean_visits.csv</code></td>
+<td style="text-align: right;">1,213</td>
+<td>G1</td>
+<td><code>unverified</code></td>
+</tr>
+<tr>
+<td><code>step5b_associations</code></td>
+<td>Step 5b associations</td>
+<td><code>data/step5b/test1_cox_death.csv</code>; <code>data/step5b/summary_step5b.json</code></td>
+<td style="text-align: right;">366</td>
+<td>G4</td>
+<td><code>unverified</code></td>
+</tr>
+<tr>
+<td><code>step6b_fits</code></td>
+<td>Step 6b mechanics</td>
+<td><code>data/step6b/visit_fits.csv</code>; <code>data/step6b/gateB_visit_fits.csv</code></td>
+<td style="text-align: right;">3,475</td>
+<td>G5</td>
+<td><code>rejected</code> (void)</td>
+</tr>
+<tr>
+<td><code>step7_focused_pushing</code></td>
+<td>Step 7 focused pushing</td>
+<td><code>data/step7/summary.json</code>; <code>data/step7/test7*.csv</code></td>
+<td style="text-align: right;">365</td>
+<td>G4</td>
+<td><code>unverified</code></td>
+</tr>
+</tbody>
+</table>
+<h2>3. Layer Details</h2>
+<ol>
+<li><strong><code>lab_masks</code> (<code>*_predictions.h5</code>)</strong>:
+   3D <code>uint8</code> array <code>/predictions</code> of shape <code>(Z, 256, 256)</code> (<code>Z in [161, 195]</code>) output by the Fei lab's 3D U-Net:</li>
+<li><code>0</code>: background</li>
+<li><code>1</code>: CAR-T cell interior / nucleus</li>
+<li><code>2</code>: Nalm6 target cell interior / nucleus</li>
+<li><code>3</code>: CAR-T cell membrane / cortex</li>
+<li><code>4</code>: Nalm6 target cell membrane / cortex</li>
+<li><strong><code>raw_volumes</code> (<code>*.h5</code> and <code>*_MIP*_405.tif</code>)</strong>:</li>
+<li>3D raw <code>.h5</code> files store <code>/data</code> of shape <code>(3, Z, 256, 256)</code> in <code>uint16</code>: Channel 0 = <code>405 nm</code> SYTOX Blue dead-cell dye, Channel 1 = <code>488 nm</code> Lifeact-eGFP F-actin, Channel 2 = <code>561 nm</code> mApple-Mem target membrane.</li>
+<li>2D MIPs (<code>*_MIPxy_405.tif</code>, <code>*_MIPxz_405.tif</code>) are exact <code>uint16</code> projections (<code>raw[0].max(axis=0).T</code> and <code>raw[0].max(axis=1).T</code>) at sweep 1 of each visit (<code>10,518</code> XY and <code>10,518</code> XZ images).</li>
+<li><strong><code>step3_reproduction</code></strong>:
+   Exact Python port of the Fei lab's instance segmentation (<code>step2_instance_seg.m</code>), contact surface extraction (<code>cl_factor.m</code>), T-cell trajectory tracker (<code>synapse_tracking.m</code> -&gt; <code>trace_num</code>), and 2-chamber raw actin depletion / retrograde flow (<code>ADC</code>, <code>ARFS</code>). Passed Gate <code>G0</code> external check against the published paper tables.</li>
+<li><strong><code>step4_death_labels_v2</code></strong>:
+   Per-visit and per-chamber target death calls using the contacted target instance (<code>trace_num == 1</code> Track 1) and excluding the <code>MIP_ROI_0</code> <code>visit &gt;= 19</code> saturation band. Blocked at Gate <code>G2</code>.</li>
+<li><strong><code>step5_descriptors</code></strong>:
+   33 macro-scale (<code>&gt;= 1.4 um</code>) 3D geometric descriptors of the contact patch, target convex-hull / reference-sphere cup indentation, and T-cell protrusion, computed at <code>z = 0.1962 um</code> and <code>z = 0.2400 um</code>. Blocked at Gates <code>G1</code>/<code>G3</code>.</li>
+<li><strong><code>qc_flags</code> &amp; <code>clean_subset_v0.1</code></strong>:
+   Pre-outcome mask quality metrics (<code>src/mask_qc.py</code>) and the 1,213-visit candidate clean subset defined in <code>clean-cell-rule@v1</code>. Pending visual verification on gallery <code>clean-2026-10-28</code>.</li>
+</ol></section><section id="definitions" style="border-top:1px solid var(--ink);padding-top:16px;margin-top:28px"><h1>Definitions and Caveats (<code>lab/handbook/definitions.md</code>)</h1>
+<h2>1. Voxel Size and Coordinate Conventions</h2>
+<ul>
+<li><strong>Lateral voxel pitch (<code>VOXEL_UM</code>)</strong>: <code>0.1962 um</code> (<code>src/constants.py</code>), derived directly from the Fei lab's contact-area voxel conversion factor <code>0.0385 um^2</code> in <code>external/feilab_CART_analysis/main/analysis/summary/summary.m</code> (<code>sqrt(0.0385) = 0.196214 um</code>).</li>
+<li><strong>Optical lateral FWHM (<code>OPTICAL_FWHM_UM</code>)</strong>: <code>0.32 um</code> (<code>320 nm</code> isotropic Bessel light-sheet resolution reported in Wang et al. 2024).</li>
+<li><strong>Array axis ordering</strong>:</li>
+<li>Deposited HDF5 files (<code>*_predictions.h5</code> and raw <code>&lt;stem&gt;.h5</code>) store 3D volumes in <code>(Z, Y, X)</code> order (<code>shape = (Z, 256, 256)</code>).</li>
+<li>MATLAB reads HDF5 arrays in transposed <code>(X, Y, Z)</code> order. Because <code>bwdist</code> (3D Euclidean distance transform) breaks equidistant Voronoi ties by linear scan-line index, exact numerical reproduction of the Fei lab's instance segmentation requires transposing <code>(Z, Y, X) -&gt; (X, Y, Z)</code> via <code>.transpose(2, 1, 0)</code> prior to <code>distance_transform_edt</code> (<code>edt_indices_matlab_xyz</code> in <code>src/reproduce_actin_measures.py</code>).</li>
+<li>Deposited 2D MIPs satisfy <code>MIPxy_405 == raw[0].max(axis=0).T</code> (shape <code>(256, 256)</code> in <code>(X, Y)</code>) and <code>MIPxz_405 == raw[0].max(axis=1).T</code> (shape <code>(256, Z)</code> in <code>(X, Z)</code>).</li>
+</ul>
+<h2>2. Axial Z-Spacing and U-Net Resolution Caveats</h2>
+<ol>
+<li><strong>Axial Z-spacing caveat (<code>z = 0.1962 um</code> vs <code>z = 0.2400 um</code>)</strong>:
+   Across uncontacted Nalm6 target cells, the 3D bounding box spans <code>~19%</code> fewer Z slices than XY pixels (<code>Delta Z / Delta XY = 0.807</code>). This corresponds either to mild physical oblateness of cells resting on the microgrid chamber floor at nominal isotropic <code>dz = 0.1962 um</code>, or to an effective post-deskew axial step of <code>~0.24 um</code> (<code>0.1962 / 0.807 = 0.243 um</code>). Every geometric descriptor in <code>src/contact_descriptors.py</code> is computed under both <code>dz = 0.1962 um</code> and <code>dz = 0.2400 um</code> (<code>_z024</code> columns). Relative descriptors (<code>cup_depth_over_radius</code>, <code>tcell_protrusion_frac</code>, <code>target_sphericity</code>) vary by <code>&lt; 6%</code> between the two axial pitches, whereas absolute volumes scale by <code>0.2400 / 0.1962 = 1.223</code>.</li>
+<li><strong>U-Net surface smoothing cutoff (<code>&gt;= 1.4 um</code> wavelength)</strong>:
+   Comparison of 3D U-Net mask boundaries against raw 561-nm membrane stacks across 20 sweeps (<code>.agy_step5res_report.md</code>) established:</li>
+<li>Outward boundary bias: the U-Net target mask (<code>(pred == 2) | (pred == 4)</code>) sits <code>+0.72 um</code> (<code>+3.69 voxels</code>) outside the raw 561-nm half-maximum membrane contour.</li>
+<li>Spectral half-power (<code>-3 dB</code>, <code>P_mask / P_raw = 0.50</code>) cutoff wavelength: <code>lambda_50% = 1.38 um</code> on the synaptic contact patch (<code>1.45 um</code> away from contact). Below <code>lambda = 1.15 um</code>, <code>&gt; 60%</code> of raw surface roughness power is erased by U-Net smoothing and voxel staircase discretization.</li>
+<li>Therefore, sub-micron microvillar fingers (<code>0.1–0.5 um</code>, de Jesus et al. 2024) cannot be measured from the deposited masks; all valid mask descriptors are restricted to macro-scale features (<code>&gt;= 1.4 um</code> wavelength).</li>
+</ol>
+<h2>3. Contact Patch and Cup Depth Definitions (<code>cup-measurement@v1</code>)</h2>
+<ul>
+<li><strong>Interior synaptic contact surface (<code>s_real</code>)</strong>:
+  In <code>step2_instance_seg.m</code> and <code>cl_factor.m</code>, the Voronoi interface between tracked T cell <code>j</code> and target (<code>map_exp == 2</code> adjacent to <code>map_exp == 3</code>) has its peripheral radius-5 rim (<code>imdilate(background, sphere(5))</code>) overwritten as <code>s_edge = -j</code>. Only interior voxels (<code>s_real = (surface == +j)</code>) count toward contact area (<code>CA_um2 = s_largest * 0.0385</code>). Omitting the <code>s_edge</code> rim exclusion inflates <code>CA_um2</code> by <code>25–30%</code>.</li>
+<li><strong>Equivalent patch radius (<code>a</code>)</strong>:
+  <code>patch_equiv_radius_um = sqrt(contact_area_um2 / pi)</code>.</li>
+<li><strong>Convex-hull cup depth (<code>d = cup_depth_hull_p95_um</code>)</strong>:
+  Given the 3D convex hull <code>ConvexHull(pts_b_surf_um)</code> of the solid contacted target cell and the unit synaptic normal <code>n_syn</code> pointing from target centroid to T-cell centroid, T-cell-facing hull facets are selected by <code>(n_facet . n_syn) &gt; 0.05</code>. For each target boundary voxel on the contact patch (<code>pts_c_um</code>), <code>d_hull_c</code> is the inward perpendicular distance from the closest facing hull facet. <code>cup_depth_hull_p95_um</code> is the 95th percentile of <code>d_hull_c</code> across the patch.</li>
+<li><strong>Focusing ratio (<code>cup_depth_over_radius</code>)</strong>:
+  <code>cup_depth_over_radius = cup_depth_hull_p95_um / max(0.20, patch_equiv_radius_um)</code> (<code>d / a</code>).</li>
+<li><strong>T-cell protrusion fraction (<code>tcell_protrusion_frac</code>)</strong>:
+  Fraction of tracked T-cell voxels lying strictly inside the contacted target's 3D convex hull.</li>
+<li><strong>Simple Laplace push proxy (<code>Route (b)</code>)</strong>:
+  On a spherical target shell of radius <code>R_target</code> and cortical tension <code>T_target</code> indented to depth <code>d</code> over patch radius <code>a</code>, quasi-static Laplace normal-stress balance gives dimensionless push <code>Pi_simple = p * R_target / T_target ≈ 2 + 4 * (R_target / a) * (d / a)</code> and net indentation push <code>Delta_Pi_indent = 4 * (R_target / a) * cup_depth_over_radius</code>.</li>
+</ul>
+<h2>4. Target Death Rule (<code>death-calling@v1</code>)</h2>
+<ul>
+<li><strong>2D dead-dye mask (<code>compute_2d_dead_mask</code> in <code>src/death_labels.py</code>)</strong>:
+  2D Gaussian filter (<code>sigma = 3.0</code>, <code>truncate = 2.0</code>), threshold <code>&gt; 404.0 ADU</code> (calibrated to match the Fei lab's 3D <code>&gt; 398.0 ADU</code> threshold after the <code>+4.6</code> to <code>+5.5 ADU</code> 2D max-projection extreme-value shift), morphological closing with <code>disk(3)</code>, and 8-connected area opening <code>&gt;= 20 px</code>.</li>
+<li><strong>Per-visit positive call (<code>dead_visit</code>)</strong>:
+  Both <code>overlap_xy_px &gt;= 20</code> and <code>overlap_xz_px &gt;= 20</code> between the cleaned 2D dead-dye masks (<code>d_xy</code>, <code>d_xz</code>) and the 2D projections (<code>b_xy</code>, <code>b_xz</code>) of the 3D target instance contacted by the tracked T cell, after excluding <code>MIP_ROI_0</code> <code>visit &gt;= 19</code> saturation-band frames.</li>
+<li><strong>Per-chamber death rules</strong>:</li>
+<li><strong>Any-Visit (<code>ever_dead_any_visit_200m</code>)</strong>: <code>&gt;= 1</code> positive visit in <code>visits 1–20</code> (matches <code>summary.m</code> <code>C = max(B, [], 2)</code>).</li>
+<li><strong>Sustained (<code>ever_dead_200m</code>)</strong>: <code>&gt;= 2</code> consecutive positive visits in <code>visits 1–20</code>.</li>
+</ul></section><section id="known-issues" style="border-top:1px solid var(--ink);padding-top:16px;margin-top:28px"><h1>Known Issues (<code>lab/handbook/known-issues.md</code>)</h1>
+<p>All issues below were identified by visual review of real-data gallery <code>review-2026-10-28</code> (<code>status/visual_review_2026-10-28.md</code>) and technical audits. Every issue links to the notebook entry where it was recorded or addressed.</p>
+<h2>1. Cell Identity &amp; Cup Measurement Issues (Gates <code>G1</code> &amp; <code>G3</code>)</h2>
+<ol>
+<li><strong>Fragmented target masks inflate 3D convex-hull cup depth</strong></li>
+<li><strong>Notebook entries</strong>: <a href="../notebook/2026-10-28-04-visual-review-2026-10-28.html">2026-10-28-04-visual-review-2026-10-28</a>, <a href="../notebook/2026-10-27-03-step5a-descriptors.html">2026-10-27-03-step5a-descriptors</a>, <a href="../notebook/2026-10-28-05-clean-subset-rule.html">2026-10-28-05-clean-subset-rule</a></li>
+<li><strong>Panels</strong>: <code>cup_01</code> (<code>10.15 um</code> depth, target <code>2,821 um^3</code>), <code>cup_03</code> (<code>9.18 um</code>, <code>2,550 um^3</code>), <code>cup_09</code>, <code>cup_10</code> (<code>5.10 um</code>, <code>depth/radius = 2.75</code>), <code>fit_unreach_01</code>, <code>deep_01</code>.</li>
+<li><strong>Mechanism &amp; risk</strong>: When the target mask consists of multiple disconnected pieces, the 3D convex hull bridges across the pieces and <code>cup_depth_hull_p95_um</code> measures the inter-piece gap rather than a synaptic dent. Across <code>4,523</code> <code>trace_num == 1</code> contact visits, median cup depth is <code>1.35 um</code> when <code>target_sphericity &lt; 0.5</code> (<code>n = 1,925</code>) vs <code>0.72 um</code> when <code>target_sphericity &gt;= 0.8</code> (<code>n = 292</code>; Spearman <code>rho = -0.26</code>). If dying targets fragment before SYTOX uptake, pre-death fragmentation could create part of the Step 5b / 7B Cox association (<a href="../notebook/2026-10-27-04-step5b-result.html">2026-10-27-04-step5b-result</a>).</li>
+<li><strong>Cells truncated by the field-of-view boundary (<code>edge</code>)</strong></li>
+<li><strong>Notebook entries</strong>: <a href="../notebook/2026-10-28-04-visual-review-2026-10-28.html">2026-10-28-04-visual-review-2026-10-28</a>, <a href="../notebook/2026-10-28-05-clean-subset-rule.html">2026-10-28-05-clean-subset-rule</a></li>
+<li><strong>Panels</strong>: <code>cup_05</code>, <code>cup_13</code>.</li>
+<li><strong>Mechanism</strong>: Cell bodies cut by the X/Y/Z crop border yield corrupted volumes, convex hulls, and indentation depths. Excluded by criterion 3 (<code>touches_fov_edge == False</code>) in <code>clean-cell-rule@v1</code>.</li>
+<li><strong>Two target cells merged into one mask (<code>merged</code>)</strong></li>
+<li><strong>Notebook entries</strong>: <a href="../notebook/2026-10-28-04-visual-review-2026-10-28.html">2026-10-28-04-visual-review-2026-10-28</a>, <a href="../notebook/2026-10-28-05-clean-subset-rule.html">2026-10-28-05-clean-subset-rule</a></li>
+<li><strong>Panels</strong>: <code>dasa_vs_untr_untreated_02</code>, <code>deep_06</code>, <code>deep_07</code> (<code>5.60 um</code> depth), <code>deep_08</code>.</li>
+<li><strong>Mechanism</strong>: Two adjacent round target cells fuse into a bilobed object with the T cell sitting in the cleft between them; the 3D hull bridges the cleft and records a spurious deep cup.</li>
+<li><strong>Hollow ring-shaped or broken-shell target masks (<code>hollow</code>)</strong></li>
+<li><strong>Notebook entries</strong>: <a href="../notebook/2026-10-28-04-visual-review-2026-10-28.html">2026-10-28-04-visual-review-2026-10-28</a>, <a href="../notebook/2026-10-28-05-clean-subset-rule.html">2026-10-28-05-clean-subset-rule</a></li>
+<li><strong>Panels</strong>: <code>dasa_vs_untr_dasatinib_09</code>, <code>dasa_vs_untr_dasatinib_11</code> (<code>6.75 um</code> depth), <code>dasa_vs_untr_dasatinib_14</code>, <code>dasa_vs_untr_dasatinib_15</code>, <code>deep_vs_shallow_shallow_10</code>, <code>deep_vs_shallow_shallow_11</code>.</li>
+<li><strong>Mechanism</strong>: Target membrane class (<code>pred == 4</code>) forms an open ring or broken shell with missing interior (<code>pred == 2</code>), producing <code>5.8–6.8 um</code> false cup depths.</li>
+<li><strong>Severe experiment-specific mask degradation in donor <code>hd10</code> and <code>tiny</code> debris fragments</strong></li>
+<li><strong>Notebook entries</strong>: <a href="../notebook/2026-10-28-04-visual-review-2026-10-28.html">2026-10-28-04-visual-review-2026-10-28</a>, <a href="../notebook/2026-10-28-03-step7-prereg-and-result.html">2026-10-28-03-step7-prereg-and-result</a>, <a href="../notebook/2026-10-28-05-clean-subset-rule.html">2026-10-28-05-clean-subset-rule</a></li>
+<li><strong>Panels</strong>: <code>dasa_vs_untr_untreated_01</code>, <code>03</code>, <code>06</code>, <code>07</code>; <code>dasa_vs_untr_dasatinib_09</code>, <code>11</code>, <code>13</code> (<code>154 um^3</code>), <code>14</code>, <code>15</code>, <code>16</code> (<code>37 um^3</code>).</li>
+<li><strong>Mechanism</strong>: Donor <code>hd10</code> (<code>v09</code> untreated clean fraction <code>0.05</code>, <code>v12</code> dasatinib clean fraction <code>0.16</code>) is predominantly fragmented or hollow, which drove the <code>hd10</code> donor outlier (<code>cup_depth_over_radius = 0.50</code>) and the single-donor dasatinib reduction in Step 7 (<a href="../notebook/2026-10-28-03-step7-prereg-and-result.html">2026-10-28-03-step7-prereg-and-result</a>).</li>
+</ol>
+<h2>2. Death Label Issues (Gate <code>G2</code>)</h2>
+<ol>
+<li><strong>Gallery target-outline mismatch with v2 chamber labels (<code>label_mismatch</code>)</strong></li>
+<li><strong>Notebook entries</strong>: <a href="../notebook/2026-10-28-04-visual-review-2026-10-28.html">2026-10-28-04-visual-review-2026-10-28</a>, <a href="../notebook/2026-10-27-02-step4-v2-labels.html">2026-10-27-02-step4-v2-labels</a></li>
+<li><strong>Panels</strong>: <code>death_surviving_24</code> (visits 11–12 show <code>296/251</code> and <code>104/236 px</code> overlap in panel but chamber label has <code>ever_dead_any_visit_200m == False</code>), <code>death_surviving_19</code> (visits 12–14 positive in panel, labelled single-visit), <code>death_killed_07</code> (positive at v7 in panel, v8 in table).</li>
+<li><strong>Mechanism</strong>: Gallery Case 6 projected all raw target voxels <code>(pred == 2) | (pred == 4)</code> whereas <code>per_chamber_death_labels_all_v2.csv</code> projected only the contacted target instance (<code>instance_seg_matlab_xyz</code>).</li>
+<li><strong>Possible overlap calculation discrepancy (<code>other</code>)</strong></li>
+<li><strong>Notebook entries</strong>: <a href="../notebook/2026-10-28-04-visual-review-2026-10-28.html">2026-10-28-04-visual-review-2026-10-28</a>, <a href="../notebook/2026-10-27-02-step4-v2-labels.html">2026-10-27-02-step4-v2-labels</a></li>
+<li><strong>Panels</strong>: <code>death_dasatinib_30</code> (visit 5 reports <code>27 px</code> overlap while the dye contour appears outside the target outline in both XY and XZ views).</li>
+<li><strong>2D projection overlap from dye-positive bystander cells (<code>neighbour_overlap</code>)</strong></li>
+<li><strong>Notebook entries</strong>: <a href="../notebook/2026-10-28-04-visual-review-2026-10-28.html">2026-10-28-04-visual-review-2026-10-28</a>, <a href="../notebook/2026-10-27-02-step4-v2-labels.html">2026-10-27-02-step4-v2-labels</a></li>
+<li><strong>Panels</strong>: <code>death_surviving_17</code> (v19 <code>304/928 px</code> overlap from a dead bystander underneath), <code>death_surviving_18</code> (v18 transient smear), <code>death_killed_05</code>, <code>death_killed_09</code>.</li>
+<li><strong>Narrow 405-nm signal-to-background margin (<code>404.0 ADU</code> vs <code>~400 ADU</code>)</strong></li>
+<li><strong>Notebook entries</strong>: <a href="../notebook/2026-10-28-04-visual-review-2026-10-28.html">2026-10-28-04-visual-review-2026-10-28</a>, <a href="../notebook/2026-10-27-02-step4-v2-labels.html">2026-10-27-02-step4-v2-labels</a></li>
+<li><strong>Panels</strong>: <code>death_killed_01</code> (peak Gaussian intensity <code>404.3 ADU</code> vs threshold <code>404.0 ADU</code>).</li>
+<li><strong><code>MIP_ROI_0</code> late 405-nm left-edge saturation band (<code>visit &gt;= 19</code>)</strong><ul>
+<li><strong>Notebook entries</strong>: <a href="../notebook/2026-10-27-02-step4-v2-labels.html">2026-10-27-02-step4-v2-labels</a></li>
+<li><strong>Scope</strong>: All <code>39 / 39</code> visits at <code>visit &gt;= 19</code> (<code>t &gt;= 190 min</code>) in <code>MIP_ROI_0</code> across all 13 experiments exhibit a <code>14,505–25,317 ADU</code> left-edge band. Excluded in <code>src/death_labels.py</code> v2 (<code>roi0_artifact_flag</code>).</li>
+</ul>
+</li>
+</ol>
+<h2>3. Mechanical Model Issues (Gate <code>G5</code> — Parked / Void)</h2>
+<ol>
+<li><strong>Unpinned rigid-body drift (<code>drift</code>)</strong><ul>
+<li><strong>Notebook entries</strong>: <a href="../notebook/2026-10-28-04-visual-review-2026-10-28.html">2026-10-28-04-visual-review-2026-10-28</a>, <a href="../notebook/2026-10-28-02-step6b-runs-void.html">2026-10-28-02-step6b-runs-void</a></li>
+<li><strong>Panels</strong>: <code>fit_reach_03</code>, <code>fit_reach_04</code>, <code>fit_reach_05</code>, <code>fit_unreach_10</code>, <code>fit_unreach_12</code>.</li>
+<li><strong>Mechanism</strong>: Without rigid-body pinning on the non-contact target hemisphere, synaptic pushing translates the entire target shell <code>2–3 um</code> away from its real mask.</li>
+</ul>
+</li>
+<li><strong>Path-dependent equilibria / re-solve non-reproducibility (<code>drift</code>)</strong><ul>
+<li><strong>Notebook entries</strong>: <a href="../notebook/2026-10-28-04-visual-review-2026-10-28.html">2026-10-28-04-visual-review-2026-10-28</a>, <a href="../notebook/2026-10-28-02-step6b-runs-void.html">2026-10-28-02-step6b-runs-void</a></li>
+<li><strong>Panels</strong>: <code>9 / 32</code> fit panels (<code>fit_reach_01</code> <code>0.37</code> vs <code>0.88 um</code>, <code>fit_reach_03</code> <code>1.61</code> vs <code>2.00 um</code>, <code>fit_reach_07</code> <code>1.10</code> vs <code>1.51 um</code>, <code>fit_reach_08</code> <code>0.98</code> vs <code>0.75 um</code>, <code>fit_reach_09</code>, <code>fit_reach_10</code>, <code>fit_reach_11</code>, <code>fit_reach_13</code>, <code>fit_unreach_09</code> <code>1.44</code> vs <code>0.08 um</code>).</li>
+</ul>
+</li>
+<li><strong>Misaligned starting reference target and excessive initial overlap (<code>misaligned</code>)</strong><ul>
+<li><strong>Notebook entries</strong>: <a href="../notebook/2026-10-28-04-visual-review-2026-10-28.html">2026-10-28-04-visual-review-2026-10-28</a>, <a href="../notebook/2026-10-28-02-step6b-runs-void.html">2026-10-28-02-step6b-runs-void</a></li>
+<li><strong>Panels</strong>: <code>fit_unreach_03</code>, <code>fit_unreach_10</code>, <code>fit_unreach_12</code>, <code>fit_unreach_13</code>, <code>fit_unreach_15</code>, <code>overlap_01</code> (<code>11.0 um</code> push-apart), <code>overlap_03</code> (<code>7.7 um</code>), <code>overlap_12</code> (<code>6.3 um</code>).</li>
+</ul>
+</li>
+<li><strong>Curve inversion discrepancy (<code>other</code>)</strong><ul>
+<li><strong>Notebook entries</strong>: <a href="../notebook/2026-10-28-04-visual-review-2026-10-28.html">2026-10-28-04-visual-review-2026-10-28</a>, <a href="../notebook/2026-10-28-02-step6b-runs-void.html">2026-10-28-02-step6b-runs-void</a></li>
+<li><strong>Panels</strong>: <code>fit_reach_14</code> (continuation curve flat near <code>0.05 um</code> up to <code>Pi = 10</code>, yet <code>pi_solved = 6.75</code> for observed depth <code>0.50 um</code>).</li>
+</ul>
+</li>
+</ol></section><section id="open-questions" style="border-top:1px solid var(--ink);padding-top:16px;margin-top:28px"><h1>Open Questions for the Fei Lab (<code>lab/handbook/open-questions.md</code>)</h1>
+<p>Technical questions regarding the ScienceDB <code>19235</code> deposition and the analysis pipeline in Wang et al. (<em>Nat. Commun.</em> 2024 / <em>Sci. Data</em> 2026):</p>
+<h2>1. Post-Deskew Axial Voxel Pitch (<code>dz</code>)</h2>
+<ul>
+<li>In <code>summary.m</code> (line 18), contact area is scaled by <code>0.0385 um^2</code> per voxel face (<code>sqrt(0.0385) = 0.1962 um</code> lateral pitch), and <code>ARFS</code> is scaled by <code>19.6 nm/s</code>.</li>
+<li>Across all uncontacted Nalm6 target cells in <code>*_predictions.h5</code>, the 3D bounding-box ratio is <code>Delta Z / Delta XY = 0.807</code> (median <code>Z</code> span ~19% fewer slices than <code>X</code> or <code>Y</code> pixels).</li>
+<li><strong>Question</strong>: After light-sheet deskewing and rotation into the <code>(Z, 256, 256)</code> ROI crop, is the true axial voxel step <code>dz = 0.1962 um</code> (implying targets are physically oblate on the microgrid floor) or <code>dz ≈ 0.240–0.243 um</code>?</li>
+</ul>
+<h2>2. Un-deposited ROIs in Group 7 (<code>v07_6_39_120_0-6_hd9</code>)</h2>
+<ul>
+<li>Across 12 of the 13 experimental groups (<code>v01</code>–<code>v06</code>, <code>v08</code>–<code>v13</code>), our port of <code>synapse_tracking.m</code> (<code>trace_num == 1</code> in <code>src/reproduce_contact_area_tracked.py</code>) matches the published row count in <code>summary.csv</code> / <code>Source_Data</code> exactly (<code>395 / 395</code> rows across 12 groups).</li>
+<li>In Group 7 (<code>v07_6_39_120_0-6_hd9</code>), the published table contains <code>39</code> rows, whereas ScienceDB <code>19235</code> contains only <code>22</code> ROI folders (<code>MIP_ROI_0</code>..<code>MIP_ROI_21</code>, yielding <code>15</code> chambers with <code>trace_num == 1</code>, a deficit of <code>24</code> rows).</li>
+<li><strong>Question</strong>: Were additional ROIs (<code>MIP_ROI_22</code>..<code>MIP_ROI_55</code>) imaged for <code>v07_6_39_120_0-6_hd9</code> that were omitted from the ScienceDB <code>19235</code> upload?</li>
+</ul>
+<h2>3. U-Net Segmentation Quality in Donor <code>hd10</code> (<code>v09</code> and <code>v12</code>) and Dasatinib (<code>v11</code>)</h2>
+<ul>
+<li>Panel-by-panel visual review (<code>figures/review/</code>) and pre-outcome QC (<code>src/mask_qc.py</code>) show that while <code>28–40%</code> of contact visits in <code>v01</code>–<code>v05</code>, <code>v08</code>, and <code>v10</code> have single, solid, un-truncated cell masks, only <code>5%</code> of visits in <code>v09_6_40_120_0-6_hd10</code> (<code>18</code> visits) and <code>4%</code> in <code>v11_6_36_120_0-6_hd2_ds</code> pass the same single-cell criteria; most target masks in <code>v09</code> and <code>v12</code> are fragmented into multiple pieces or hollow shells.</li>
+<li><strong>Question</strong>: Did <code>v09</code>, <code>v11</code>, and <code>v12</code> have lower raw 561-nm mApple-Mem expression or different illumination settings that degraded the 3D U-Net predictions (<code>classes 2, 4</code>), and were any manual QC exclusions applied in <code>Figure 5</code>?</li>
+</ul>
+<h2>4. <code>MIP_ROI_0</code> Late 405-nm Left-Edge Saturation Band (<code>visit &gt;= 19</code>)</h2>
+<ul>
+<li>In every one of the 13 experiments (<code>39 / 39</code> visits at <code>visit &gt;= 19</code>, <code>t &gt;= 190 min</code>), <code>MIP_ROI_0</code> (and no other ROI) displays a vertical saturation band along the left edge (<code>X = 0..W-1</code>, peaking at <code>14,505–25,317 ADU</code> vs <code>&lt; 3,000 ADU</code> in all other <code>10,471</code> chamber-visits).</li>
+<li><strong>Question</strong>: Does <code>MIP_ROI_0</code> sit at the physical edge of the microgrid chip where the 405-nm excitation sheet or stage homed at <code>t &gt;= 190 min</code>?</li>
+</ul>
+<h2>5. 405-nm Dead-Dye Threshold Calibration (<code>398 ADU</code>) and <code>Figure 5g</code> Kill Counts</h2>
+<ul>
+<li>In <code>step2_instance_seg.m</code> (line 45), the 3D dead-dye mask thresholds the <code>[3,3,1]</code> Gaussian-smoothed 405-nm volume at <code>&gt; 398 ADU</code>, while camera background median is <code>~396–400 ADU</code> and clearly dead targets read <code>410–490 ADU</code>.</li>
+<li>Furthermore, in <code>dead_count.m</code>, any overlap with the 10-voxel dilated dye mask (<code>d_dil10_3d</code>) can be triggered by a dead bystander cell within <code>2 um</code> of the contacted target.</li>
+<li><strong>Question</strong>: Were the per-condition kill fractions in <code>Figure 5g</code> (<code>57.5%</code> high-killing, <code>27.0%</code> low-killing, <code>4.5%</code> drug-treated) taken directly from <code>summary.m</code> (<code>C = max(B, [], 2)</code> on <code>dead_count.m</code>), or were false kills from adjacent bystander cells and <code>MIP_ROI_0</code> curated manually?</li>
+</ul></section>
+    
+  </main>
+</div>
+</body>
+</html>

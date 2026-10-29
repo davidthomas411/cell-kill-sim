@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>2026-10-28-04-visual-review-2026-10-28</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<header class="top">
+  <div class="in">
+    <a class="brand" href="../index.html">Cell-Kill-Sim Lab</a>
+    <nav class="tabs" aria-label="Primary"><a href="../index.html" class="">Gates</a>
+<a href="../notebook/index.html" class="on">Notebook</a>
+<a href="../protocols/index.html" class="">Protocols</a>
+<a href="../registry.html" class="">Registry</a>
+<a href="../galleries/index.html" class="">Galleries</a>
+<a href="../handbook/index.html" class="">Handbook</a></nav>
+  </div>
+</header>
+<div class="wrap">
+  <aside class="side"><div class="section">Entries</div>
+<a href="index.html">All entries</a>
+<a href="2026-10-28-05-clean-subset-rule.html">2026-10-28-05 G1</a>
+<a href="2026-10-28-04-visual-review-2026-10-28.html">2026-10-28-04 none</a>
+<a href="2026-10-28-03-step7-prereg-and-result.html">2026-10-28-03 G4</a>
+<a href="2026-10-28-02-step6b-runs-void.html">2026-10-28-02 G5</a>
+<a href="2026-10-28-01-step6a-choice.html">2026-10-28-01 G5</a>
+<a href="2026-10-27-04-step5b-result.html">2026-10-27-04 G4</a>
+<a href="2026-10-27-03-step5a-descriptors.html">2026-10-27-03 G3</a>
+<a href="2026-10-27-02-step4-v2-labels.html">2026-10-27-02 G2</a>
+<a href="2026-10-27-01-step3-reproduction.html">2026-10-27-01 G0</a></aside>
+  <main>
+    
+        <h1>Visual review of 128 real-data panels and stage-gate verification plan (UNVERIFIED outputs flagged)</h1>
+        <div class="tblwrap">
+          <table class="data">
+            <tbody>
+              <tr><th>ID</th><td><code>2026-10-28-04-visual-review-2026-10-28</code></td><th>Date</th><td>2026-10-28</td></tr>
+              <tr><th>Gate</th><td><strong>none</strong></td><th>Status</th><td><span class="status-pill st-draft">draft</span></td></tr>
+              <tr><th>Author</th><td>agy (backfilled)</td><th>Reviewers</th><td>claude</td></tr>
+              <tr><th>Signoff</th><td>—</td><th>Commits</th><td><code>b2eb54a, 1aedad2, 6c3e4f4, 49d5d3e, b469b2f, aa72b85</code></td></tr>
+              <tr><th>Datasets</th><td><a href="../registry.html#ds-lab_masks"><code>lab_masks</code></a>, <a href="../registry.html#ds-raw_volumes"><code>raw_volumes</code></a>, <a href="../registry.html#ds-step4_death_labels_v2"><code>step4_death_labels_v2</code></a>, <a href="../registry.html#ds-step5_descriptors"><code>step5_descriptors</code></a>, <a href="../registry.html#ds-step6b_fits"><code>step6b_fits</code></a></td><th>Protocols</th><td><a href="../protocols/index.html#gallery-review-v1"><code>gallery-review@v1</code></a>, <a href="../protocols/index.html#cup-measurement-v1"><code>cup-measurement@v1</code></a>, <a href="../protocols/index.html#death-calling-v1"><code>death-calling@v1</code></a></td></tr>
+              <tr><th>Galleries</th><td><a href="../galleries/review-2026-10-28.html"><code>review-2026-10-28</code></a></td><th>Supersedes / By</th><td>— / —</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <h2>Question</h2>
+<p>When we plot actual microscopy and 3D U-Net mask cross-sections (<code>XY</code> and <code>XZ</code> slices through the contact centroid, plus 405-nm SYTOX MIP triplets) overlaid with our extracted cell contours, convex hulls, cup depth vectors, death calls, and solved mechanical meshes across random and extreme visits, do the underlying masks, measurements, death labels, and mechanical fits hold up visually?</p>
+<h2>What was run</h2>
+<pre><code class="language-bash">python3 src/review/make_gallery.py
+python3 src/download_raw.py --file-list &lt;scratchpad&gt;/panel_raw_files.csv  (list built from figures/review/index.csv; not saved in the repo) --workers 8
+</code></pre>
+<p>Commits:
+- <code>b2eb54a</code> (<code>Review gallery code and visual review notes: fragmented target masks, model drift and path dependence, death-label checks</code>)
+- <code>1aedad2</code> (<code>Visual review notes: all 128 panels reviewed</code>)
+- <code>6c3e4f4</code> (<code>download_raw: --file-list option to fetch single volumes</code>)
+- <code>49d5d3e</code> (<code>Verification plan: stage gates with full visual review</code>)
+- <code>b469b2f</code> (<code>plan.json: audit state, gates G0-G5</code>)
+- <code>aa72b85</code> (<code>Verification plan G1: locate mask failures by layer (U-Net, extraction, biology) against raw images</code>)</p>
+<h2>What was looked at</h2>
+<p>All <strong>128 panels</strong> (33 contact sheets of 4) in gallery <code>review-2026-10-28</code> (<code>figures/review/</code>, indexed in <code>figures/review/index.csv</code>):
+- Case 1 <code>cup_measurement</code>: <code>cup_01</code>..<code>cup_16</code> (16 panels)
+- Case 2 <code>fit_reachable</code>: <code>fit_reach_01</code>..<code>fit_reach_16</code> (16 panels)
+- Case 3 <code>fit_unreachable</code>: <code>fit_unreach_01</code>..<code>fit_unreach_16</code> (16 panels)
+- Case 4 <code>initial_overlap</code>: <code>overlap_01</code>..<code>overlap_12</code> (12 panels)
+- Case 5 <code>mesh_size</code>: <code>mesh_size_01</code>..<code>mesh_size_06</code> (6 panels)
+- Case 6 <code>death_labels</code>: <code>death_killed_01</code>..<code>12</code>, <code>death_surviving_13</code>..<code>24</code>, <code>death_dasatinib_25</code>..<code>30</code> (30 panels)
+- Case 7 <code>dasatinib_vs_untreated</code>: <code>dasa_vs_untr_untreated_01</code>..<code>08</code>, <code>dasa_vs_untr_dasatinib_09</code>..<code>16</code> (16 panels)
+- Case 8 <code>deep_vs_shallow</code>: <code>deep_vs_shallow_deep_01</code>..<code>08</code>, <code>deep_vs_shallow_shallow_09</code>..<code>16</code> (16 panels)</p>
+<h2>Observations</h2>
+<ol>
+<li><strong>Cup measurement &amp; mask defects (invalidates unverified <code>step5_descriptors</code>, <code>step5b_associations</code>, <code>step7_focused_pushing</code>)</strong>:</li>
+<li><strong>Fragmented targets</strong>: Target mask is split into separate pieces (<code>cup_01</code> <code>10.2 um</code>, <code>cup_03</code> <code>9.2 um</code>, <code>cup_09</code>, <code>cup_10</code> <code>5.1 um</code>, <code>fit_unreach_01</code>, <code>deep_01</code>), so the 3D convex hull bridges the inter-piece gap. Across <code>4,523</code> contact visits, median cup depth is <code>1.35 um</code> (<code>sphericity &lt; 0.5</code>, <code>n = 1,925</code>) vs <code>0.72 um</code> (<code>sphericity &gt;= 0.8</code>, <code>n = 292</code>; Spearman <code>rho = -0.26</code>).</li>
+<li><strong>FOV edge truncation</strong>: <code>cup_05</code>, <code>cup_13</code>.</li>
+<li><strong>Two merged targets</strong>: <code>dasa_vs_untr_untreated_02</code>, <code>deep_06</code>, <code>deep_07</code> (<code>5.6 um</code>), <code>deep_08</code>.</li>
+<li><strong>Hollow target shells</strong>: <code>dasa_vs_untr_dasatinib_09, 11, 14, 15</code>, <code>deep_vs_shallow_shallow_10, 11</code> (<code>5.8–6.8 um</code> false cups).</li>
+<li><strong>Donor <code>hd10</code> (<code>v09</code>, <code>v12</code>)</strong>: Mostly fragmented or hollow (<code>dasa_vs_untr_untreated_01, 03, 06, 07</code>; <code>dasa_vs_untr_dasatinib_09, 11, 14, 15</code>) plus tiny fragments (<code>dasatinib_16</code>: <code>37 um^3</code>, <code>dasatinib_13</code>: <code>154 um^3</code>).</li>
+<li><strong>Clean cells</strong>: Whole, separate cells measure sensibly and match raw membrane contours (<code>cup_14</code>–<code>16</code>, <code>shallow_12, 13</code>, <code>deep_04</code>, <code>dasa_vs_untr_untreated_04, 05, 08</code>).</li>
+<li><strong>Mechanical model defects (invalidates <code>step6b_fits</code>)</strong>:</li>
+<li>Solved target drifts <code>2–3 um</code> off the mask (<code>fit_reach_03, 04, 05</code>; <code>fit_unreach_10, 12</code>).</li>
+<li>Re-solving at fitted <code>Pi</code> disagrees with the continuation curve in <code>9 / 32</code> fit panels (<code>fit_reach_01, 03, 07, 08, 09, 10, 11, 13</code>; <code>fit_unreach_09</code>).</li>
+<li>Reference target misaligned (<code>fit_unreach_03, 10, 12, 13, 15</code>), starting overlaps up to <code>11.0 um</code> (<code>overlap_01, 03, 12</code>), and curve inversion mismatch in <code>fit_reach_14</code>.</li>
+<li><strong>Death label defects (blocks <code>step4_death_labels_v2</code>)</strong>:</li>
+<li>Narrow signal margin (<code>404 ADU</code> threshold vs <code>~400 ADU</code> background; <code>death_killed_01</code> at <code>404.3 ADU</code>).</li>
+<li>Overlap bug check needed on <code>death_dasatinib_30</code> v5 (<code>27 px</code> reported outside outline).</li>
+<li>Gallery/table mismatch on <code>death_surviving_19</code>, <code>death_surviving_24</code>, and <code>death_killed_07</code>.</li>
+<li>Neighbour projection overlap on <code>death_surviving_17</code>, <code>death_killed_05</code>, <code>death_killed_09</code>.</li>
+</ol>
+<h2>Decision</h2>
+<p>Established the stage-gate verification plan (<code>status/verification_plan.md</code>, Gates <code>G0</code>–<code>G5</code>). Every dataset after Step 3 (<code>step4_death_labels_v2</code>, <code>step5_descriptors</code>, <code>step5b_associations</code>, <code>step7_focused_pushing</code>) is marked <strong>UNVERIFIED</strong>, and <code>step6b_fits</code> is <strong>REJECTED / PARKED</strong>. No stage may feed the next until its real-image gallery passes panel-by-panel review.</p>
+<h2>Open issues</h2>
+<ul>
+<li>Execute Gate <code>G1</code> (clean-cell rule and layer-by-layer failure attribution against raw images), Gate <code>G2</code> (death-label overlap and threshold audit), Gate <code>G3</code> (cup descriptors on <code>G1</code>-clean visits), and Gate <code>G4</code> (rerun associations on <code>G1</code>–<code>G3</code> verified data).</li>
+</ul>
+        
+  </main>
+</div>
+</body>
+</html>

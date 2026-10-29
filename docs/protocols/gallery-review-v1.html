@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>gallery-review@v1</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<header class="top">
+  <div class="in">
+    <a class="brand" href="../index.html">Cell-Kill-Sim Lab</a>
+    <nav class="tabs" aria-label="Primary"><a href="../index.html" class="">Gates</a>
+<a href="../notebook/index.html" class="">Notebook</a>
+<a href="../protocols/index.html" class="on">Protocols</a>
+<a href="../registry.html" class="">Registry</a>
+<a href="../galleries/index.html" class="">Galleries</a>
+<a href="../handbook/index.html" class="">Handbook</a></nav>
+  </div>
+</header>
+<div class="wrap">
+  <aside class="side"><div class="section">Protocols</div>
+<a href="#clean-cell-rule-v1">clean-cell-rule@v1</a>
+<a href="#cup-measurement-v1">cup-measurement@v1</a>
+<a href="#death-calling-v1">death-calling@v1</a>
+<a href="#gallery-review-v1">gallery-review@v1</a></aside>
+  <main>
+    <p class="meta"><a href="index.html">All protocols</a> · <code>gallery-review@v1</code> · Date 2026-10-28 · <span class="status-pill st-reviewed">reviewed</span></p><h1>Protocol: Gallery Review (<code>gallery-review-v1</code>)</h1>
+<h2>Purpose</h2>
+<p>No dataset stage feeds the next until a real-image gallery for that stage has been inspected panel by panel and passes its stage gate (<code>G1</code>–<code>G5</code>). Matching summary numbers in a published table does not validate segmentation masks or extracted measurements.</p>
+<h2>1. Panel Selection (Stratified Random + Extremes + Borderlines)</h2>
+<p>Every stage-gate gallery renders real experimental data (<code>*_predictions.h5</code>, raw 561-nm membrane / 488-nm actin <code>.h5</code> volumes fetched via <code>src/download_raw.py --file-list</code>, and 405-nm SYTOX MIPs) across three mandatory strata using a fixed random seed (<code>20261028</code>):</p>
+<ol>
+<li><strong>Stratified random examples</strong>: sampled across all three biological conditions (Untreated high-killing CAR-T, Untreated low-killing CAR-T, Dasatinib 50 nM CAR-T) and across donors (<code>hd1</code>–<code>hd10</code>).</li>
+<li><strong>Extremes of each measured quantity</strong>: maximum and minimum values (top 2–3 and bottom 2–3) of the stage's primary metrics (e.g., <code>cup_depth_hull_p95_um</code>, <code>cup_depth_over_radius</code>, <code>target_volume_um3</code>, <code>target_raw_largest_frac</code>, <code>pi_solved</code>, <code>push_apart_um</code>).</li>
+<li><strong>Borderline threshold cases</strong>: visits or chambers closest to decision boundaries (e.g., within a few pixels of the 20-px 405-nm overlap cutoff, near the 404.0 ADU dye threshold, or closest to each of the five clean-cell QC thresholds).</li>
+</ol>
+<h2>2. Visual Standard Across All Panels</h2>
+<ol>
+<li><strong>Raw images underneath</strong>: Every 3D slice panel must show the raw fluorescence image (561-nm target membrane and/or 488-nm F-actin) beneath our extracted outlines, alongside the deposited U-Net labels (classes 0–4) when diagnosing segmentation failures.</li>
+<li><strong>Fixed colour scheme</strong>:</li>
+<li>Tracked target outline: blue solid (<code>#1F4E79</code>)</li>
+<li>Tracked T-cell outline: orange solid (<code>#C0561F</code>)</li>
+<li>Other cells in field: grey fill/outline (explicitly labelled)</li>
+<li>Contact patch voxels: purple squares (<code>#6B4C9A</code>)</li>
+<li>Target convex hull / reference surface: green dashed (<code>#2E7D5B</code>)</li>
+<li>Measured cup depth vector / dead-dye contour: red (<code>#B3261E</code>)</li>
+<li>Solved model shapes: dashed outlines in fixed plot colours (<code>#6B4C9A</code> target, <code>#111111</code> T cell)</li>
+<li>A complete legend/key and all numerical metrics from <code>index.csv</code> must appear on every panel.</li>
+</ol>
+<h2>3. Verdict Scale &amp; Controlled Tag Vocabulary</h2>
+<p>Each reviewer inspects every panel at full resolution (via <code>tools/review_app.py</code> or contact sheets) and records a row in <code>lab/reviews/&lt;gallery_id&gt;.csv</code> with:</p>
+<ul>
+<li><strong>Verdict (<code>verdict</code>)</strong>:</li>
+<li><code>ok</code> — Cell identity, segmentation contour, overlay alignment, and computed measurement are physically sound and match the underlying raw image.</li>
+<li><code>problem</code> — A segmentation error, truncation, merge, hollow shell, projection overlap artefact, label mismatch, or solver failure invalidates the measurement on this panel.</li>
+<li><code>unsure</code> — Ambiguous boundary, faint dye signal near threshold, or missing raw channel requiring secondary check.</li>
+<li><strong>Controlled tags (<code>tags</code>, semicolon-separated)</strong>:</li>
+<li><code>fragmented</code> — Target or T cell is split into multiple disconnected pieces.</li>
+<li><code>merged</code> — Two distinct cells are fused into a single mask object.</li>
+<li><code>hollow</code> — Ring-shaped or broken-shell mask with unfilled interior.</li>
+<li><code>edge</code> — Cell body is truncated by the field-of-view border.</li>
+<li><code>tiny</code> — Implausibly small cell fragment (<code>&lt; 200 um^3</code>).</li>
+<li><code>misaligned</code> — Reference or starting mesh does not align with the real cell.</li>
+<li><code>drift</code> — Solved mechanical mesh translates off the real cell mask (<code>2–3 um</code> rigid-body drift) or re-solve disagrees with continuation curve.</li>
+<li><code>label_mismatch</code> — Panel overlay numbers disagree with the chamber/visit table label.</li>
+<li><code>neighbour_overlap</code> — Dye-positive bystander cell overlaps target projection in XY/XZ without dye inside the contacted target.</li>
+<li><code>real_death</code> — Confirmed target death with SYTOX dye appearing inside the contacted target and persisting across visits.</li>
+<li><code>clean</code> — Whole, single, solid, well-segmented T cell and target away from FOV edges.</li>
+<li><code>other</code> — Issue not covered above (must be explained in <code>note</code>).</li>
+</ul>
+<h2>4. Independent Second Reviewer &amp; Gate Signoff</h2>
+<ol>
+<li><strong>Primary complete pass (<code>claude</code>)</strong>: Reviews 100% of panels in the gallery, logs per-panel findings, and summarizes failure rates by layer:</li>
+<li><em>(a)</em> U-Net labels wrong while raw cell is whole (lab segmentation error),</li>
+<li><em>(b)</em> U-Net labels sound but extracted object wrong (our extraction code bug),</li>
+<li><em>(c)</em> Raw cell itself blebbing/fragmenting (real biology / possible death signal).</li>
+<li><strong>Independent second reviewer (<code>user</code> / PI)</strong>: Reviews panels independently in <code>tools/review_app.py</code> on key stage gates (<code>G1</code>, <code>G2</code>, <code>G3</code>). The review app and static site display all reviewers' verdicts side by side and highlight any panel where reviewers disagree.</li>
+<li><strong>Iterate and lock</strong>: Code or subset rules are fixed to resolve identified problems, the same panels are re-rendered, and the gallery is re-reviewed until pass criteria hold and the notebook entry is signed off.</li>
+</ol>
+  </main>
+</div>
+</body>
+</html>

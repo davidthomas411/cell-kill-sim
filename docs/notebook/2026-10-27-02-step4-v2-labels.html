@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>2026-10-27-02-step4-v2-labels</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<header class="top">
+  <div class="in">
+    <a class="brand" href="../index.html">Cell-Kill-Sim Lab</a>
+    <nav class="tabs" aria-label="Primary"><a href="../index.html" class="">Gates</a>
+<a href="../notebook/index.html" class="on">Notebook</a>
+<a href="../protocols/index.html" class="">Protocols</a>
+<a href="../registry.html" class="">Registry</a>
+<a href="../galleries/index.html" class="">Galleries</a>
+<a href="../handbook/index.html" class="">Handbook</a></nav>
+  </div>
+</header>
+<div class="wrap">
+  <aside class="side"><div class="section">Entries</div>
+<a href="index.html">All entries</a>
+<a href="2026-10-28-05-clean-subset-rule.html">2026-10-28-05 G1</a>
+<a href="2026-10-28-04-visual-review-2026-10-28.html">2026-10-28-04 none</a>
+<a href="2026-10-28-03-step7-prereg-and-result.html">2026-10-28-03 G4</a>
+<a href="2026-10-28-02-step6b-runs-void.html">2026-10-28-02 G5</a>
+<a href="2026-10-28-01-step6a-choice.html">2026-10-28-01 G5</a>
+<a href="2026-10-27-04-step5b-result.html">2026-10-27-04 G4</a>
+<a href="2026-10-27-03-step5a-descriptors.html">2026-10-27-03 G3</a>
+<a href="2026-10-27-02-step4-v2-labels.html">2026-10-27-02 G2</a>
+<a href="2026-10-27-01-step3-reproduction.html">2026-10-27-01 G0</a></aside>
+  <main>
+    
+        <h1>Step 4 v2: Contacted-target death labels and MIP_ROI_0 artifact exclusion (UNVERIFIED)</h1>
+        <div class="tblwrap">
+          <table class="data">
+            <tbody>
+              <tr><th>ID</th><td><code>2026-10-27-02-step4-v2-labels</code></td><th>Date</th><td>2026-10-27</td></tr>
+              <tr><th>Gate</th><td><strong>G2</strong></td><th>Status</th><td><span class="status-pill st-draft">draft</span></td></tr>
+              <tr><th>Author</th><td>agy (backfilled)</td><th>Reviewers</th><td>—</td></tr>
+              <tr><th>Signoff</th><td>—</td><th>Commits</th><td><code>b431903, 05a57c0, b055e23</code></td></tr>
+              <tr><th>Datasets</th><td><a href="../registry.html#ds-lab_masks"><code>lab_masks</code></a>, <a href="../registry.html#ds-raw_volumes"><code>raw_volumes</code></a>, <a href="../registry.html#ds-step3_reproduction"><code>step3_reproduction</code></a>, <a href="../registry.html#ds-step4_death_labels_v2"><code>step4_death_labels_v2</code></a></td><th>Protocols</th><td><a href="../protocols/index.html#death-calling-v1"><code>death-calling@v1</code></a></td></tr>
+              <tr><th>Galleries</th><td><a href="../galleries/review-2026-10-28.html"><code>review-2026-10-28</code></a></td><th>Supersedes / By</th><td>— / —</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <h2>Question</h2>
+<p>Can we build per-visit and per-chamber target death labels across all 502 chambers (<code>10,510</code> chamber-visits) from the deposited 2D 405-nm SYTOX projections (<code>*_MIPxy_405.tif</code>, <code>*_MIPxz_405.tif</code>) and 3D segmentation masks (<code>*_predictions.h5</code>), restricted to the target instance contacted by the tracked T cell and free of stage-edge imaging artefacts?</p>
+<p>** Verification Notice: All Step 4 v2 death labels reported in this entry are UNVERIFIED and blocked at Gate <code>G2</code>.**</p>
+<h2>What was run</h2>
+<pre><code class="language-bash">python3 src/death_labels.py --all-experiments --workers 6
+</code></pre>
+<p>Commits:
+- <code>b431903</code> (<code>Step 4 pilot: target death labels from dead-dye projections (groups 1-3)</code>)
+- <code>05a57c0</code> (<code>Death labels for all 502 chambers</code>)
+- <code>b055e23</code> (<code>Step 4: death labels v2 (contacted target only, ROI_0 405 nm artifact removed, 200-min window)</code>)</p>
+<h2>What was looked at</h2>
+<ul>
+<li>Calibration table <code>data/step4/calibration_20_raw_volumes.csv</code> (20 local 3D raw <code>.h5</code> volumes vs deposited 2D MIPs).</li>
+<li><code>MIP_ROI_0</code> late saturation band characterization <code>data/step4/mip_roi0_artifact_characterization_v2.csv</code>.</li>
+<li>Subsequently inspected on real-data gallery <code>review-2026-10-28</code> (<code>figures/review/death_labels/</code>, 30 panels: <code>death_killed_01</code>..<code>12</code>, <code>death_surviving_13</code>..<code>24</code>, <code>death_dasatinib_25</code>..<code>30</code>).</li>
+</ul>
+<h2>Observations</h2>
+<ol>
+<li><strong>MIP projection verification</strong>: On all 20 local 3D raw volumes, <code>MIPxy_405 == raw[0].max(axis=0).T</code> and <code>MIPxz_405 == raw[0].max(axis=1).T</code> match with <code>0 ADU</code> difference.</li>
+<li><strong>Contacted-target filtering (<code>commit b055e23</code>, UNVERIFIED)</strong>: Restricting the 2D target projections <code>b_xy</code>, <code>b_xz</code> from all raw target voxels <code>(pred == 2) | (pred == 4)</code> (v1) to the 3D segmented target instance contacted by Track 1 (<code>instance_seg_matlab_xyz</code>, <code>trace_num == 1</code>) removes bystander-only death calls.</li>
+<li><strong><code>MIP_ROI_0</code> late 405-nm saturation band (<code>commit b055e23</code>)</strong>: In all <code>13 / 13</code> experiments, <code>MIP_ROI_0</code> at <code>visit &gt;= 19</code> (<code>39 / 39</code> visits) has a left-edge vertical saturation band (<code>14,505–25,317 ADU</code>). Excluding visits with <code>median(mip_xy[:, 0]) &gt; 404.0</code> and <code>mip_xy.max() &gt; 5000</code> removes <code>9 / 13</code> artifact-only false-positive chamber deaths.</li>
+<li><strong>Unverified condition kill rates (<code>trace_num == 1</code>, Any-Visit rule)</strong>: Untreated high-killing <code>87 / 167</code> (<code>52.1%</code>, paper <code>Figure 5g</code>: <code>96 / 167 = 57.5%</code>), untreated low-killing <code>39 / 160</code> (<code>24.4%</code> full, <code>34 / 160 = 21.2%</code> in 200 min; paper: <code>44 / 163 = 27.0%</code>), dasatinib <code>8 / 89</code> (<code>9.0%</code> full, <code>6 / 89 = 6.7%</code> in 200 min; paper: <code>4 / 89 = 4.5%</code>).</li>
+<li><strong>Defects found in subsequent visual review (<code>review-2026-10-28</code>)</strong>:</li>
+<li>Gallery panels (<code>death_surviving_19</code>, <code>death_surviving_24</code>, <code>death_killed_07</code>) drew raw <code>(pred == 2) | (pred == 4)</code> outlines rather than the contacted target instance, disagreeing with the v2 table labels.</li>
+<li><code>death_dasatinib_30</code> v5 reports <code>27 px</code> overlap while the dye speck sits outside the target contour in both views.</li>
+<li>Dye-positive neighbours can overlap the target in 2D projection (<code>death_surviving_17</code>, <code>death_killed_05</code>, <code>death_killed_09</code>).</li>
+<li>Signal margin is narrow (<code>404.0 ADU</code> threshold vs <code>~400 ADU</code> background; <code>death_killed_01</code> at <code>404.3 ADU</code>).</li>
+</ol>
+<h2>Decision</h2>
+<p>Result is <strong>UNVERIFIED</strong> (<code>status: unverified</code> in <code>lab/registry.csv</code>, Step 4 blocked at Gate <code>G2</code>). Do not treat <code>step4_death_labels_v2</code> as verified ground truth until the gallery/label discrepancy, <code>death_dasatinib_30</code> overlap check, neighbour-overlap filtering, and threshold sensitivity analysis pass Gate <code>G2</code>.</p>
+<h2>Open issues</h2>
+<ul>
+<li>Align gallery target projection outlines with the v2 contacted-target mask so <code>death_surviving_19</code>, <code>death_surviving_24</code>, and <code>death_killed_07</code> are resolved.</li>
+<li>Check <code>death_dasatinib_30</code> v5 overlap coordinates.</li>
+<li>Report threshold sensitivity (<code>403–410 ADU</code>, <code>20–50 px</code>) and eliminate 2D neighbour-overlap false kills (<code>death_killed_05</code>, <code>death_killed_09</code>).</li>
+</ul>
+        
+  </main>
+</div>
+</body>
+</html>

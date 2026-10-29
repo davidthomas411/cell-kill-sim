@@ -1,0 +1,147 @@
+panel_id,reviewer,verdict,tags,note,timestamp
+cup_01,claude,problem,fragmented;merged,"Target is several pieces (2,821 um3); hull spans them: 10.2 um 'cup' is a gap, not a dent.",2026-10-28T20:15:52
+cup_02,claude,ok,clean,Minimal contact (5.9 um2); zero depth plausible.,2026-10-28T20:15:52
+cup_03,claude,problem,fragmented,"Multi-piece target 2,550 um3; 9.2 um depth from hull bridging.",2026-10-28T20:15:52
+cup_04,claude,problem,fragmented,Target split in XY slice; hull spans pieces; 3.5 um depth partly gap.,2026-10-28T20:15:52
+cup_05,claude,problem,edge,Target cut by field-of-view edge.,2026-10-28T20:15:52
+cup_06,claude,unsure,other,Irregular target outline on raw; depth 2.8 um plausible but outline ragged.,2026-10-28T20:15:52
+cup_07,claude,unsure,hollow,Target has interior hole; depth small so effect limited.,2026-10-28T20:15:52
+cup_08,claude,problem,fragmented,Small detached lobe enlarges hull; 3.5 um depth inflated.,2026-10-28T20:15:52
+cup_09,claude,problem,fragmented;tiny,"Fragmented target, 194 um3.",2026-10-28T20:15:52
+cup_10,claude,problem,hollow;fragmented,"Ring of pieces around T cell; 5.1 um depth, depth/radius 2.75.",2026-10-28T20:15:52
+cup_11,claude,ok,clean,"Single solid target, shallow contact.",2026-10-28T20:15:52
+cup_12,claude,unsure,fragmented,"T-cell mask fragmented; target 1,242 um3 may be large/merged.",2026-10-28T20:15:52
+cup_13,claude,problem,edge,Target cut by field-of-view edge.,2026-10-28T20:15:52
+cup_14,claude,ok,clean,Whole separate cells; measurement sensible.,2026-10-28T20:15:52
+cup_15,claude,ok,clean,Whole separate cells; measurement sensible.,2026-10-28T20:15:52
+cup_16,claude,ok,clean,Whole separate cells; measurement sensible.,2026-10-28T20:15:52
+fit_reach_01,claude,problem,drift;fragmented,Re-solve depth 0.37 vs curve 0.88 um; fragmented target.,2026-10-28T20:15:52
+fit_reach_02,claude,problem,misaligned;fragmented,Solved target displaced from fragmented mask.,2026-10-28T20:15:52
+fit_reach_03,claude,problem,drift,Solved target/T cell several um off the masks.,2026-10-28T20:15:52
+fit_reach_04,claude,problem,drift,Solved target/T cell several um off the masks.,2026-10-28T20:15:52
+fit_reach_05,claude,problem,drift,Solved target/T cell several um off the masks.,2026-10-28T20:15:52
+fit_reach_06,claude,ok,clean,Solved shapes follow masks; fit consistent.,2026-10-28T20:15:52
+fit_reach_07,claude,problem,drift,Re-solve depth disagrees with gate-B curve.,2026-10-28T20:15:52
+fit_reach_08,claude,problem,drift,Re-solve depth disagrees with gate-B curve.,2026-10-28T20:15:52
+fit_reach_09,claude,problem,drift,Re-solve depth disagrees with gate-B curve.,2026-10-28T20:15:52
+fit_reach_10,claude,problem,drift,Re-solve depth disagrees with gate-B curve.,2026-10-28T20:15:52
+fit_reach_11,claude,problem,drift,Solved target/T cell several um off the masks.,2026-10-28T20:15:52
+fit_reach_12,claude,ok,clean,Solved shapes follow masks; fit consistent.,2026-10-28T20:15:52
+fit_reach_13,claude,problem,drift,Re-solve depth disagrees with gate-B curve.,2026-10-28T20:15:52
+fit_reach_14,claude,problem,other,Fitted Pi 6.75 inconsistent with own curve (flat to Pi 10): inversion bug?,2026-10-28T20:15:52
+fit_reach_15,claude,ok,clean,Solved shapes follow masks; fit consistent.,2026-10-28T20:15:52
+fit_reach_16,claude,ok,clean,Solved shapes follow masks; fit consistent.,2026-10-28T20:15:52
+fit_unreach_01,claude,problem,fragmented,Observed 5.05 um depth over 10.4 um patch on fragmented target: bogus observation.,2026-10-28T20:15:52
+fit_unreach_02,claude,problem,other,Labelled unreachable but re-solve at Pi 12 exceeds observed depth.,2026-10-28T20:15:52
+fit_unreach_03,claude,problem,misaligned,Push slides past target; reference much larger than mask.,2026-10-28T20:15:52
+fit_unreach_04,claude,unsure,drift,Curve reaches near observed; solved T cell offset.,2026-10-28T20:15:52
+fit_unreach_05,claude,problem,misaligned,Reference/solved target placed away from the real target.,2026-10-28T20:15:52
+fit_unreach_06,claude,problem,fragmented,Fragmented target; observed depth unreliable.,2026-10-28T20:15:52
+fit_unreach_07,claude,problem,fragmented,Fragmented target; observed depth unreliable.,2026-10-28T20:15:52
+fit_unreach_08,claude,problem,fragmented,Fragmented target; observed depth unreliable.,2026-10-28T20:15:52
+fit_unreach_09,claude,problem,drift,Re-solve 1.44 vs curve 0.08 um.,2026-10-28T20:15:52
+fit_unreach_10,claude,problem,misaligned,Reference/solved target placed away from the real target.,2026-10-28T20:15:52
+fit_unreach_11,claude,problem,fragmented,Fragmented target; observed depth unreliable.,2026-10-28T20:15:52
+fit_unreach_12,claude,problem,misaligned,Reference/solved target placed away from the real target.,2026-10-28T20:15:52
+fit_unreach_13,claude,problem,misaligned,Cells never touch in the model (gap 1.43 um).,2026-10-28T20:15:52
+fit_unreach_14,claude,problem,fragmented,Fragmented target; observed depth unreliable.,2026-10-28T20:15:52
+fit_unreach_15,claude,problem,misaligned,Reference/solved target placed away from the real target.,2026-10-28T20:15:52
+fit_unreach_16,claude,problem,fragmented,Fragmented target; observed depth unreliable.,2026-10-28T20:15:52
+overlap_01,claude,problem,misaligned,Starting target 11 um into T cell; T cell moved ~4 um off mask.,2026-10-28T20:15:52
+overlap_02,claude,unsure,tiny,No overlap but target R_eq 2.0 um: fragment.,2026-10-28T20:15:52
+overlap_03,claude,problem,misaligned,"7.7 um starting overlap, far beyond any cup.",2026-10-28T20:15:52
+overlap_04,claude,ok,clean,Overlap about the cup depth or none; sensible.,2026-10-28T20:15:52
+overlap_05,claude,ok,clean,Overlap about the cup depth or none; sensible.,2026-10-28T20:15:52
+overlap_06,claude,ok,clean,Overlap about the cup depth or none; sensible.,2026-10-28T20:15:52
+overlap_07,claude,ok,clean,Overlap about the cup depth or none; sensible.,2026-10-28T20:15:52
+overlap_08,claude,ok,clean,Overlap about the cup depth or none; sensible.,2026-10-28T20:15:52
+overlap_09,claude,ok,clean,Overlap about the cup depth or none; sensible.,2026-10-28T20:15:52
+overlap_10,claude,unsure,misaligned,2.6 um overlap vs 1.8 um cup; reference shape differs from mask.,2026-10-28T20:15:52
+overlap_11,claude,ok,clean,Overlap about the cup depth or none; sensible.,2026-10-28T20:15:52
+overlap_12,claude,problem,misaligned,6.3 um starting overlap.,2026-10-28T20:15:52
+mesh_size_01,claude,problem,drift,Mesh sizes agree with each other but solved shapes sit off the masks.,2026-10-28T20:15:52
+mesh_size_02,claude,problem,drift,Mesh sizes agree with each other but solved shapes sit off the masks.,2026-10-28T20:15:52
+mesh_size_03,claude,problem,drift,Mesh sizes agree with each other but solved shapes sit off the masks.,2026-10-28T20:15:52
+mesh_size_04,claude,problem,drift,Mesh sizes agree with each other but solved shapes sit off the masks.,2026-10-28T20:15:52
+mesh_size_05,claude,problem,drift,Mesh sizes agree with each other but solved shapes sit off the masks.,2026-10-28T20:15:52
+mesh_size_06,claude,problem,drift,Raw cell bodies look larger than mask outlines; check on more raw images.,2026-10-28T20:15:52
+death_killed_01,claude,unsure,other,Borderline call at 404.3 ADU; faint.,2026-10-28T20:15:52
+death_killed_02,claude,ok,real_death,Dye appears inside the target and grows over visits.,2026-10-28T20:15:52
+death_killed_03,claude,ok,real_death,Dye appears inside the target and grows over visits.,2026-10-28T20:15:52
+death_killed_04,claude,ok,real_death,Dye appears inside the target and grows over visits.,2026-10-28T20:15:52
+death_killed_05,claude,problem,neighbour_overlap,Dye-positive neighbour beside target before the call; possible false kill.,2026-10-28T20:15:52
+death_killed_06,claude,ok,real_death,Dye appears inside the target and grows over visits.,2026-10-28T20:15:52
+death_killed_07,claude,problem,label_mismatch,"Panel dead at v7, label first positive v8; gallery counts all targets (bug).",2026-10-28T20:15:52
+death_killed_08,claude,ok,real_death,Dye appears inside the target and grows over visits.,2026-10-28T20:15:52
+death_killed_09,claude,problem,neighbour_overlap,Dye-positive neighbour beside target before the call; possible false kill.,2026-10-28T20:15:52
+death_killed_10,claude,ok,real_death,Dye appears inside the target and grows over visits.,2026-10-28T20:15:52
+death_killed_11,claude,ok,real_death,Dye appears inside the target and grows over visits.,2026-10-28T20:15:52
+death_killed_12,claude,ok,real_death,Dye appears inside the target and grows over visits.,2026-10-28T20:15:52
+death_surviving_13,claude,ok,clean,No sustained dye on the target.,2026-10-28T20:15:52
+death_surviving_14,claude,ok,other,"ROI_0 late band artefact, correctly excluded.",2026-10-28T20:15:52
+death_surviving_15,claude,ok,clean,No sustained dye on the target.,2026-10-28T20:15:52
+death_surviving_16,claude,ok,other,"ROI_0 late band artefact, correctly excluded.",2026-10-28T20:15:52
+death_surviving_17,claude,ok,neighbour_overlap,Neighbour overlap in projection on one visit; correctly rejected as single-visit.,2026-10-28T20:15:52
+death_surviving_18,claude,ok,other,"Transient smear, single visit, correctly rejected.",2026-10-28T20:15:52
+death_surviving_19,claude,problem,label_mismatch,Panel shows dye v12-v14 incl. bright blob v14; label single-visit. Likely gallery bug; possible missed death.,2026-10-28T20:15:52
+death_surviving_20,claude,ok,clean,No sustained dye on the target.,2026-10-28T20:15:52
+death_surviving_21,claude,ok,clean,No sustained dye on the target.,2026-10-28T20:15:52
+death_surviving_22,claude,ok,clean,No sustained dye on the target.,2026-10-28T20:15:52
+death_surviving_23,claude,ok,clean,No sustained dye on the target.,2026-10-28T20:15:52
+death_surviving_24,claude,problem,label_mismatch,"Panel dead v11-v12, label never positive; likely gallery all-targets bug.",2026-10-28T20:15:52
+death_dasatinib_25,claude,ok,neighbour_overlap,Neighbour overlap in projection on one visit; correctly rejected as single-visit.,2026-10-28T20:15:52
+death_dasatinib_26,claude,ok,other,"ROI_0 late band artefact, correctly excluded.",2026-10-28T20:15:52
+death_dasatinib_27,claude,ok,clean,No dye on target.,2026-10-28T20:15:52
+death_dasatinib_28,claude,unsure,other,Single-visit bright object within fragmented target outline.,2026-10-28T20:15:52
+death_dasatinib_29,claude,ok,clean,No dye on target.,2026-10-28T20:15:52
+death_dasatinib_30,claude,problem,label_mismatch,Confirmed gallery bug: 71-voxel U-Net speck counted as target; label correct.,2026-10-28T20:15:52
+dasa_vs_untr_untreated_01,claude,problem,fragmented,"T cell in pieces, tiny contact; 3.95 um depth unreliable.",2026-10-28T20:15:52
+dasa_vs_untr_untreated_02,claude,problem,merged,Two round targets merged into one mask.,2026-10-28T20:15:52
+dasa_vs_untr_untreated_03,claude,unsure,merged,Wedge-shaped target with T cell in concavity: real wrapping or merged cells.,2026-10-28T20:15:52
+dasa_vs_untr_untreated_04,claude,ok,clean,"Whole cells, sensible contact.",2026-10-28T20:15:52
+dasa_vs_untr_untreated_05,claude,ok,clean,"Whole cells, sensible contact.",2026-10-28T20:15:52
+dasa_vs_untr_untreated_06,claude,problem,fragmented;hollow,hd10 target fragmented/hollow.,2026-10-28T20:15:52
+dasa_vs_untr_untreated_07,claude,problem,fragmented;hollow,hd10 target fragmented/hollow.,2026-10-28T20:15:52
+dasa_vs_untr_untreated_08,claude,ok,clean,"Whole cells, sensible contact.",2026-10-28T20:15:52
+dasa_vs_untr_dasatinib_09,claude,problem,hollow,Hollow ring target (hd10 dasatinib); large false cup.,2026-10-28T20:15:52
+dasa_vs_untr_dasatinib_10,claude,problem,tiny,Target fragment (37-154 um3).,2026-10-28T20:15:52
+dasa_vs_untr_dasatinib_11,claude,problem,hollow,Hollow ring target (hd10 dasatinib); large false cup.,2026-10-28T20:15:52
+dasa_vs_untr_dasatinib_12,claude,ok,clean,Whole cells.,2026-10-28T20:15:52
+dasa_vs_untr_dasatinib_13,claude,problem,tiny,Target fragment (37-154 um3).,2026-10-28T20:15:52
+dasa_vs_untr_dasatinib_14,claude,problem,hollow,Hollow ring target (hd10 dasatinib); large false cup.,2026-10-28T20:15:52
+dasa_vs_untr_dasatinib_15,claude,problem,fragmented,Fragmented target.,2026-10-28T20:15:52
+dasa_vs_untr_dasatinib_16,claude,problem,tiny,Target fragment (37-154 um3).,2026-10-28T20:15:52
+deep_vs_shallow_deep_01,claude,problem,fragmented,"T cell in pieces, tiny contact; 3.95 um depth unreliable.",2026-10-28T20:15:52
+deep_vs_shallow_deep_02,claude,unsure,merged,Wedge-shaped target with T cell in concavity: real wrapping or merged cells.,2026-10-28T20:15:52
+deep_vs_shallow_deep_03,claude,problem,fragmented,Fragmented target; hull bridging.,2026-10-28T20:15:52
+deep_vs_shallow_deep_04,claude,ok,clean,Real cup on raw images.,2026-10-28T20:15:52
+deep_vs_shallow_deep_05,claude,problem,fragmented,Fragmented target; hull bridging.,2026-10-28T20:15:52
+deep_vs_shallow_deep_06,claude,problem,fragmented,Fragmented target; hull bridging.,2026-10-28T20:15:52
+deep_vs_shallow_deep_07,claude,problem,merged,"Two-lobed target, T cell in groove: 5.6 um 'cup'.",2026-10-28T20:15:52
+deep_vs_shallow_deep_08,claude,unsure,merged,T cell enveloped: wrapping or two targets.,2026-10-28T20:15:52
+deep_vs_shallow_shallow_09,claude,ok,clean,Clean contact; masks follow raw membrane where shown.,2026-10-28T20:15:52
+deep_vs_shallow_shallow_10,claude,problem,hollow,Hollow target mask.,2026-10-28T20:15:52
+deep_vs_shallow_shallow_11,claude,problem,hollow,Hollow target mask.,2026-10-28T20:15:52
+deep_vs_shallow_shallow_12,claude,ok,clean,Clean contact; masks follow raw membrane where shown.,2026-10-28T20:15:52
+deep_vs_shallow_shallow_13,claude,ok,clean,Clean contact; masks follow raw membrane where shown.,2026-10-28T20:15:52
+deep_vs_shallow_shallow_14,claude,problem,hollow,Hollow target mask.,2026-10-28T20:15:52
+deep_vs_shallow_shallow_15,claude,unsure,other,Target with internal gaps; shallow contact.,2026-10-28T20:15:52
+deep_vs_shallow_shallow_16,claude,problem,fragmented,T-cell mask fragmented.,2026-10-28T20:15:52
+qc_frag_01,claude,problem,fragmented;tiny,Genuine small fragments (41-173 um3).,2026-10-28T20:15:52
+qc_frag_02,claude,problem,fragmented;tiny,Genuine small fragments (41-173 um3).,2026-10-28T20:15:52
+qc_frag_03,claude,problem,fragmented;tiny,Genuine small fragments (41-173 um3).,2026-10-28T20:15:52
+qc_frag_04,claude,problem,fragmented;tiny,Genuine small fragments (41-173 um3).,2026-10-28T20:15:52
+qc_frag_05,claude,problem,fragmented;tiny,Genuine small fragments (41-173 um3).,2026-10-28T20:15:52
+qc_frag_06,claude,problem,fragmented,Target pieces where raw membrane shows almost no cell: possible U-Net false target.,2026-10-28T20:15:52
+qc_edge_01,claude,problem,edge;merged,"Cut by edge and two merged targets (~2,000 um3).",2026-10-28T20:15:52
+qc_edge_02,claude,problem,edge;merged,"Cut by edge and two merged targets (~2,000 um3).",2026-10-28T20:15:52
+qc_edge_03,claude,problem,edge,Cell cut by the field-of-view edge.,2026-10-28T20:15:52
+qc_edge_04,claude,problem,edge,Cell cut by the field-of-view edge.,2026-10-28T20:15:52
+qc_edge_05,claude,problem,edge,Cell cut by the field-of-view edge.,2026-10-28T20:15:52
+qc_edge_06,claude,problem,edge,Cell cut by the field-of-view edge.,2026-10-28T20:15:52
+qc_clean_01,claude,ok,clean,Whole separate cells.,2026-10-28T20:15:52
+qc_clean_02,claude,problem,other,Visually flat contact records 2.87 um: possible cup-measurement bias (facing-facet distance).,2026-10-28T20:15:52
+qc_clean_03,claude,ok,clean,Whole separate cells.,2026-10-28T20:15:52
+qc_clean_04,claude,unsure,other,3.21 um recorded for a mild contact; same cup-measurement question.,2026-10-28T20:15:52
+qc_clean_05,claude,ok,clean,Whole separate cells.,2026-10-28T20:15:52
+qc_clean_06,claude,ok,clean,Whole separate cells.,2026-10-28T20:15:52
