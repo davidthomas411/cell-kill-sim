@@ -2,7 +2,7 @@
 
 A plain-language guide to what this project is and what has been done. It assumes
 no background in biology or in the code. Every picture comes from the real data.
-Last updated 28 October 2026.
+Last updated 29 October 2026.
 
 <div class="toc" markdown="1">
 
@@ -13,7 +13,7 @@ Last updated 28 October 2026.
 [4. What we measured](#4-what-we-measured) ·
 [5. What we found, and why it is on hold](#5-what-we-found-and-why-it-is-on-hold) ·
 [6. How work is checked now](#6-how-work-is-checked-now) ·
-[7. What happens next](#7-what-happens-next) ·
+[7. Redrawing the cells](#7-redrawing-the-cells-in-progress) ·
 [8. Glossary](#8-glossary)
 
 </div>
@@ -148,6 +148,7 @@ It is parked until the measurements are trustworthy.
 | Deeper dents go with faster killing, within each experiment (about 1.4× per standard deviation) | **On hold**: bad masks inflate dents, and they become more common just before death, so this could be an artefact |
 | High-killing donors do *not* push in a more focused way than low-killing donors | **On hold**, and the test was inconclusive anyway |
 | Mechanical model | **Parked** |
+| Which chambers count as "killed" | **In question**: in two of eight chambers we checked, a tumour cell the T cell touched dies but the chamber is labelled "survived" (section 7) |
 
 The lesson: earlier stages were accepted on numbers and reports, without
 looking at enough real images. Problems in the masks then flowed into every
@@ -164,18 +165,80 @@ The project is run like a lab:
 - **Data registry:** every dataset has a status. Only verified data may be analysed.
 - **Gates:** a stage may feed the next only after its review passes.
 
-So far 256 panels have been reviewed (146 in the first gallery, 110 in the clean-cell gallery).
+So far 256 gallery panels (146 in the first gallery, 110 in the clean-cell gallery) and 340 movie frames from the redrawing pilot (section 7) have been reviewed.
 
-## 7. What happens next
+## 7. Redrawing the cells (in progress)
 
-1. **Better cell outlines.** Instead of trusting the lab's masks, we redraw cells from the
-   raw images using several methods: the lab's masks repaired, Cellpose-SAM (a general
-   AI cell-outlining model), and a membrane-based method. For each cell we pick the
-   outline that matches the raw movie. A pilot on 8 chambers (4 killed, 4 not) is starting.
-2. **Movies as the standard view** for every chamber, with the measurements plotted
-   alongside so each number can be checked against what the cells do.
-3. **Scale up** by processing raw images as they download and keeping only the cell
-   outlines and summaries, so all 502 chambers fit on one computer.
+Instead of trusting the lab's masks, we are redrawing the cells from the raw images
+and comparing methods side by side on movies of 8 chambers (4 killed, 4 survived).
+Each round, every frame is reviewed and the problems found are fixed in the next round.
+
+**Round 1: four methods on one chamber.** These were the lab's masks, the lab's masks
+repaired, Cellpose-SAM (a general AI cell-outlining model) and PlantSeg (a method built
+for membrane labels). Cellpose-SAM shattered every cell into pieces, because the tumour
+label marks only the membrane and the cells look hollow. PlantSeg had a bug that drew
+the T cell as a striped box.
+
+<figure>
+<img src="img/f11_p1_four_methods.jpg" alt="Four methods side by side on the same moment: lab masks, repaired lab masks, Cellpose-SAM shattered into pieces, PlantSeg with a striped box">
+<figcaption><b>Round 1, one moment, four methods.</b> Blue = tumour cell being tracked, orange = T cell,
+grey = other objects. Top row: view from above; bottom row: side view. Third column: Cellpose-SAM breaks
+every cell into pieces. Fourth column: PlantSeg's T cell is a striped box (a bug, since fixed).</figcaption>
+</figure>
+
+**Round 2: all 8 chambers.** Repairing the lab's masks cut whole round cells into pieces.
+More important, the lab's masks drop a tumour cell once it has died: when the cell fills
+with death dye, it has no outline. PlantSeg keeps it.
+
+<figure>
+<img src="img/f12_oversplit.jpg" alt="One round tumour cell, cut into pieces by the two repaired-mask columns">
+<figcaption><b>Over-splitting.</b> One round tumour cell. The lab masks (first column) and PlantSeg (last)
+outline it whole; the two repaired versions (middle) cut it into pieces.</figcaption>
+</figure>
+
+<figure>
+<img src="img/f13_dead_cell_lost.jpg" alt="A dead tumour cell full of yellow dye, outlined only in the last column">
+<figcaption><b>A dead cell disappears from the lab's masks.</b> The tumour cell is full of death dye (yellow).
+The three lab-based columns have no outline on it; only PlantSeg (right) still outlines it.</figcaption>
+</figure>
+
+**Round 3: an improved PlantSeg (called C4).** It knows which colour belongs to which
+cell type and handles dead cells separately. It fixes the straight-line cuts and stops
+the T cell from swallowing a dead neighbour.
+
+<figure>
+<img src="img/f14_c4_fix.jpg" alt="Lab masks, PlantSeg and C4 side by side; PlantSeg's T cell has a straight edge and includes the dead cell, C4's does not">
+<figcaption><b>Round 3.</b> Columns: lab masks, PlantSeg, C4. PlantSeg's T cell (orange, middle) has a straight
+edge and includes the dead yellow cell; C4's (right) follows the green T cell.</figcaption>
+</figure>
+
+**What round 3 showed about killing.** In two chambers labelled "survived", the tumour
+cell the T cell touched does die:
+- **v02 ROI 3:** the cell dies about 1.5-2 hours after the T cell leaves.
+- **v03 ROI 30:** the cell dies at the very last time point, just after contact ends.
+
+Either the lab's masks missed these deaths, or the lab's definition of a kill
+excludes them. We are asking the Fei lab.
+
+<figure>
+<video src="img/p3_v02_MIP_ROI_3.mp4" controls loop muted playsinline></video>
+<figcaption><b>v02 ROI 3, labelled survived.</b> Columns: lab masks, PlantSeg, C4. The T cell (green, right edge)
+touches the tumour cell early on, then leaves; the tumour cell later fills with death dye.</figcaption>
+</figure>
+
+**Still wrong in C4:**
+- touching tumour cells sometimes merge;
+- small neighbours get attached;
+- the tracking of which cell is which across time slips.
+
+C4 was tuned on these 8 chambers. It is now being tested, unchanged, on 12 chambers
+it has never seen.
+
+**After that:**
+1. Fix tracking and the merging of touching cells.
+2. Agree on what counts as a kill, then redo the death labels on the new outlines.
+3. **Scale up** by processing raw images as they download, keeping only the cell outlines
+   and summaries, so all 502 chambers fit on one computer.
 4. Then, and only then, re-ask the questions in section 5 and return to the mechanical model.
 
 **Open questions for the Fei lab:** the true spacing between 3D slices (the paper
@@ -195,3 +258,6 @@ says 0.6 µm, but the images look like about 0.2 µm), and whether deaths seen o
 | Donor | The person the T cells came from; 10 donors, 5 high-killing and 5 low-killing |
 | Dasatinib | A drug that weakens T-cell pushing; used as a control |
 | Digital twin | A 3D model of the cells over time, built from the images |
+| PlantSeg | A published method for outlining cells from membrane images; the basis of our current outlines |
+| C4 | Our improved version of PlantSeg (round 3 of the pilot) |
+| Tracking | Working out which outline is the same cell from one time point to the next |

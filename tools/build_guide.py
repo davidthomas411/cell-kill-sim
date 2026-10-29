@@ -1,6 +1,6 @@
 """Build the plain-language project guide (docs/guide/) from lab/guide/guide.md plus
 figures made from real data. Usage: python3 tools/build_guide.py"""
-import csv, subprocess
+import csv, shutil, subprocess
 from pathlib import Path
 import h5py, numpy as np, markdown
 from PIL import Image, ImageDraw, ImageFont
@@ -87,6 +87,12 @@ def figures():
     crop_panel("figures/review/cup_validation/b_dent_R5_a3_d2.png", (0, 0, 1100, 450), "f8_cup_test.jpg")
     crop_panel("figures/review/death_labels/death_killed_04.png", (0, 0, 900, 560), "f9_death.jpg")
     crop_panel("figures/review/fit_reachable/fit_reach_03.png", (0, 0, 900, 470), "f10_model.jpg")
+    # 11-14. re-segmentation pilot frames (full frames; columns labelled in the image)
+    crop_panel("figures/pilot/frames/10.jpg", (0, 0, 1492, 738), "f11_p1_four_methods.jpg", 0.8)
+    crop_panel("figures/pilot/frames/v02_MIP_ROI_3/06.jpg", (0, 0, 1200, 622), "f12_oversplit.jpg")
+    crop_panel("figures/pilot/frames/v02_MIP_ROI_3/16.jpg", (0, 0, 1200, 622), "f13_dead_cell_lost.jpg")
+    crop_panel("figures/pilot/p3/frames/v03_MIP_ROI_6/14.jpg", (0, 0, 1200, 714), "f14_c4_fix.jpg")
+    shutil.copy2(R / "figures/pilot/web/p3_v02_MIP_ROI_3.mp4", IMG / "p3_v02_MIP_ROI_3.mp4")
     for name in ("v01_MIP_ROI_2", "v01_MIP_ROI_32"):
         subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", str(R / f"figures/movies/{name}.gif"), "-movflags", "+faststart",
                         "-pix_fmt", "yuv420p", "-vf", "fps=2,crop=iw:ih*0.55:0:0,scale=trunc(iw/2)*2:trunc(ih/2)*2",
