@@ -148,6 +148,12 @@ table.data th,main table th{
   background:var(--paper);max-width:100%;margin:8px 0 14px;
 }
 .fig img{display:block;max-width:100%;height:auto;width:100%}
+.fig video{display:block;max-width:100%;height:auto;width:100%;background:#000}
+.fig-with-movie{
+  display:grid;grid-template-columns:minmax(0,1.4fr) minmax(260px,0.85fr);gap:16px;
+  align-items:start;margin:8px 0 14px;
+}
+.fig-with-movie .fig{margin:0}
 .panel-grid{
   display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:24px;
   align-items:start;
@@ -167,4 +173,5 @@ table.data th,main table th{
   main{padding:16px 0 72px;max-width:100%}
   h1{font-size:25px}
   .panel-grid{grid-template-columns:1fr;gap:12px}
+  .fig-with-movie{grid-template-columns:1fr;gap:12px}
 }

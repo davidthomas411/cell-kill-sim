@@ -21,6 +21,7 @@ import csv
 import html
 from pathlib import Path
 import re
+import shutil
 import struct
 import subprocess
 import sys
@@ -58,6 +59,10 @@ from review_app import (  # noqa: E402
 )
 
 DOCS_DIR: Path = REPO_ROOT / "docs"
+DOCS_MOVIES_DIR: Path = DOCS_DIR / "movies"
+MOVIES_INDEX_CSV: Path = REPO_ROOT / "figures" / "movies" / "index.csv"
+STEP4_CHAMBER_CSV: Path = REPO_ROOT / "data" / "step4" / "per_chamber_death_labels_all_v2.csv"
+STEP5_CHAMBER_CSV: Path = REPO_ROOT / "data" / "step5" / "per_chamber_descriptors.csv"
 MAX_JPEG_WIDTH: int = 1100
 JPEG_QUALITY: int = 70
 
@@ -211,6 +216,12 @@ table.data th,main table th{
   background:var(--paper);max-width:100%;margin:8px 0 14px;
 }
 .fig img{display:block;max-width:100%;height:auto;width:100%}
+.fig video{display:block;max-width:100%;height:auto;width:100%;background:#000}
+.fig-with-movie{
+  display:grid;grid-template-columns:minmax(0,1.4fr) minmax(260px,0.85fr);gap:16px;
+  align-items:start;margin:8px 0 14px;
+}
+.fig-with-movie .fig{margin:0}
 .panel-grid{
   display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:24px;
   align-items:start;
@@ -230,6 +241,7 @@ table.data th,main table th{
   main{padding:16px 0 72px;max-width:100%}
   h1{font-size:25px}
   .panel-grid{grid-template-columns:1fr;gap:12px}
+  .fig-with-movie{grid-template-columns:1fr;gap:12px}
 }
 """
 
@@ -301,6 +313,7 @@ def _page_shell(
         ("protocols", "Protocols", f"{root_prefix}protocols/index.html"),
         ("registry", "Registry", f"{root_prefix}registry.html"),
         ("galleries", "Galleries", f"{root_prefix}galleries/index.html"),
+        ("movies", "Movies", f"{root_prefix}movies/index.html"),
         ("handbook", "Handbook", f"{root_prefix}handbook/index.html"),
     ]
     tabs_html = "\n".join(
@@ -881,10 +894,346 @@ def build_handbook_pages() -> None:
     )
 
 
-def build_gallery_pages(galleries: list[dict[str, str]]) -> None:
-    """Build docs/galleries/index.html and docs/galleries/<id>.html with JPEG thumbnails."""
+def _ensure_movie_in_docs(src_mp4_rel: str) -> tuple[str, str, str] | None:
+    """
+    Copy `src_mp4_rel` (and its `<stem>_poster.jpg` and `<stem>.webp` fallback) into `docs/movies/`.
+    If `<stem>_poster.jpg` is missing, extract frame 0 with `ffmpeg`.
+    Returns `(mp4_name, poster_name, webp_name)` inside `docs/movies/`, or `None` if `src_mp4_rel` is missing.
+    """
+    if not src_mp4_rel:
+        return None
+    src_mp4 = (REPO_ROOT / src_mp4_rel).resolve()
+    try:
+        src_mp4.relative_to(REPO_ROOT.resolve())
+    except ValueError:
+        return None
+    if not src_mp4.is_file():
+        return None
+
+    DOCS_MOVIES_DIR.mkdir(parents=True, exist_ok=True)
+    mp4_name = src_mp4.name
+    dst_mp4 = DOCS_MOVIES_DIR / mp4_name
+    if not dst_mp4.is_file() or dst_mp4.stat().st_mtime < src_mp4.stat().st_mtime:
+        shutil.copy2(src_mp4, dst_mp4)
+
+    stem = src_mp4.stem
+    src_poster = src_mp4.with_name(f"{stem}_poster.jpg")
+    poster_name = f"{stem}_poster.jpg"
+    dst_poster = DOCS_MOVIES_DIR / poster_name
+    if src_poster.is_file():
+        if not dst_poster.is_file() or dst_poster.stat().st_mtime < src_poster.stat().st_mtime:
+            shutil.copy2(src_poster, dst_poster)
+    elif not dst_poster.is_file():
+        subprocess.run(
+            ["ffmpeg", "-y", "-i", str(src_mp4), "-frames:v", "1", "-q:v", "4", str(dst_poster)],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=False,
+        )
+
+    src_webp = src_mp4.with_suffix(".webp")
+    webp_name = f"{stem}.webp"
+    dst_webp = DOCS_MOVIES_DIR / webp_name
+    if src_webp.is_file():
+        if not dst_webp.is_file() or dst_webp.stat().st_mtime < src_webp.stat().st_mtime:
+            shutil.copy2(src_webp, dst_webp)
+    else:
+        webp_name = ""
+
+    return mp4_name, poster_name, webp_name
+
+
+def sync_movies_to_docs() -> tuple[list[dict[str, Any]], dict[tuple[str, str], dict[str, dict[str, Any]]]]:
+    """
+    Read `figures/movies/index.csv`, copy all MP4 clips, poster JPEGs, and WebP fallbacks
+    into `docs/movies/`, and return `(movie_rows, movies_by_chamber)`.
+    """
+    DOCS_MOVIES_DIR.mkdir(parents=True, exist_ok=True)
+    if not MOVIES_INDEX_CSV.is_file():
+        return [], {}
+
+    movie_rows: list[dict[str, Any]] = []
+    movies_by_chamber: dict[tuple[str, str], dict[str, dict[str, Any]]] = {}
+
+    with open(MOVIES_INDEX_CSV, "r", encoding="utf-8", newline="") as f:
+        for r in csv.DictReader(f):
+            exp = (r.get("exp") or "").strip()
+            roi = (r.get("roi") or "").strip()
+            clip = (r.get("clip") or "").strip()
+            path_rel = (r.get("path") or "").strip()
+            copied = _ensure_movie_in_docs(path_rel)
+            if copied is None:
+                continue
+            mp4_name, poster_name, webp_name = copied
+            item = {
+                "exp": exp,
+                "roi": roi,
+                "clip": clip,
+                "path": path_rel,
+                "size": int(r.get("size") or 0),
+                "n_frames": int(r.get("n_frames") or 0),
+                "has_all_visits": str(r.get("has_all_visits", "")).strip() == "True",
+                "mp4_name": mp4_name,
+                "poster_name": poster_name,
+                "webp_name": webp_name,
+            }
+            movie_rows.append(item)
+            ch_dict = movies_by_chamber.setdefault((exp, roi), {})
+            if clip == "visits":
+                ch_dict["visits"] = item
+            else:
+                ch_dict["burst"] = item
+
+    return movie_rows, movies_by_chamber
+
+
+def _load_chamber_summary_lookup() -> dict[tuple[str, str], dict[str, str]]:
+    """Load per-chamber condition, outcome, and descriptor summary for the Movies page."""
+    out: dict[tuple[str, str], dict[str, str]] = {}
+    if STEP4_CHAMBER_CSV.is_file():
+        with open(STEP4_CHAMBER_CSV, "r", encoding="utf-8", newline="") as f:
+            for r in csv.DictReader(f):
+                if str(r.get("trace_num", "")).strip() != "1":
+                    continue
+                exp = (r.get("experiment") or "").strip()
+                roi = (r.get("roi") or "").strip()
+                cond = (r.get("condition") or "").strip()
+                ever_d = str(r.get("ever_dead_200m") or r.get("ever_dead") or "").strip() == "True"
+                dv = (r.get("death_visit_200m") or r.get("death_visit") or "").strip()
+                if ever_d and dv:
+                    dv_int = int(float(dv))
+                    outcome = f"Killed (visit {dv_int}, {dv_int * 10} min)"
+                elif str(r.get("ever_dead_any_visit_200m", "")).strip() == "True":
+                    fadv = (r.get("first_any_dead_visit_200m") or "").strip()
+                    outcome = f"Single-visit 405+ (visit {int(float(fadv))})" if fadv else "Single-visit 405+"
+                else:
+                    outcome = "Survived (<=200 min)"
+                out[(exp, roi)] = {
+                    "condition": cond,
+                    "outcome": outcome,
+                    "n_contact_visits": (r.get("n_contact_visits_200m") or r.get("n_contact_visits") or "—").strip(),
+                    "first_contact_visit": (r.get("first_contact_visit_200m") or r.get("first_contact_visit") or "—").strip(),
+                }
+    if STEP5_CHAMBER_CSV.is_file():
+        with open(STEP5_CHAMBER_CSV, "r", encoding="utf-8", newline="") as f:
+            for r in csv.DictReader(f):
+                if str(r.get("trace_num", "")).strip() != "1":
+                    continue
+                exp = (r.get("experiment") or "").strip()
+                roi = (r.get("roi") or "").strip()
+                d = out.setdefault((exp, roi), {})
+                for col, key in [
+                    ("cup_depth_hull_p95_um_mean", "mean_cup_depth_um"),
+                    ("cup_depth_hull_p95_um_max", "max_cup_depth_um"),
+                    ("contact_area_um2_mean", "mean_contact_area_um2"),
+                    ("target_volume_um3_mean", "mean_target_vol_um3"),
+                ]:
+                    val = (r.get(col) or "").strip()
+                    if val:
+                        try:
+                            d[key] = f"{float(val):.2f}"
+                        except ValueError:
+                            d[key] = val
+    return out
+
+
+def build_movies_page(
+    movie_rows: list[dict[str, Any]],
+    movies_by_chamber: dict[tuple[str, str], dict[str, dict[str, Any]]],
+) -> None:
+    """Build docs/movies/index.html and docs/movies.html."""
+    DOCS_MOVIES_DIR.mkdir(parents=True, exist_ok=True)
+    ch_lookup = _load_chamber_summary_lookup()
+
+    def _render_movies_body(media_prefix: str) -> str:
+        if not movie_rows:
+            return "<h1>Movies</h1><p class=\"muted\">No chamber movies generated yet.</p>"
+
+        exps = sorted({r["exp"] for r in movie_rows})
+        exp_opts = ['<option value="__all__">All experiments</option>'] + [
+            f'<option value="{_esc(e)}">{_esc(e.split("_")[0])} ({_esc(e.split("_")[-1])})</option>'
+            for e in exps
+        ]
+
+        tbl_rows: list[str] = []
+        cards_html: list[str] = []
+
+        for (exp, roi), clips in sorted(
+            movies_by_chamber.items(),
+            key=lambda kv: (
+                kv[0][0],
+                int(kv[0][1].split("_")[-1]) if kv[0][1].split("_")[-1].isdigit() else 0,
+            ),
+        ):
+            exp_short = exp.split("_")[0]
+            donor = exp.split("_")[-1]
+            ch_id = f"{exp_short}-{roi}"
+            info = ch_lookup.get((exp, roi), {})
+            cond = info.get("condition", "CAR-T")
+            outcome = info.get("outcome", "—")
+            v_clip = clips.get("visits")
+            b_clip = clips.get("burst")
+
+            v_desc = f"{v_clip['n_frames']} frames ({v_clip['size'] // 1024} KB)" if v_clip else "—"
+            b_lbl = b_clip["clip"].replace("burst_v", "Visit ") if b_clip else "—"
+            b_desc = f"{b_lbl}, {b_clip['n_frames']} sweeps ({b_clip['size'] // 1024} KB)" if b_clip else "—"
+            all_v_str = "Yes" if (v_clip and v_clip["has_all_visits"]) else "No"
+
+            tbl_rows.append(
+                f"<tr>"
+                f'<td><a href="#chamber-{_esc(ch_id)}"><strong>{_esc(exp_short)} {_esc(roi)}</strong></a></td>'
+                f"<td>{_esc(donor)}</td>"
+                f"<td>{_esc(cond)}</td>"
+                f"<td>{_esc(outcome)}</td>"
+                f"<td>{_esc(v_desc)}</td>"
+                f"<td>{_esc(b_desc)}</td>"
+                f"<td>{_esc(all_v_str)}</td>"
+                f"</tr>"
+            )
+
+            vid_blocks: list[str] = []
+            for c_item, c_title in [
+                (v_clip, "Visits (10 min intervals, all visits)"),
+                (b_clip, f"Within-visit sweep burst ({b_lbl}, 15 s intervals)"),
+            ]:
+                if not c_item:
+                    continue
+                mp4_src = f"{media_prefix}{c_item['mp4_name']}"
+                poster_src = f"{media_prefix}{c_item['poster_name']}"
+                webp_fallback = (
+                    f'<img src="{_esc(media_prefix + c_item["webp_name"])}" alt="{_esc(exp_short)} {_esc(roi)}">'
+                    if c_item.get("webp_name")
+                    else ""
+                )
+                vid_blocks.append(
+                    f'<div data-clip-type="{"visits" if c_item["clip"] == "visits" else "burst"}">'
+                    f'<h3>{_esc(c_title)}</h3>'
+                    f'<p class="meta">{c_item["n_frames"]} frames · {c_item["size"] // 1024} KB MP4</p>'
+                    f'<div class="fig">'
+                    f'<video controls loop muted playsinline poster="{_esc(poster_src)}">'
+                    f'<source src="{_esc(mp4_src)}" type="video/mp4">'
+                    f"{webp_fallback}"
+                    f"</video>"
+                    f"</div>"
+                    f"</div>"
+                )
+
+            num_items = [
+                ("Experiment", f"{exp_short} ({donor})"),
+                ("Chamber", roi),
+                ("Condition", cond),
+                ("Outcome (200 min)", outcome),
+                ("Contact visits", info.get("n_contact_visits", "—")),
+                ("Mean cup depth p95 (um)", info.get("mean_cup_depth_um", "—")),
+                ("Max cup depth p95 (um)", info.get("max_cup_depth_um", "—")),
+                ("Mean contact area (um^2)", info.get("mean_contact_area_um2", "—")),
+                ("Mean target volume (um^3)", info.get("mean_target_vol_um3", "—")),
+                ("All visits downloaded", all_v_str),
+            ]
+            num_rows_html = "".join(
+                f"<tr><td>{_esc(k)}</td><td>{_esc(v)}</td></tr>" for k, v in num_items
+            )
+
+            cards_html.append(
+                f'<article class="panel-card movie-chamber-card" id="chamber-{_esc(ch_id)}" data-exp="{_esc(exp)}">'
+                f'<div class="panel-head">'
+                f'<h2>{_esc(exp_short)} {_esc(roi)} <span class="muted">({_esc(cond)} · {_esc(outcome)})</span></h2>'
+                f'<a class="meta" href="#chamber-{_esc(ch_id)}">#{_esc(ch_id)}</a>'
+                f"</div>"
+                f'<div class="panel-grid">'
+                f'{"".join(vid_blocks)}'
+                f"</div>"
+                f"<h3>Chamber summary</h3>"
+                f'<div class="tblwrap"><table class="data">'
+                f"<thead><tr><th>Metric</th><th>Value</th></tr></thead>"
+                f"<tbody>{num_rows_html}</tbody>"
+                f"</table></div>"
+                f"</article>"
+            )
+
+        return f"""
+        <h1>Movies</h1>
+        <div class="filter-bar">
+          <div>
+            <label for="flt-exp">Experiment</label>
+            <select id="flt-exp">{"".join(exp_opts)}</select>
+          </div>
+          <div>
+            <label for="flt-clip">Clip view</label>
+            <select id="flt-clip">
+              <option value="__all__">Both clips (visits + burst)</option>
+              <option value="visits">Visits only (10 min)</option>
+              <option value="burst">Within-visit burst only (15 s)</option>
+            </select>
+          </div>
+          <span class="meta" id="flt-movie-count">{len(movies_by_chamber)} chambers ({len(movie_rows)} clips)</span>
+        </div>
+        <div class="tblwrap">
+          <table class="data">
+            <thead>
+              <tr>
+                <th>Chamber</th>
+                <th>Donor</th>
+                <th>Condition</th>
+                <th>Outcome (200 min)</th>
+                <th>Visits clip</th>
+                <th>Sweep burst clip</th>
+                <th>All visits</th>
+              </tr>
+            </thead>
+            <tbody>
+              {"".join(tbl_rows)}
+            </tbody>
+          </table>
+        </div>
+        <div id="movies-list">
+          {"".join(cards_html)}
+        </div>
+        <script>
+        (function() {{
+          const selE = document.getElementById("flt-exp");
+          const selC = document.getElementById("flt-clip");
+          const lbl = document.getElementById("flt-movie-count");
+          const cards = Array.from(document.querySelectorAll(".movie-chamber-card"));
+          function update() {{
+            const e = selE.value;
+            const c = selC.value;
+            let shown = 0;
+            cards.forEach(card => {{
+              const okE = (e === "__all__" || card.getAttribute("data-exp") === e);
+              card.style.display = okE ? "" : "none";
+              if (okE) shown += 1;
+              card.querySelectorAll("[data-clip-type]").forEach(col => {{
+                const ct = col.getAttribute("data-clip-type");
+                col.style.display = (c === "__all__" || c === ct) ? "" : "none";
+              }});
+            }});
+            lbl.textContent = "Showing " + shown + " of " + cards.length + " chambers";
+          }}
+          selE.addEventListener("change", update);
+          selC.addEventListener("change", update);
+        }})();
+        </script>
+        """
+
+    (DOCS_MOVIES_DIR / "index.html").write_text(
+        _page_shell("Movies", "movies", _render_movies_body(""), root_prefix="../"),
+        encoding="utf-8",
+    )
+    (DOCS_DIR / "movies.html").write_text(
+        _page_shell("Movies", "movies", _render_movies_body("movies/"), root_prefix=""),
+        encoding="utf-8",
+    )
+
+
+def build_gallery_pages(
+    galleries: list[dict[str, str]],
+    movies_by_chamber: dict[tuple[str, str], dict[str, dict[str, Any]]] | None = None,
+) -> None:
+    """Build docs/galleries/index.html and docs/galleries/<id>.html with JPEG thumbnails and optional movie column."""
     gal_out_dir = DOCS_DIR / "galleries"
     gal_out_dir.mkdir(parents=True, exist_ok=True)
+    movies_by_chamber = movies_by_chamber or {}
 
     index_rows: list[str] = []
 
@@ -1001,6 +1350,52 @@ def build_gallery_pages(galleries: list[dict[str, str]]) -> None:
             )
 
             jpg_rel = f"{gid}/{pid}.jpg"
+            has_img = bool(p.get("png_rel"))
+
+            # Resolve optional movie column (either explicit `movie`/`movie_path` column or matching chamber movie)
+            movie_info: tuple[str, str, str] | None = None
+            if p.get("movie_rel"):
+                movie_info = _ensure_movie_in_docs(str(p["movie_rel"]))
+            elif p.get("exp") and p.get("roi"):
+                ch_movies = movies_by_chamber.get((str(p["exp"]), str(p["roi"])))
+                if ch_movies and "visits" in ch_movies:
+                    vc = ch_movies["visits"]
+                    movie_info = (vc["mp4_name"], vc["poster_name"], vc.get("webp_name", ""))
+
+            if movie_info is not None:
+                mp4_name, poster_name, webp_name = movie_info
+                webp_tag = (
+                    f'<img src="../movies/{_esc(webp_name)}" alt="{_esc(pid)}">'
+                    if webp_name
+                    else ""
+                )
+                video_html = (
+                    f'<video controls loop muted playsinline poster="../movies/{_esc(poster_name)}">'
+                    f'<source src="../movies/{_esc(mp4_name)}" type="video/mp4">'
+                    f"{webp_tag}"
+                    f"</video>"
+                )
+                if has_img:
+                    media_html = (
+                        f'<div class="fig-with-movie">'
+                        f'<div class="fig">'
+                        f'<img src="{_esc(jpg_rel)}" alt="{_esc(pid)}" loading="lazy">'
+                        f"</div>"
+                        f'<div class="fig">'
+                        f'<div class="label" style="margin-bottom:6px">Chamber movie</div>'
+                        f"{video_html}"
+                        f"</div>"
+                        f"</div>"
+                    )
+                else:
+                    media_html = f'<div class="fig">{video_html}</div>'
+            else:
+                media_html = (
+                    f'<div class="fig">'
+                    f'<img src="{_esc(jpg_rel)}" alt="{_esc(pid)}" loading="lazy">'
+                    f"</div>"
+                )
+
             panel_cards_html.append(
                 f'<article class="panel-card" id="panel-{_esc(pid)}" '
                 f'data-group="{_esc(grp)}" data-verdicts="{_esc(verdict_attr)}">'
@@ -1008,9 +1403,7 @@ def build_gallery_pages(galleries: list[dict[str, str]]) -> None:
                 f'<h2>{_esc(pid)} <span class="muted">({_esc(grp)})</span></h2>'
                 f'<a class="meta" href="#panel-{_esc(pid)}">#{_esc(pid)}</a>'
                 f"</div>"
-                f'<div class="fig">'
-                f'<img src="{_esc(jpg_rel)}" alt="{_esc(pid)}" loading="lazy">'
-                f"</div>"
+                f"{media_html}"
                 f'<div class="panel-grid">'
                 f"<div>"
                 f"<h3>Review verdicts ({len(all_revs)})</h3>"
@@ -1124,13 +1517,15 @@ def build_site() -> None:
     protocols = list_protocols(PROTOCOLS_DIR)
     registry = load_registry(REGISTRY_CSV)
     galleries = load_galleries(GALLERIES_CSV)
+    movie_rows, movies_by_chamber = sync_movies_to_docs()
 
     build_home_page(entries, registry, galleries)
     build_notebook_pages(entries)
     build_protocols_pages(protocols)
     build_registry_page(registry)
     build_handbook_pages()
-    build_gallery_pages(galleries)
+    build_movies_page(movie_rows, movies_by_chamber)
+    build_gallery_pages(galleries, movies_by_chamber)
 
 
 def main(argv: list[str] | None = None) -> int:
