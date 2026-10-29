@@ -1,26 +1,30 @@
-"""Build 4-column candidate comparison movie and per-visit JPEG frames for v01 MIP_ROI_32.
+"""Build 4-column candidate comparison movies and per-visit JPEG frames for all 8 Pilot P2 chambers.
 
-Follows display conventions of src/review/make_chamber_movie.py:
+Conventions (same layout as P1, updated for P2):
+- 4 columns: C0 (Lab deposited), C1 (Lab repaired), C1s (C1 + signal check), C3 (PlantSeg 3D fixed).
+- Each column shows XY max projection (top row) and XZ max projection (bottom row).
 - Raw composite: green ch1 (T-cell Lifeact), magenta ch2 (target mApple-Mem),
-  yellow ch0 (SYTOX death dye above 404 ADU after sigma=3 Gaussian), fixed display range.
-- Cropped to cells + 5 um (25 voxels at 0.1962 um/voxel).
-- 4 columns (C0..C3), each column showing top view (max over z) and side view (max over y).
-- Outlines of PROJECTED 3D masks: tracked target in blue (90, 160, 255),
-  tracked T cell in orange (255, 150, 40), other instances in thin grey (150, 150, 150).
-- Saves figures/pilot/frames/<visit>.jpg (quality 80) and
-  figures/pilot/v01_MIP_ROI_32_candidates.mp4 (H.264, crf 24, 2 fps, <= 3 MB).
+  yellow ch0 (SYTOX death dye above 404 ADU after sigma=3 Gaussian), fixed display range per chamber.
+- Cropped to chamber union of cells + 5 um (26 voxels at 0.1962 um/voxel).
+- Outlines of projected 3D masks: tracked target in blue (90, 160, 255),
+  tracked T cell in orange (255, 150, 40), other instances in thin grey (155, 155, 155).
+- Prints precision/recall (P/R) of the tracked target and T cell under each panel.
+- Canvas width: 1200 px (even height).
+- Saves zero-padded frames ONLY: figures/pilot/frames/<exp>_<roi>/<visit:02d>.jpg
+- Encodes H.264 MP4 (< 1.5 MB, libx264, crf 28-30, 2 fps): figures/pilot/<exp>_<roi>_candidates.mp4
 """
 
 from __future__ import annotations
 
 import csv
 import subprocess
+import sys
 from pathlib import Path
 from typing import Dict, List, Tuple
 
 import h5py
 import numpy as np
-import sys
+import pandas as pd
 from PIL import Image, ImageDraw, ImageFont
 from scipy import ndimage as ndi
 
@@ -29,23 +33,28 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from src.reproduce_contact_area import STRUCT26
-VOXEL_UM = 0.1962
-PAD_UM = 5.0
-PAD_PX = int(round(PAD_UM / VOXEL_UM))  # 25 voxels (~4.91 um; use 26 for >= 5.0 um)
+from src.seg.candidates import PILOT_CHAMBERS, VOXEL_UM
 
 CANDIDATES = [
     ("C0", "C0: Lab deposited"),
     ("C1", "C1: Lab repaired"),
-    ("C2", "C2: Cellpose-SAM 3D"),
+    ("C1s", "C1s: C1 + signal check"),
     ("C3", "C3: PlantSeg 3D"),
 ]
 
 
-def outline_2d(mask_2d: np.ndarray) -> np.ndarray:
-    """1-pixel inner boundary outline of a 2D boolean mask."""
+def outline_2d(mask_2d: np.ndarray, thickness: int = 1) -> np.ndarray:
+    """Inner boundary outline of a 2D boolean mask with given pixel thickness."""
     if not np.any(mask_2d):
         return np.zeros_like(mask_2d, dtype=bool)
-    return mask_2d & (~ndi.binary_erosion(mask_2d))
+    return mask_2d & (~ndi.binary_erosion(mask_2d, iterations=thickness))
+
+
+def resize_bool_nearest(mask_2d: np.ndarray, width: int, height: int) -> np.ndarray:
+    """Nearest-neighbor resize of a 2D boolean array to (height, width)."""
+    im = Image.fromarray(mask_2d.astype(np.uint8) * 255)
+    im_up = im.resize((width, height), Image.NEAREST)
+    return np.asarray(im_up) > 127
 
 
 def load_font(size: int = 13) -> ImageFont.ImageFont:
@@ -62,7 +71,11 @@ def load_font(size: int = 13) -> ImageFont.ImageFont:
     return ImageFont.load_default()
 
 
-def main(exp: str = "v01_6_40_120_0-6_hd1", roi: str = "MIP_ROI_32") -> None:
+def render_chamber_movie(
+    short_exp: str = "v01",
+    exp: str = "v01_6_40_120_0-6_hd1",
+    roi: str = "MIP_ROI_32",
+) -> Path:
     manifest_path = REPO_ROOT / "data" / "scidb_19235_raw" / "manifest.csv"
     with open(manifest_path, "r") as f:
         all_rows = list(csv.DictReader(f))
@@ -82,6 +95,22 @@ def main(exp: str = "v01_6_40_120_0-6_hd1", roi: str = "MIP_ROI_32") -> None:
             s2 = [r for r in vlist if r["sweep_index"] == "2"]
             rows.append(s2[0] if s2 else sorted(vlist, key=lambda x: int(x["sweep_index"]))[0])
 
+    # Load per-chamber metrics for precision/recall annotations
+    metrics_csv = REPO_ROOT / "data" / "pilot_seg" / f"{short_exp}_{roi}_p2_metrics.csv"
+    if not metrics_csv.exists():
+        metrics_csv = REPO_ROOT / "data" / "pilot_seg" / "pilot2_metrics.csv"
+    pr_lookup: Dict[Tuple[int, str], Tuple[float, float, float, float]] = {}
+    if metrics_csv.exists():
+        mdf = pd.read_csv(metrics_csv)
+        mdf_sub = mdf[(mdf["experiment"] == exp) & (mdf["roi"] == roi)]
+        for _, mr in mdf_sub.iterrows():
+            pr_lookup[(int(mr["visit"]), str(mr["candidate"]))] = (
+                float(mr["target_precision"]),
+                float(mr["target_recall"]),
+                float(mr["tcell_precision"]),
+                float(mr["tcell_recall"]),
+            )
+
     # Load raw volumes, predictions, and compute chamber-wide union cell crop (+ 5 um = 26 px)
     frames_raw: List[np.ndarray] = []
     stems: List[str] = []
@@ -91,11 +120,13 @@ def main(exp: str = "v01_6_40_120_0-6_hd1", roi: str = "MIP_ROI_32") -> None:
     for r in rows:
         stem = f"{int(r['stem']):05d}"
         stems.append(stem)
-        raw = h5py.File(REPO_ROOT / r["path"], "r")["raw"][:].astype(np.float32)
-        pred = h5py.File(
+        with h5py.File(REPO_ROOT / r["path"], "r") as f_raw:
+            raw = f_raw["raw"][:].astype(np.float32)
+        with h5py.File(
             REPO_ROOT / "data" / "scidb_19235_masks" / exp / roi / f"{stem}_predictions.h5",
             "r",
-        )["predictions"][:]
+        ) as f_pred:
+            pred = f_pred["predictions"][:]
         frames_raw.append(raw)
 
         lab, _ = ndi.label(pred > 0, structure=STRUCT26)
@@ -120,7 +151,7 @@ def main(exp: str = "v01_6_40_120_0-6_hd1", roi: str = "MIP_ROI_32") -> None:
     y0, y1 = max(0, y_min - pad), min(Y, y_max + pad + 1)
     x0, x1 = max(0, x_min - pad), min(X, x_max + pad + 1)
     crop_sl = (slice(z0, z1), slice(y0, y1), slice(x0, x1))
-    print(f"Chamber crop (cells + 5 um): Z=[{z0}:{z1}], Y=[{y0}:{y1}], X=[{x0}:{x1}]")
+    print(f"[{short_exp} {roi}] Chamber crop (cells + 5 um): Z=[{z0}:{z1}], Y=[{y0}:{y1}], X=[{x0}:{x1}]")
 
     # Fixed display range across the whole chamber (clipping camera read-noise floor at p65)
     lo = [
@@ -143,22 +174,43 @@ def main(exp: str = "v01_6_40_120_0-6_hd1", roi: str = "MIP_ROI_32") -> None:
         rgb = np.stack([g + d, t + 0.8 * d, g], axis=-1)
         return (np.clip(rgb, 0.0, 1.0) * 255.0).astype(np.uint8)
 
-    scale = 2
+    # Fixed 1200 px canvas width geometry
+    total_w = 1200
+    left_label_w = 28
+    right_pad = 12
     col_gap = 8
     row_gap = 8
     top_header_h = 46
-    bottom_footer_h = 28
-    left_label_w = 24
+    pr_panel_h = 38
+    bottom_footer_h = 26
 
-    frames_dir = REPO_ROOT / "figures" / "pilot" / "frames"
+    panel_w = (total_w - left_label_w - right_pad - 3 * col_gap) // 4  # 284 px
+    x_span = max(1, x1 - x0)
+    y_span = max(1, y1 - y0)
+    z_span = max(1, z1 - z0)
+    scale_factor = float(panel_w) / float(x_span)
+    top_h = max(32, int(round(y_span * scale_factor)))
+    side_h = max(32, int(round(z_span * scale_factor)))
+
+    total_h = top_header_h + top_h + row_gap + side_h + pr_panel_h + bottom_footer_h
+    if total_h % 2 != 0:
+        total_h += 1
+
+    frames_dir = REPO_ROOT / "figures" / "pilot" / "frames" / f"{short_exp}_{roi}"
     frames_dir.mkdir(parents=True, exist_ok=True)
-    movie_path = REPO_ROOT / "figures" / "pilot" / "v01_MIP_ROI_32_candidates.mp4"
+    # Remove any accidental unpadded files if present in subfolder
+    for unpad in range(1, 10):
+        p_unpad = frames_dir / f"{unpad}.jpg"
+        if p_unpad.exists():
+            p_unpad.unlink()
+
+    movie_path = REPO_ROOT / "figures" / "pilot" / f"{short_exp}_{roi}_candidates.mp4"
 
     font_title = load_font(14)
     font_col = load_font(13)
     font_small = load_font(12)
 
-    for idx, (r, raw_full, stem) in enumerate(zip(rows, frames_raw, stems)):
+    for r, raw_full, stem in zip(rows, frames_raw, stems):
         visit = int(r["visit_index"])
         sweep = int(r["sweep_index"])
         raw_crop = raw_full[:, z0:z1, y0:y1, x0:x1]
@@ -168,7 +220,13 @@ def main(exp: str = "v01_6_40_120_0-6_hd1", roi: str = "MIP_ROI_32") -> None:
 
         col_panels: List[Tuple[Image.Image, Image.Image]] = []
         for cand_code, _ in CANDIDATES:
-            npz_path = REPO_ROOT / "data" / "pilot_seg" / cand_code / exp / roi / f"{stem}.npz"
+            if cand_code == "C3":
+                npz_path = REPO_ROOT / "data" / "pilot_seg" / "C3_fixed" / exp / roi / f"{stem}.npz"
+                if not npz_path.exists():
+                    npz_path = REPO_ROOT / "data" / "pilot_seg" / "C3" / exp / roi / f"{stem}.npz"
+            else:
+                npz_path = REPO_ROOT / "data" / "pilot_seg" / cand_code / exp / roi / f"{stem}.npz"
+
             data = np.load(npz_path)
             t_inst = data["t_inst"][crop_sl]
             b_inst = data["b_inst"][crop_sl]
@@ -178,52 +236,36 @@ def main(exp: str = "v01_6_40_120_0-6_hd1", roi: str = "MIP_ROI_32") -> None:
             bid = int(data["tracked_b_id"])
 
             rendered_views: List[Image.Image] = []
-            for axis, base_rgb in [(0, base_top), (1, base_side)]:
+            for axis, base_rgb, target_h in [(0, base_top, top_h), (1, base_side, side_h)]:
                 rgb_up = np.array(
-                    Image.fromarray(base_rgb).resize(
-                        (base_rgb.shape[1] * scale, base_rgb.shape[0] * scale),
-                        Image.NEAREST,
-                    )
+                    Image.fromarray(base_rgb).resize((panel_w, target_h), Image.NEAREST)
                 )
 
-                # Other instances: thin 1px grey outline on upscaled panel
+                # Other instances: thin 1px grey outline on panel
                 for inst_arr, tr_id in [(b_inst, bid), (t_inst, tid)]:
                     for uid in np.unique(inst_arr):
                         if uid == 0 or int(uid) == tr_id:
                             continue
                         proj_o = (inst_arr == uid).max(axis=axis)
-                        proj_o_up = np.repeat(np.repeat(proj_o, scale, axis=0), scale, axis=1)
-                        rgb_up[outline_2d(proj_o_up)] = (155, 155, 155)
+                        if np.any(proj_o):
+                            proj_o_up = resize_bool_nearest(proj_o, panel_w, target_h)
+                            rgb_up[outline_2d(proj_o_up, thickness=1)] = (155, 155, 155)
 
                 # Tracked target: 2px blue outline of projected 3D mask
                 proj_b = b_mask.max(axis=axis)
                 if np.any(proj_b):
-                    out_b = outline_2d(proj_b)
-                    out_b_up = np.repeat(np.repeat(out_b, scale, axis=0), scale, axis=1)
-                    rgb_up[out_b_up] = (90, 160, 255)
+                    proj_b_up = resize_bool_nearest(proj_b, panel_w, target_h)
+                    rgb_up[outline_2d(proj_b_up, thickness=2)] = (90, 160, 255)
 
                 # Tracked T cell: 2px orange outline of projected 3D mask
                 proj_t = t_mask.max(axis=axis)
                 if np.any(proj_t):
-                    out_t = outline_2d(proj_t)
-                    out_t_up = np.repeat(np.repeat(out_t, scale, axis=0), scale, axis=1)
-                    rgb_up[out_t_up] = (255, 150, 40)
+                    proj_t_up = resize_bool_nearest(proj_t, panel_w, target_h)
+                    rgb_up[outline_2d(proj_t_up, thickness=2)] = (255, 150, 40)
 
                 rendered_views.append(Image.fromarray(rgb_up))
 
             col_panels.append((rendered_views[0], rendered_views[1]))
-
-        panel_w = col_panels[0][0].width
-        top_h = col_panels[0][0].height
-        side_h = col_panels[0][1].height
-
-        total_w = left_label_w + 4 * panel_w + 3 * col_gap + 12
-        total_h = top_header_h + top_h + row_gap + side_h + bottom_footer_h
-        # Ensure even dimensions for H.264 yuv420p
-        if total_w % 2 != 0:
-            total_w += 1
-        if total_h % 2 != 0:
-            total_h += 1
 
         canvas = Image.new("RGB", (total_w, total_h), (18, 18, 18))
         dr = ImageDraw.Draw(canvas)
@@ -231,7 +273,7 @@ def main(exp: str = "v01_6_40_120_0-6_hd1", roi: str = "MIP_ROI_32") -> None:
         # Top header: chamber + visit + time
         dr.text(
             (left_label_w, 6),
-            f"v01 {roi}  |  Visit {visit:02d}/20  (t = {(visit - 1) * 10} min, sweep {sweep})",
+            f"{short_exp} {roi}  |  Visit {visit:02d}/20  (t = {(visit - 1) * 10} min, sweep {sweep})",
             fill=(242, 242, 242),
             font=font_title,
         )
@@ -240,15 +282,30 @@ def main(exp: str = "v01_6_40_120_0-6_hd1", roi: str = "MIP_ROI_32") -> None:
         dr.text((4, top_header_h + 6), "XY", fill=(200, 200, 200), font=font_small)
         dr.text((4, top_header_h + top_h + row_gap + 6), "XZ", fill=(200, 200, 200), font=font_small)
 
-        for c_idx, (_, col_label) in enumerate(CANDIDATES):
+        pr_y0 = top_header_h + top_h + row_gap + side_h + 4
+        for c_idx, (cand_code, col_label) in enumerate(CANDIDATES):
             x_off = left_label_w + c_idx * (panel_w + col_gap)
             dr.text((x_off, 26), col_label, fill=(242, 242, 242), font=font_col)
             top_im, side_im = col_panels[c_idx]
             canvas.paste(top_im, (x_off, top_header_h))
             canvas.paste(side_im, (x_off, top_header_h + top_h + row_gap))
 
+            b_p, b_r, t_p, t_r = pr_lookup.get((visit, cand_code), (0.0, 0.0, 0.0, 0.0))
+            dr.text(
+                (x_off + 2, pr_y0),
+                f"Target: P={b_p:.2f}  R={b_r:.2f}",
+                fill=(130, 190, 255),
+                font=font_small,
+            )
+            dr.text(
+                (x_off + 2, pr_y0 + 16),
+                f"T cell: P={t_p:.2f}  R={t_r:.2f}",
+                fill=(255, 175, 85),
+                font=font_small,
+            )
+
         # 5 um scale bar on right-most XY panel
-        px_5um = int(round(5.0 / VOXEL_UM * scale))
+        px_5um = max(10, int(round((5.0 / VOXEL_UM) * scale_factor)))
         sb_x1 = left_label_w + 4 * panel_w + 3 * col_gap - 10
         sb_x0 = sb_x1 - px_5um
         sb_y = top_header_h + top_h - 10
@@ -256,43 +313,49 @@ def main(exp: str = "v01_6_40_120_0-6_hd1", roi: str = "MIP_ROI_32") -> None:
         dr.text((sb_x0, sb_y - 15), "5 um", fill=(255, 255, 255), font=font_small)
 
         # Footer legend
-        footer_y = top_header_h + top_h + row_gap + side_h + 6
+        footer_y = pr_y0 + pr_panel_h
         dr.text(
             (left_label_w, footer_y),
             "Raw: green ch1 (T cell) | magenta ch2 (target) | yellow ch0 (SYTOX >404 ADU)    "
             "Outlines: blue tracked target | orange tracked T cell | grey other instances",
-            fill=(210, 210, 210),
+            fill=(205, 205, 205),
             font=font_small,
         )
 
-        # Save both <visit>.jpg and zero-padded <visit:02d>.jpg at quality 80
+        # Save zero-padded <visit:02d>.jpg ONLY (no duplicate unpadded files)
         jpg_path_pad = frames_dir / f"{visit:02d}.jpg"
-        jpg_path_raw = frames_dir / f"{visit}.jpg"
-        canvas.save(jpg_path_pad, format="JPEG", quality=80)
-        if jpg_path_raw != jpg_path_pad:
-            canvas.save(jpg_path_raw, format="JPEG", quality=80)
+        canvas.save(jpg_path_pad, format="JPEG", quality=82)
 
-    # Encode H.264 MP4 (crf 24, 2 fps) from zero-padded frames 01..20
-    cmd = [
-        "ffmpeg",
-        "-y",
-        "-framerate",
-        "2",
-        "-i",
-        str(frames_dir / "%02d.jpg"),
-        "-c:v",
-        "libx264",
-        "-crf",
-        "24",
-        "-pix_fmt",
-        "yuv420p",
-        "-movflags",
-        "+faststart",
-        str(movie_path),
-    ]
-    subprocess.run(cmd, check=True)
-    size_mb = movie_path.stat().st_size / (1024 * 1024)
-    print(f"Saved {movie_path} ({size_mb:.3f} MB)")
+    # Encode H.264 MP4 (1200 px wide, crf 28, 2 fps, <= 1.5 MB)
+    for crf_val in ("28", "30", "32"):
+        cmd = [
+            "ffmpeg",
+            "-y",
+            "-framerate",
+            "2",
+            "-i",
+            str(frames_dir / "%02d.jpg"),
+            "-c:v",
+            "libx264",
+            "-crf",
+            crf_val,
+            "-pix_fmt",
+            "yuv420p",
+            "-movflags",
+            "+faststart",
+            str(movie_path),
+        ]
+        subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        size_mb = movie_path.stat().st_size / (1024 * 1024)
+        if size_mb <= 1.48:
+            break
+    print(f"Saved {movie_path} ({size_mb:.3f} MB, crf={crf_val}, {total_w}x{total_h})")
+    return movie_path
+
+
+def main() -> None:
+    for short_exp, exp, roi in PILOT_CHAMBERS:
+        render_chamber_movie(short_exp=short_exp, exp=exp, roi=roi)
 
 
 if __name__ == "__main__":

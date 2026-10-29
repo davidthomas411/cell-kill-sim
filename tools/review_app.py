@@ -37,7 +37,19 @@ _WRITE_LOCK = threading.Lock()
 
 # Internal file-path columns hidden from the UI display table per House Style
 _HIDDEN_INDEX_COLUMNS: frozenset[str] = frozenset(
-    {"source_data_path", "panel_png_path", "image_path", "file_path", "raw_path"}
+    {
+        "source_data_path",
+        "panel_png_path",
+        "image_path",
+        "file_path",
+        "raw_path",
+        "mask_h5_path",
+        "raw_h5_path",
+        "movie",
+        "movie_path",
+        "video_path",
+        "path",
+    }
 )
 
 _HUMAN_FIELD_LABELS: dict[str, str] = {
@@ -132,6 +144,15 @@ def _load_gallery_index(gallery_row: dict[str, str]) -> tuple[bool, list[dict[st
                     or row.get("image_path")
                     or ""
                 ).strip()
+                movie_rel = (
+                    row.get("movie")
+                    or row.get("movie_path")
+                    or row.get("video_path")
+                    or (row.get("path") if str(row.get("path", "")).endswith(".mp4") else "")
+                    or ""
+                ).strip()
+                exp_val = (row.get("experiment") or row.get("exp") or "").strip()
+                roi_val = (row.get("roi") or "").strip()
                 numbers: list[dict[str, str]] = []
                 for k, v in row.items():
                     if k is None or k in _HIDDEN_INDEX_COLUMNS:
@@ -151,6 +172,9 @@ def _load_gallery_index(gallery_row: dict[str, str]) -> tuple[bool, list[dict[st
                         "panel_id": panel_id,
                         "group": group,
                         "png_rel": png_rel,
+                        "movie_rel": movie_rel,
+                        "exp": exp_val,
+                        "roi": roi_val,
                         "numbers": numbers,
                     }
                 )

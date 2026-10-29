@@ -41,7 +41,7 @@ All 20 visit frames (top and side views, 4 candidates side by side), reviewed by
 In every frame: blue = tracked target, orange = tracked T cell, grey = other objects.
 
 <figure>
-<video src="../pilot/v01_MIP_ROI_32_candidates.mp4" controls loop muted playsinline></video>
+<video src="../pilot/p1_v01_MIP_ROI_32_candidates.mp4" controls loop muted playsinline></video>
 <figcaption>All 20 visits. Columns: C0 lab, C1 lab repaired, C2 Cellpose-SAM, C3 PlantSeg. Top row: view from above; bottom row: side view.</figcaption>
 </figure>
 
