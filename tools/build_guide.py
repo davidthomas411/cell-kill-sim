@@ -94,6 +94,7 @@ def figures():
     crop_panel("figures/pilot/frames/v02_MIP_ROI_3/06.jpg", (0, 0, 1200, 572), "f12_oversplit.jpg")
     crop_panel("figures/pilot/frames/v02_MIP_ROI_3/16.jpg", (0, 0, 1200, 572), "f13_dead_cell_lost.jpg")
     crop_panel("figures/pilot/p3/frames/v03_MIP_ROI_6/14.jpg", (0, 0, 1200, 688), "f14_c4_fix.jpg")
+    crop_panel("figures/pilot/p4/frames/v12_MIP_ROI_32/18.jpg", (0, 0, 960, 792), "f15_heldout.jpg")
     shutil.copy2(R / "figures/pilot/web/p3_v02_MIP_ROI_3.mp4", IMG / "p3_v02_MIP_ROI_3.mp4")
     for name in ("v01_MIP_ROI_2", "v01_MIP_ROI_32"):
         subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", str(R / f"figures/movies/{name}.gif"), "-movflags", "+faststart",

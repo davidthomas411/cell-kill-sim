@@ -1952,5 +1952,248 @@ def run_all_pilot3_chambers(device: str = "mps", reuse_cache: bool = True) -> Tu
     return comb_m, comb_d
 
 
+PILOT4_CHAMBERS: List[Tuple[str, str, str]] = [
+    ("v06", "v06_6_40_120_0-6_hd8", "MIP_ROI_28"),
+    ("v07", "v07_6_39_120_0-6_hd9", "MIP_ROI_2"),
+    ("v07", "v07_6_39_120_0-6_hd9", "MIP_ROI_26"),
+    ("v08", "v08_6_40_120_0-6_hd2", "MIP_ROI_24"),
+    ("v08", "v08_6_40_120_0-6_hd2", "MIP_ROI_38"),
+    ("v09", "v09_6_40_120_0-6_hd10", "MIP_ROI_29"),
+    ("v09", "v09_6_40_120_0-6_hd10", "MIP_ROI_38"),
+    ("v10", "v10_6_40_120_0-6_hd5", "MIP_ROI_28"),
+    ("v11", "v11_6_36_120_0-6_hd2_ds", "MIP_ROI_15"),
+    ("v12", "v12_6_35_120_0-6_hd10ds", "MIP_ROI_23"),
+    ("v12", "v12_6_35_120_0-6_hd10ds", "MIP_ROI_32"),
+    ("v13", "v13_6_40_120_0-6_hd5_ds", "MIP_ROI_28"),
+]
+
+
+def run_chamber_visits_p4(
+    short_exp: str = "v06",
+    exp: str = "v06_6_40_120_0-6_hd8",
+    roi: str = "MIP_ROI_28",
+    device: str = "mps",
+    reuse_cache: bool = True,
+) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    """Run C0 and C4 (unchanged) on sweep 1 of all visits of a held-out P4 chamber, track instances, and score boundaries."""
+    manifest_df = pd.read_csv(REPO_ROOT / "data" / "scidb_19235_raw" / "manifest.csv")
+    sub = manifest_df[
+        (manifest_df["experiment"] == exp)
+        & (manifest_df["roi"] == roi)
+        & (manifest_df["ok"] == True)  # noqa: E712
+        & (manifest_df["sweep_index"] != 6)
+    ].copy()
+
+    visit_rows = []
+    for visit_idx, vdf in sub.groupby("visit_index"):
+        vdf_s1 = vdf[vdf["sweep_index"] == 1]
+        if len(vdf_s1) > 0:
+            chosen = vdf_s1.iloc[0]
+        else:
+            vdf_s2 = vdf[vdf["sweep_index"] == 2]
+            chosen = vdf_s2.iloc[0] if len(vdf_s2) > 0 else vdf.sort_values("sweep_index").iloc[0]
+        visit_rows.append(
+            {
+                "visit": int(visit_idx),
+                "sweep": int(chosen["sweep_index"]),
+                "stem": f"{int(chosen['stem']):05d}",
+            }
+        )
+    visit_rows.sort(key=lambda d: d["visit"])
+
+    cands = ["C0", "C4"]
+    inst_store: Dict[str, List[Tuple[np.ndarray, np.ndarray, float]]] = {c: [] for c in cands}
+    stems_all = [str(it["stem"]) for it in visit_rows]
+    ref_map = get_reference_masks_for_stems(exp, roi, stems_all)
+    ref_t_list: List[Optional[np.ndarray]] = []
+    ref_b_list: List[Optional[np.ndarray]] = []
+
+    for item in visit_rows:
+        v = int(item["visit"])
+        sw = int(item["sweep"])
+        stem = str(item["stem"])
+        raw_path = REPO_ROOT / "data" / "scidb_19235_raw" / exp / roi / f"{stem}.h5"
+        pred_path = REPO_ROOT / "data" / "scidb_19235_masks" / exp / roi / f"{stem}_predictions.h5"
+
+        t_ref_s, b_ref_s = ref_map[stem]
+        ref_t_list.append(t_ref_s > 0 if np.any(t_ref_s > 0) else None)
+        ref_b_list.append(b_ref_s > 0 if np.any(b_ref_s > 0) else None)
+
+        # Load or run C0 and save immediately to disk
+        npz_c0 = REPO_ROOT / "data" / "pilot_seg" / "C0" / exp / roi / f"{stem}.npz"
+        if reuse_cache and npz_c0.exists():
+            with np.load(npz_c0) as z0:
+                res_c0 = (z0["t_inst"], z0["b_inst"], float(z0["runtime_s"]))
+        else:
+            with h5py.File(pred_path, "r") as f_pred:
+                pred_tmp = f_pred["predictions"][:]
+            res_c0 = run_c0(pred_tmp)
+            tid0, bid0 = select_tracked_pair(res_c0[0], res_c0[1], t_ref_s, b_ref_s)
+            save_candidate_npz(npz_c0, res_c0[0], res_c0[1], tid0, bid0, res_c0[2])
+            del pred_tmp
+            gc.collect()
+
+        # Load or run C4 (unchanged) and save immediately to disk
+        npz_c4 = REPO_ROOT / "data" / "pilot_seg" / "C4" / exp / roi / f"{stem}.npz"
+        if reuse_cache and npz_c4.exists():
+            with np.load(npz_c4) as z4:
+                res_c4 = (z4["t_inst"], z4["b_inst"], float(z4["runtime_s"]))
+        else:
+            with h5py.File(raw_path, "r") as f_raw:
+                raw_tmp = f_raw["raw"][:]
+            with h5py.File(pred_path, "r") as f_pred:
+                pred_tmp = f_pred["predictions"][:]
+            try:
+                res_c4 = run_c4(raw_tmp, pred_tmp, device=device)
+            except Exception as exc:
+                import traceback
+                print(f"[CRASH {short_exp} {roi} v{v:02d} s{sw} {stem}] {exc}", flush=True)
+                traceback.print_exc()
+                res_c4 = (
+                    np.zeros(pred_tmp.shape, dtype=np.uint16),
+                    np.zeros(pred_tmp.shape, dtype=np.uint16),
+                    0.0,
+                )
+            tid_init, bid_init = select_tracked_pair(res_c4[0], res_c4[1], t_ref_s, b_ref_s)
+            save_candidate_npz(npz_c4, res_c4[0], res_c4[1], tid_init, bid_init, res_c4[2])
+            del raw_tmp, pred_tmp
+            gc.collect()
+
+        inst_store["C0"].append(res_c0)
+        inst_store["C4"].append(res_c4)
+        print(f"[{short_exp} {roi} v{v:02d} s{sw} {stem}] C0={res_c0[2]:.2f}s C4={res_c4[2]:.2f}s", flush=True)
+
+    # Track instances across all visits for each candidate
+    track_store: Dict[str, Tuple[List[Tuple[int, int]], List[Tuple[int, int]]]] = {}
+    for cand in cands:
+        t_list = [x[0] for x in inst_store[cand]]
+        b_list = [x[1] for x in inst_store[cand]]
+        t_tracks = track_instances_hungarian(t_list, ref_t_list)
+        t_contact_masks: List[Optional[np.ndarray]] = [
+            (t_list[idx] == uid) if uid > 0 else None for idx, (uid, _) in enumerate(t_tracks)
+        ]
+        b_tracks = track_instances_hungarian(b_list, ref_b_list, contact_masks=t_contact_masks)
+        track_store[cand] = (t_tracks, b_tracks)
+
+    # Update C0 and C4 .npz tracked IDs and compute per-visit boundary metrics + C4 death timeline
+    metrics_rows: List[Dict[str, object]] = []
+    death_rows: List[Dict[str, object]] = []
+    chamber_id = f"{short_exp}_{roi}"
+
+    for idx, item in enumerate(visit_rows):
+        v = int(item["visit"])
+        sw = int(item["sweep"])
+        stem = str(item["stem"])
+        raw_path = REPO_ROOT / "data" / "scidb_19235_raw" / exp / roi / f"{stem}.h5"
+        with h5py.File(raw_path, "r") as f_raw:
+            raw_v = f_raw["raw"][:]
+        em = prepare_channel_eval_maps(raw_v)
+
+        for cand in cands:
+            t_inst, b_inst, rt = inst_store[cand][idx]
+            tid, t_track_id = track_store[cand][0][idx]
+            bid, b_track_id = track_store[cand][1][idx]
+
+            npz_out = REPO_ROOT / "data" / "pilot_seg" / cand / exp / roi / f"{stem}.npz"
+            save_candidate_npz(npz_out, t_inst, b_inst, tid, bid, rt)
+
+            t_mask = (t_inst == tid) if tid > 0 else np.zeros(t_inst.shape, dtype=bool)
+            b_mask = (b_inst == bid) if bid > 0 else np.zeros(b_inst.shape, dtype=bool)
+
+            b_surf, b_miss, b_phan = compute_boundary_scores(
+                b_mask, em["z_b"], em["strong_b"], em["any_sig_b"], is_target=True
+            )
+            t_surf, t_miss, t_phan = compute_boundary_scores(
+                t_mask, em["z_t"], em["strong_t"], em["any_sig_t"], is_target=False
+            )
+            dye_vox_in_b = int(np.sum(em["sytox_dye"] & b_mask))
+
+            faces = count_interface_faces(t_mask, b_mask)
+            contact_area_um2 = round(float(faces) * FACE_AREA_UM2, 3)
+
+            metrics_rows.append(
+                {
+                    "chamber": chamber_id,
+                    "short_exp": short_exp,
+                    "experiment": exp,
+                    "roi": roi,
+                    "visit": v,
+                    "sweep": sw,
+                    "stem": stem,
+                    "voxel_size_um": VOXEL_UM,
+                    "candidate": cand,
+                    "tracked_t_id": int(tid),
+                    "tracked_b_id": int(bid),
+                    "tcell_track_id": int(t_track_id),
+                    "target_track_id": int(b_track_id),
+                    "target_surf_score": b_surf,
+                    "target_missed_2vox": b_miss,
+                    "target_phantom_frac": b_phan,
+                    "tcell_surf_score": t_surf,
+                    "tcell_missed_2vox": t_miss,
+                    "tcell_phantom_frac": t_phan,
+                    "target_vox": int(np.sum(b_mask)),
+                    "tcell_vox": int(np.sum(t_mask)),
+                    "target_vol_um3": round(int(np.sum(b_mask)) * VOXEL_VOL_UM3, 3),
+                    "tcell_vol_um3": round(int(np.sum(t_mask)) * VOXEL_VOL_UM3, 3),
+                    "n_target_instances": int(len(np.unique(b_inst)) - (1 if 0 in b_inst else 0)),
+                    "n_tcell_instances": int(len(np.unique(t_inst)) - (1 if 0 in t_inst else 0)),
+                    "dye_voxels_in_target": dye_vox_in_b,
+                    "contact_faces": int(faces),
+                    "contact_area_um2": contact_area_um2,
+                    "runtime_s": round(float(rt), 4),
+                }
+            )
+
+            if cand == "C4":
+                death_rows.append(
+                    {
+                        "chamber": chamber_id,
+                        "visit": v,
+                        "target_track_id": int(b_track_id),
+                        "dye_voxels_in_target": dye_vox_in_b,
+                        "contact_area_um2": contact_area_um2,
+                    }
+                )
+        del raw_v, em
+
+    del inst_store, ref_t_list, ref_b_list
+    gc.collect()
+
+    df_m = pd.DataFrame(metrics_rows)
+    df_d = pd.DataFrame(death_rows)
+    ch_csv = REPO_ROOT / "data" / "pilot_seg" / f"{short_exp}_{roi}_p4_metrics.csv"
+    df_m.to_csv(ch_csv, index=False)
+    return df_m, df_d
+
+
+def run_all_pilot4_chambers(device: str = "mps", reuse_cache: bool = True) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    """Run C0 and C4 across all 12 held-out P4 chambers and write pilot4_metrics.csv + p4_death_timeline.csv."""
+    m_dfs: List[pd.DataFrame] = []
+    d_dfs: List[pd.DataFrame] = []
+    for short_exp, exp, roi in PILOT4_CHAMBERS:
+        df_m, df_d = run_chamber_visits_p4(
+            short_exp=short_exp,
+            exp=exp,
+            roi=roi,
+            device=device,
+            reuse_cache=reuse_cache,
+        )
+        m_dfs.append(df_m)
+        d_dfs.append(df_d)
+
+    comb_m = pd.concat(m_dfs, ignore_index=True)
+    comb_d = pd.concat(d_dfs, ignore_index=True)
+
+    m_path = REPO_ROOT / "data" / "pilot_seg" / "pilot4_metrics.csv"
+    d_path = REPO_ROOT / "data" / "pilot_seg" / "p4_death_timeline.csv"
+    comb_m.to_csv(m_path, index=False)
+    comb_d.to_csv(d_path, index=False)
+    print(f"Saved P4 metrics -> {m_path} ({len(comb_m)} rows)")
+    print(f"Saved P4 death timeline -> {d_path} ({len(comb_d)} rows)")
+    return comb_m, comb_d
+
+
 if __name__ == "__main__":
-    run_all_pilot3_chambers(device="mps", reuse_cache=True)
+    run_all_pilot4_chambers(device="mps", reuse_cache=True)
+

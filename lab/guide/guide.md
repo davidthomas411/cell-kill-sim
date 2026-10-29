@@ -172,7 +172,7 @@ The project is run like a lab:
 - **Data registry:** every dataset has a status. Only verified data may be analysed.
 - **Gates:** a stage may feed the next only after its review passes.
 
-So far 256 gallery panels (146 in the first gallery, 110 in the clean-cell gallery) and 340 movie frames from the redrawing pilot (section 7) have been reviewed.
+So far 256 gallery panels (146 in the first gallery, 110 in the clean-cell gallery) and 599 movie frames from the redrawing pilot (section 7) have been reviewed.
 
 ## 7. Redrawing the cells (in progress)
 
@@ -238,11 +238,20 @@ touches the tumour cell early on, then leaves; the tumour cell later fills with 
 - small neighbours get attached;
 - the tracking of which cell is which across time slips.
 
-C4 was tuned on these 8 chambers. It is now being tested, unchanged, on 12 chambers
-it has never seen.
+**Round 4: a fair test.** C4 was tuned on those 8 chambers, so we ran it, unchanged,
+on 12 chambers it had never seen. Its outlines held up: solid and tight, with none of
+the lab masks' lobes hanging into empty space. But two problems now dominate:
+- touching tumour cells are often drawn as one;
+- the computer often picks the wrong cell as "the target" or "the T cell".
+
+<figure>
+<img src="img/f15_heldout.jpg" alt="Lab mask with a large lobe below the cells next to a tight C4 outline, on a chamber C4 had never seen">
+<figcaption><b>Round 4, a chamber C4 had never seen</b> (v12, ROI 32). Left: the lab's tumour-cell outline (blue)
+hangs far below the cells in the side view. Right: C4 follows the cell.</figcaption>
+</figure>
 
 **After that:**
-1. Fix tracking and the merging of touching cells.
+1. Pick and follow the right cells over time, and separate touching tumour cells.
 2. Agree on what counts as a kill, then redo the death labels on the new outlines.
 3. **Scale up** by processing raw images as they download, keeping only the cell outlines
    and summaries, so all 502 chambers fit on one computer.
