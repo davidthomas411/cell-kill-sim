@@ -175,3 +175,6 @@ table.data th,main table th{
   .panel-grid{grid-template-columns:1fr;gap:12px}
   .fig-with-movie{grid-template-columns:1fr;gap:12px}
 }
+
+.abstract{background:var(--paper-2);border:1px solid var(--rule);border-radius:6px;padding:.4rem 1.2rem 1rem;margin:0 0 2rem;max-width:46rem}
+.abstract h2{margin-top:.8rem}

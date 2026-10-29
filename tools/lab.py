@@ -254,7 +254,7 @@ def list_notebook_entries(notebook_dir: Path = NOTEBOOK_DIR) -> list[dict[str, A
         return []
     entries: list[dict[str, Any]] = []
     for p in sorted(notebook_dir.glob("*.md")):
-        if p.name.lower() == "readme.md":
+        if p.name.lower() in ("readme.md", "abstract.md"):
             continue
         meta, body = parse_markdown_with_front_matter(p)
         entries.append(
@@ -288,7 +288,7 @@ def list_protocols(protocols_dir: Path = PROTOCOLS_DIR) -> list[dict[str, Any]]:
         return []
     items: list[dict[str, Any]] = []
     for p in sorted(protocols_dir.glob("*.md")):
-        if p.name.lower() == "readme.md":
+        if p.name.lower() in ("readme.md", "abstract.md"):
             continue
         meta, body = parse_markdown_with_front_matter(p)
         items.append(

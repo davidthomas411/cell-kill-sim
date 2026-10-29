@@ -79,19 +79,21 @@ def figures():
     row = Image.new("RGB", (a.width + b.width + c.width + 8, max(a.height, c.height)), (255, 255, 255))
     row.paste(a, (0, 0)); row.paste(b, (a.width + 4, 0)); row.paste(c, (a.width + b.width + 8, 0))
     save(row, "f3_slice_vs_projection.jpg")
-    # 4-7. real gallery panels (cropped to the image area)
-    crop_panel("figures/review_clean/clean_random/clean_rand_03_v01_untr_3.png", (0, 30, 770, 787), "f4_good_mask.jpg")
-    crop_panel("figures/review_clean/clean_random/clean_rand_47_v12_dasa_3.png", (0, 30, 770, 787), "f5_hollow.jpg")
-    crop_panel("figures/review_clean/clean_extremes/clean_ext_04_min_cup_depth_rank1.png", (0, 30, 770, 787), "f6_merged.jpg")
-    crop_panel("figures/review_clean/clean_random/clean_rand_39_v10_untr_3.png", (0, 30, 770, 787), "f7_real_cup.jpg")
-    crop_panel("figures/review/cup_validation/b_dent_R5_a3_d2.png", (0, 0, 1100, 450), "f8_cup_test.jpg")
-    crop_panel("figures/review/death_labels/death_killed_04.png", (0, 0, 900, 560), "f9_death.jpg")
-    crop_panel("figures/review/fit_reachable/fit_reach_03.png", (0, 0, 900, 470), "f10_model.jpg")
+    # 4-7 are drawn on the raw image by tools/guide_mask_figures.py (needs the seg env).
+    crop_panel("figures/review/cup_validation/b_dent_R5_a3_d2.png", (20, 60, 770, 430), "f8_cup_test.jpg")
+    # 9. a death over time: C4 top view of v02 ROI 3 (round 3 of the pilot)
+    tiles = []
+    for v in (8, 12, 14, 17):
+        t = Image.open(R / f"figures/pilot/p3/frames/v02_MIP_ROI_3/{v:02d}.jpg").convert("RGB").crop((808, 44, 1190, 420))
+        ImageDraw.Draw(t).text((10, 8), f"{(v - 1) * 10} min", font=FONT, fill=(255, 255, 255)); tiles.append(t)
+    strip = Image.new("RGB", (sum(t.width for t in tiles) + 12, tiles[0].height), (255, 255, 255))
+    for k, t in enumerate(tiles): strip.paste(t, (k * (t.width + 4), 0))
+    save(strip, "f9_death.jpg")
     # 11-14. re-segmentation pilot frames (full frames; columns labelled in the image)
-    crop_panel("figures/pilot/frames/10.jpg", (0, 0, 1492, 738), "f11_p1_four_methods.jpg", 0.8)
-    crop_panel("figures/pilot/frames/v02_MIP_ROI_3/06.jpg", (0, 0, 1200, 622), "f12_oversplit.jpg")
-    crop_panel("figures/pilot/frames/v02_MIP_ROI_3/16.jpg", (0, 0, 1200, 622), "f13_dead_cell_lost.jpg")
-    crop_panel("figures/pilot/p3/frames/v03_MIP_ROI_6/14.jpg", (0, 0, 1200, 714), "f14_c4_fix.jpg")
+    crop_panel("figures/pilot/frames/10.jpg", (0, 0, 1492, 712), "f11_p1_four_methods.jpg", 0.8)
+    crop_panel("figures/pilot/frames/v02_MIP_ROI_3/06.jpg", (0, 0, 1200, 572), "f12_oversplit.jpg")
+    crop_panel("figures/pilot/frames/v02_MIP_ROI_3/16.jpg", (0, 0, 1200, 572), "f13_dead_cell_lost.jpg")
+    crop_panel("figures/pilot/p3/frames/v03_MIP_ROI_6/14.jpg", (0, 0, 1200, 688), "f14_c4_fix.jpg")
     shutil.copy2(R / "figures/pilot/web/p3_v02_MIP_ROI_3.mp4", IMG / "p3_v02_MIP_ROI_3.mp4")
     for name in ("v01_MIP_ROI_2", "v01_MIP_ROI_32"):
         subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", str(R / f"figures/movies/{name}.gif"), "-movflags", "+faststart",

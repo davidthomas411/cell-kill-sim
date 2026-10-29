@@ -76,28 +76,35 @@ Early in this project we reviewed single slices only, which can miss what happen
 <p>To measure anything, the computer needs to know which voxels (3D pixels) belong
 to which cell. The Fei lab trained a neural network to label every voxel, and
 published these labels, called <strong>masks</strong>. We started from their masks.</p>
+<p>In every picture below, the <strong>blue line</strong> is the lab's outline of the tumour cell and
+the <strong>orange line</strong> is their outline of the T cell, drawn on the raw image.</p>
 <figure>
-<img src="img/f4_good_mask.jpg" alt="Top: raw image with blue and orange outlines that follow the cells closely. Bottom: the lab's mask labels">
-<figcaption><b>A good mask.</b> Top: the raw image with the outline of the tumour cell (blue) and T cell (orange).
-Bottom: the lab's labels. The outline follows the cell. (The top row shows only the magenta channel, so the T cell's outline has no green under it.)</figcaption>
+<img src="img/f4_good_mask.jpg" alt="A green T cell and a magenta tumour cell, each closely outlined, seen from above and from the side">
+<figcaption><b>A good mask</b> (experiment v01, chamber ROI 5). Seen from above and from the side, each outline
+follows its cell.</figcaption>
 </figure>
 
 <p>When we looked closely, many masks turned out to be wrong in ways that matter:</p>
 <figure>
-<img src="img/f5_hollow.jpg" alt="A solid magenta cell whose mask is a broken hollow ring">
-<figcaption><b>Hollow mask.</b> The cell is solid, but the mask is a broken ring. Because the label marks only
-the membrane, the network sometimes fails to fill the inside. Donor hd10's experiments are mostly like this.</figcaption>
+<img src="img/f5_hollow.jpg" alt="From above the tumour cell outline looks whole; a cut through the middle shows the mask is a broken ring">
+<figcaption><b>Hollow mask</b> (v12, ROI 33). From above and from the side the outline looks fine. A cut through the
+middle of the cell (right) shows that the mask is only a broken ring, shaded blue: the inside of the cell is not
+included. The tumour label marks only the cell's surface, and the lab's network sometimes fails to fill the inside.
+Most masks in donor hd10's experiments look like this.</figcaption>
 </figure>
 
 <figure>
-<img src="img/f6_merged.jpg" alt="Two round tumour cells touching, outlined as one object">
-<figcaption><b>Two cells merged.</b> Two round tumour cells are labelled as one object. A T cell sitting in the
-groove between them then looks as if it has pushed a deep dent into "one" cell.</figcaption>
+<img src="img/f6_merged.jpg" alt="One blue outline around two tumour cells; from the side the outline also loops into empty space">
+<figcaption><b>Two cells merged, plus a phantom lobe</b> (v01, ROI 32, 40 minutes in). From above, one blue outline
+goes around two tumour cells: the large one next to the T cell and a smaller one below it. From the side, the
+outline also loops up into empty space where there is no cell. A T cell next to a merged pair can look as if it
+has pushed a deep dent into "one" cell.</figcaption>
 </figure>
 
-<p>Other failures: a cell split into fragments, a mask extending where there is no
-cell, and cells cut off at the edge of the image. In a random check of visits
-that passed our first quality rule, only <strong>4 in 10 masks matched the raw image well</strong>.</p>
+<p>Other failures: a cell split into fragments, and cells cut off at the edge of the
+image. In a random check of time points that passed our first quality rule, only
+<strong>4 in 10 masks matched the raw image well</strong>. Section 7 also shows that the lab's
+masks lose a tumour cell once it has died.</p>
 <h2>4. What we measured</h2>
 <p><strong>Contact area:</strong> how much of the T cell touches the target. We reproduced the
 lab's published numbers exactly (395 of 395 chambers matched; area within 0.5%
@@ -106,33 +113,32 @@ for 369 of 419 cells). This part is solid.</p>
 distance from the target's "filled-in" outline (its convex hull) down to the
 contact surface.</p>
 <figure>
-<img src="img/f7_real_cup.jpg" alt="A tumour cell wrapping around a T cell, with a red arrow marking a 3.7 micrometre dent">
-<figcaption><b>A real deep cup</b> (3.7 µm). The target visibly wraps around the T cell. The green dashed line is
-the filled-in outline; the red arrow is the measured depth.</figcaption>
+<img src="img/f7_real_cup.jpg" alt="A magenta tumour cell curving around a green T cell; from the side the blue outline hangs below the cells">
+<figcaption><b>A deep cup, measured at 3.7 µm</b> (v10, ROI 23). From above, the tumour cell (magenta) curves around
+the T cell (green). But from the side, the blue outline hangs down below the cells where there is no signal,
+and that lobe makes the dent look deeper than it is. Many "deep cups" were like this, which is why the cup results are on hold.</figcaption>
 </figure>
 
 <figure>
-<img src="img/f8_cup_test.jpg" alt="Synthetic sphere with a 2 micrometre dent and the measured depth">
-<figcaption><b>Testing the ruler.</b> On artificial cells with dents of known depth, the measurement is right to within
-one voxel (a 2 µm dent measures 1.96 µm). So the ruler is fine; the trouble is the bad masks it is applied to.</figcaption>
+<img src="img/f8_cup_test.jpg" alt="A computer-made round cell (blue) with a 2 micrometre dent where a T cell (orange) presses in; arrows mark the measured depth">
+<figcaption><b>Testing the ruler.</b> An artificial cell (blue) with a dent of known depth (2 µm) where an artificial T cell
+(orange) presses in, cut through the middle two ways. The arrows show the measured depth: 1.96 µm, right to within one
+voxel. So the ruler is fine; the trouble is the bad masks it is applied to.</figcaption>
 </figure>
 
 <p><strong>Death:</strong> a target counts as killed when the death dye appears inside it and
 stays. Our kill rates match the paper's per group (52% vs 57.5%, 24% vs 27%,
 6% vs 4.5%), but the dye is faint and the calls depend on the threshold.</p>
 <figure>
-<img src="img/f9_death.jpg" alt="Death-dye images before, at and after a called death visit">
-<figcaption><b>A death call.</b> The death dye (bright) appears on the target at the called visit and grows after it.</figcaption>
+<img src="img/f9_death.jpg" alt="Four snapshots of a magenta tumour cell: at 70 minutes it is clear, then yellow spots appear and by 160 minutes it is filled with yellow death dye">
+<figcaption><b>What a death looks like</b> (v02, ROI 3, seen from above). At 70 minutes the tumour cell is clear. Yellow
+spots of death dye appear at 110 minutes, and by 160 minutes the cell is full of dye. The T cell (green, right edge)
+had touched this cell earlier and moved away. This chamber is labelled "survived" (section 7).</figcaption>
 </figure>
 
 <p><strong>A mechanical model</strong> to turn dents into forces was built and tested, but it
 did not fit the real cells reliably: its cells drifted away from the real ones.
 It is parked until the measurements are trustworthy.</p>
-<figure>
-<img src="img/f10_model.jpg" alt="Model outlines displaced from the real cell outlines">
-<figcaption><b>Why the model is parked.</b> The model's cells (dashed) sit several micrometres away from the real ones (solid).</figcaption>
-</figure>
-
 <h2>5. What we found, and why it is on hold</h2>
 <table>
 <thead>

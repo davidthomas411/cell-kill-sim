@@ -243,6 +243,9 @@ table.data th,main table th{
   .panel-grid{grid-template-columns:1fr;gap:12px}
   .fig-with-movie{grid-template-columns:1fr;gap:12px}
 }
+
+.abstract{background:var(--paper-2);border:1px solid var(--rule);border-radius:6px;padding:.4rem 1.2rem 1rem;margin:0 0 2rem;max-width:46rem}
+.abstract h2{margin-top:.8rem}
 """
 
 
@@ -254,6 +257,14 @@ def _status_pill(status: str) -> str:
     s = (status or "").strip()
     slug = re.sub(r"[^a-z0-9_-]+", "-", s.lower())
     return f'<span class="status-pill st-{_esc(slug)}">{_esc(s)}</span>'
+
+
+def _abstract_html() -> str:
+    """The running project abstract (lab/notebook/ABSTRACT.md), rewritten after each experiment."""
+    path = NOTEBOOK_DIR / "ABSTRACT.md"
+    if not path.exists():
+        return ""
+    return f'<section class="abstract">{_render_md(path.read_text(encoding="utf-8"))}</section>'
 
 
 def _render_md(md_text: str) -> str:
@@ -524,6 +535,7 @@ def build_home_page(
         )
 
     body = f"""
+    {_abstract_html()}
     <h1>Gates</h1>
     <div class="tblwrap">
       <table class="data">
@@ -615,6 +627,7 @@ def build_notebook_pages(entries: list[dict[str, Any]]) -> None:
 
     idx_body = f"""
     <h1>Notebook</h1>
+    {_abstract_html()}
     <div class="tblwrap">
       <table class="data">
         <thead>
