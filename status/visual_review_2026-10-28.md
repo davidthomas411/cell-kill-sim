@@ -105,3 +105,36 @@ Claude: all 128 panels (33 contact sheets of 4), in two passes.
   items 4-7 are fixed.
 - Step 4 death labels: need the overlap-bug check and a threshold sensitivity
   analysis; 3D (not projection) overlap would remove item 11.
+
+## Addendum: QC job results and its 18 panels (reviewed by Claude, all 18)
+
+Source: `.agy_qc_report.md`, `data/qc/`, `figures/review/qc_flagged/`, `figures/review/qc_clean/`.
+
+- **Death-label mismatch resolved for death_dasatinib_30.** It was a gallery bug:
+  `src/review/make_gallery.py` overlapped dye with every target in the field (a
+  71-voxel U-Net speck here). `src/death_labels.py` v2 uses the contacted target
+  only and records no overlap. death_surviving_19, death_surviving_24 and
+  death_killed_07 are presumably the same, and are still to be confirmed.
+- **Death calls are threshold-sensitive.** Sustained kills (trace_num==1, 200 min)
+  at 404 ADU / 20 px: 81 of 416. At 406 ADU: 64 (-17). At 410 ADU: 38 (-43).
+  Low-killing group: 11.2% at 404, 5.6% at 406, 0.6% at 410. Most low-killing
+  kills are faint, near-threshold calls; they need panel-by-panel review (G2).
+- **Lab-label fragmentation rises before death.** flag_fragmented_raw, last 3
+  pre-death visits vs earlier: 43% vs 35% (any-visit rule, 92 chambers,
+  p = 0.020); 43% vs 31% (sustained, p = 0.017). This is the confound risk for
+  the cup-death association.
+- Excluding the literal flags barely moves the step 5b HRs (cup depth/radius
+  1.60 -> 1.51). But the literal flag catches only 3% of visits, so this does
+  not clear the association.
+- qc_frag_01-06: all genuine small fragments (41-173 um^3). In qc_frag_06
+  (raw) the target pieces sit where the membrane image shows almost no
+  cell: a possible U-Net false target.
+- qc_edge_01-06: cells genuinely cut at the border. qc_edge_01 and 02 are also
+  merged targets (about 2,000 um^3, two lobes), with 5-6 um "cups".
+- **New concern, cup measurement definition (qc_clean_02, 04).** A visually
+  flat contact records 2.87 um (qc_clean_02, patch radius 6.6 um). The code
+  (src/contact_descriptors.py:709-715) takes each patch point's min distance
+  to the planes of T-cell-facing hull facets only. The true distance to the
+  hull is the min over all facets, so excluding facets can overestimate depth
+  near the rim of wide or curved contacts. Synthetic validation with known
+  answers is running (.agy_cuptest_report.md).
