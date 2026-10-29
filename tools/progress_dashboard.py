@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""Local live progress dashboard for Cell-Kill-Sim.
+"""Local live progress dashboard for Cell-Kill-Sim (re-segmentation phase).
 
-Uses Python standard library only (http.server, json, os, subprocess, threading).
+Uses Python standard library only (argparse, collections, datetime, html,
+http.server, json, os, pathlib, re, subprocess, sys, time, urllib.parse).
 Run:
     python3 tools/progress_dashboard.py [--port 8765]
 """
@@ -10,37 +11,44 @@ from __future__ import annotations
 
 import argparse
 import collections
-import csv
 import datetime
+import html as html_mod
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 import os
 from pathlib import Path
 import re
-import shutil
 import subprocess
 import sys
-import threading
 import time
 from urllib.parse import urlparse
 
-# Import portable paths from src/paths.py
-_SRC_DIR = Path(__file__).resolve().parents[1] / "src"
+# Import portable paths from src/paths.py (with defensive fallback)
+_REPO_FALLBACK = Path(__file__).resolve().parents[1]
+_SRC_DIR = _REPO_FALLBACK / "src"
 if str(_SRC_DIR) not in sys.path:
     sys.path.insert(0, str(_SRC_DIR))
 
-from paths import DATA_DIR, REPO_ROOT  # noqa: E402
+try:
+    from paths import DATA_DIR, REPO_ROOT  # type: ignore
+except Exception:
+    REPO_ROOT = _REPO_FALLBACK
+    DATA_DIR = REPO_ROOT / "data"
 
 PLAN_PATH: Path = REPO_ROOT / "status" / "plan.json"
-URLS_PATH: Path = DATA_DIR / "scidb_19235_all_urls.txt"
-MASKS_DIR: Path = DATA_DIR / "scidb_19235_masks"
-MANIFEST_PATH: Path = MASKS_DIR / "manifest.csv"
+ABSTRACT_PATH: Path = REPO_ROOT / "lab" / "notebook" / "ABSTRACT.md"
+NOTEBOOK_DIR: Path = REPO_ROOT / "lab" / "notebook"
+PILOT_SEG_DIR: Path = DATA_DIR / "pilot_seg"
+C4_DIR: Path = PILOT_SEG_DIR / "C4"
+C5_DIR: Path = PILOT_SEG_DIR / "C5"
+P5_TRACKS_DIR: Path = PILOT_SEG_DIR / "p5_tracks"
+P5_MOVIES_DIR: Path = REPO_ROOT / "figures" / "pilot" / "p5"
 CLI_LOG_PATH: Path = Path.home() / ".gemini" / "antigravity-cli" / "cli.log"
 
-SCAN_CACHE_TTL_S: float = 5.0
-RATE_WINDOW_S: float = 120.0
-LOG_TAIL_BYTES: int = 2 * 1024 * 1024  # ~2 MB
+LOG_TAIL_BYTES: int = 256 * 1024  # 256 KB
+REPORT_MAX_AGE_S: float = 24.0 * 3600.0  # 24 hours
+VERDICT_ORDER: tuple[str, ...] = ("good", "ok", "merge", "track", "poor", "unclear")
 
 
 def _human_bytes(num_bytes: int | float) -> str:
@@ -49,423 +57,697 @@ def _human_bytes(num_bytes: int | float) -> str:
         if val < 1024.0 or unit == "TB":
             if unit == "B":
                 return f"{int(val)} B"
-            return f"{val:.2f} {unit}"
+            return f"{val:.1f} {unit}"
         val /= 1024.0
-    return f"{val:.2f} TB"
+    return f"{val:.1f} TB"
 
 
-def _human_duration(seconds: float | None) -> str:
-    if seconds is None or seconds < 0:
-        return "—"
-    sec = int(round(seconds))
-    if sec == 0:
-        return "0s"
-    hours, rem = divmod(sec, 3600)
-    mins, secs = divmod(rem, 60)
-    if hours > 0:
-        return f"{hours}h {mins:02d}m"
-    if mins > 0:
-        return f"{mins}m {secs:02d}s"
-    return f"{secs}s"
+def _human_age(seconds: float) -> str:
+    sec = max(0, int(round(seconds)))
+    if sec < 60:
+        return f"{sec}s ago"
+    mins, secs = divmod(sec, 60)
+    if mins < 60:
+        return f"{mins}m ago"
+    hours, rem_m = divmod(mins, 60)
+    return f"{hours}h {rem_m:02d}m ago"
 
 
-def compute_expected_masks(urls_path: Path = URLS_PATH) -> tuple[bool, dict[str, int], int]:
-    """Compute expected _predictions.h5 counts per experiment from scidb_19235_all_urls.txt."""
-    if not urls_path.is_file():
-        return False, {}, 0
-    counts: dict[str, int] = collections.Counter()
-    try:
-        with open(urls_path, "r", encoding="utf-8", errors="replace") as f:
-            for line in f:
-                if "_predictions.h5" not in line:
-                    continue
-                idx = line.find("/V1/")
-                if idx == -1:
-                    continue
-                rest = line[idx + 4 :]
-                slash = rest.find("/")
-                if slash <= 0:
-                    continue
-                exp = rest[:slash].strip()
-                if exp:
-                    counts[exp] += 1
-    except OSError:
-        return False, {}, 0
-
-    ordered = dict(sorted(counts.items(), key=lambda kv: kv[0]))
-    total = sum(ordered.values())
-    return True, ordered, total
+def _inline_markdown(text: str) -> str:
+    """Escape HTML and render **bold** and `code` spans."""
+    escaped = html_mod.escape(text, quote=True)
+    escaped = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", escaped)
+    escaped = re.sub(r"`([^`]+)`", r"<code>\1</code>", escaped)
+    return escaped
 
 
-class MaskProgressTracker:
-    """Thread-safe 5-second cached scanner for mask files and rolling 2-minute rate tracker."""
+def render_mini_markdown(md_text: str) -> str:
+    """Render headings, paragraphs, nested bullets, numbered lists, and bold from markdown."""
+    lines = md_text.splitlines()
+    out: list[str] = []
+    para_lines: list[str] = []
 
-    def __init__(self, urls_path: Path = URLS_PATH, masks_dir: Path = MASKS_DIR) -> None:
-        self.urls_path = urls_path
-        self.masks_dir = masks_dir
-        self._lock = threading.Lock()
-        self._urls_loaded = False
-        self._expected_by_exp: dict[str, int] = {}
-        self._expected_total: int = 0
+    # List state: stack of ("ul" | "ol", current_li_parts)
+    list_stack: list[tuple[str, list[str]]] = []
 
-        self._last_scan_ts: float = 0.0
-        self._cached_result: dict | None = None
-        # Rolling history of (timestamp, present_total) over the last ~2 minutes
-        self._history: collections.deque[tuple[float, int]] = collections.deque()
-        self._seeded_from_mtime: bool = False
+    def flush_para() -> None:
+        if para_lines:
+            joined = " ".join(para_lines)
+            out.append(f"<p>{_inline_markdown(joined)}</p>")
+            para_lines.clear()
 
-        self._ensure_expected_loaded()
+    def close_top_list() -> None:
+        tag, li_parts = list_stack.pop()
+        if li_parts:
+            out.append(f"<li>{_inline_markdown(' '.join(li_parts))}</li>")
+        out.append(f"</{tag}>")
 
-    def _ensure_expected_loaded(self) -> None:
-        if not self._urls_loaded:
-            ok, by_exp, total = compute_expected_masks(self.urls_path)
-            if ok:
-                self._urls_loaded = True
-                self._expected_by_exp = by_exp
-                self._expected_total = total
+    def close_all_lists() -> None:
+        while list_stack:
+            close_top_list()
 
-    @staticmethod
-    def _scan_experiment_dir(exp_dir: Path, now_ts: float) -> tuple[int, int, int]:
-        """Recursively scan an experiment directory with os.scandir.
+    for raw_line in lines:
+        stripped = raw_line.strip()
+        if not stripped:
+            flush_para()
+            close_all_lists()
+            continue
 
-        Returns (file_count, total_bytes, recent_120s_count).
-        Ignores .part files.
-        """
-        if not exp_dir.is_dir():
-            return 0, 0, 0
-        count = 0
-        total_bytes = 0
-        recent_count = 0
-        cutoff = now_ts - RATE_WINDOW_S
-        stack: list[Path] = [exp_dir]
-        while stack:
-            current = stack.pop()
-            try:
-                with os.scandir(current) as it:
-                    for entry in it:
-                        name = entry.name
-                        if name.endswith(".part") or ".part." in name:
-                            continue
-                        try:
-                            if entry.is_dir(follow_symlinks=False):
-                                stack.append(Path(entry.path))
-                            elif entry.is_file(follow_symlinks=False) and name.endswith("_predictions.h5"):
-                                st = entry.stat(follow_symlinks=False)
-                                count += 1
-                                total_bytes += st.st_size
-                                if st.st_mtime >= cutoff:
-                                    recent_count += 1
-                        except OSError:
-                            continue
-            except OSError:
-                continue
-        return count, total_bytes, recent_count
+        # Heading (#, ##, ###)
+        m_hdr = re.match(r"^(#{1,6})\s+(.*)$", stripped)
+        if m_hdr:
+            flush_para()
+            close_all_lists()
+            out.append(f'<h3 class="abs-heading">{_inline_markdown(m_hdr.group(2).strip())}</h3>')
+            continue
 
-    @staticmethod
-    def _read_manifest_failures(manifest_path: Path) -> tuple[bool, int, int, int]:
-        """Read manifest.csv if present.
-
-        Returns (manifest_exists, failures_count, not_downloaded_count, raw_ok_false_count).
-        Note: src/download_masks.py pre-populates unattempted rows with ok=False and
-        error='not_downloaded'. Actual download/validation failures have ok=False and
-        error != 'not_downloaded'.
-        """
-        if not manifest_path.is_file():
-            return False, 0, 0, 0
-        failures = 0
-        not_downloaded = 0
-        raw_false = 0
-        try:
-            with open(manifest_path, "r", encoding="utf-8", errors="replace", newline="") as f:
-                reader = csv.DictReader(f)
-                for row in reader:
-                    ok_val = str(row.get("ok", "")).strip().lower()
-                    if ok_val in ("false", "0", "no"):
-                        raw_false += 1
-                        err_val = str(row.get("error", "")).strip()
-                        if err_val == "not_downloaded":
-                            not_downloaded += 1
-                        else:
-                            failures += 1
-        except Exception:
-            return False, 0, 0, 0
-        return True, failures, not_downloaded, raw_false
-
-    def get_status(self) -> dict:
-        with self._lock:
-            self._ensure_expected_loaded()
-            now = time.time()
-            if self._cached_result is not None and (now - self._last_scan_ts) < SCAN_CACHE_TTL_S:
-                return self._cached_result
-
-            if not self._urls_loaded:
-                res = {
-                    "state": "not started",
-                    "message": f"Missing URL list at {self.urls_path.name}",
-                    "expected_total": 0,
-                    "present_total": 0,
-                    "percent": 0.0,
-                    "bytes_total": 0,
-                    "bytes_human": "0 B",
-                    "failures": 0,
-                    "rate_files_per_min": 0.0,
-                    "eta_seconds": None,
-                    "eta_human": "—",
-                    "experiments": [],
-                }
-                self._last_scan_ts = now
-                self._cached_result = res
-                return res
-
-            masks_root_exists = self.masks_dir.is_dir()
-            exp_rows: list[dict] = []
-            present_total = 0
-            bytes_total = 0
-            recent_120s_total = 0
-
-            for exp, expected_cnt in self._expected_by_exp.items():
-                exp_dir = self.masks_dir / exp
-                c, b, r = self._scan_experiment_dir(exp_dir, now) if masks_root_exists else (0, 0, 0)
-                present_total += c
-                bytes_total += b
-                recent_120s_total += r
-                pct = (c / expected_cnt * 100.0) if expected_cnt > 0 else 0.0
-                exp_rows.append(
-                    {
-                        "experiment": exp,
-                        "expected": expected_cnt,
-                        "present": c,
-                        "percent": round(pct, 2),
-                        "bytes": b,
-                        "bytes_human": _human_bytes(b),
-                    }
-                )
-
-            # Seed history on first scan using file mtime counts over the last 2 minutes
-            # so rate/ETA is immediately informative before 2 scan intervals elapse.
-            if not self._seeded_from_mtime:
-                self._seeded_from_mtime = True
-                if recent_120s_total > 0:
-                    self._history.append((now - RATE_WINDOW_S, max(0, present_total - recent_120s_total)))
-
-            self._history.append((now, present_total))
-            while len(self._history) > 2 and (now - self._history[0][0]) > RATE_WINDOW_S:
-                self._history.popleft()
-
-            rate_per_min = 0.0
-            if len(self._history) >= 2:
-                t0, n0 = self._history[0]
-                dt = now - t0
-                dn = present_total - n0
-                if dt >= 1.0 and dn >= 0:
-                    rate_per_min = (dn / dt) * 60.0
-
-            remaining = max(0, self._expected_total - present_total)
-            if remaining == 0 and self._expected_total > 0:
-                eta_seconds: float | None = 0.0
-                eta_human = "0s"
-            elif rate_per_min > 0.0:
-                eta_seconds = (remaining / rate_per_min) * 60.0
-                eta_human = _human_duration(eta_seconds)
+        # Indented sub-bullet (2+ leading spaces followed by - or *)
+        m_sub_ul = re.match(r"^(\s{2,})[-*]\s+(.*)$", raw_line)
+        if m_sub_ul:
+            flush_para()
+            item_text = m_sub_ul.group(2).strip()
+            if not list_stack:
+                list_stack.append(("ul", []))
+                out.append("<ul>")
+            if len(list_stack) == 1:
+                # Keep parent <li> open while starting nested <ul>
+                parent_tag, parent_li = list_stack[0]
+                if parent_li:
+                    out.append(f"<li>{_inline_markdown(' '.join(parent_li))}")
+                    parent_li.clear()
+                else:
+                    out.append("<li>")
+                out.append("<ul>")
+                list_stack.append(("ul", [item_text]))
             else:
-                eta_seconds = None
-                eta_human = "—"
+                # Already in sub-list
+                _, sub_li = list_stack[-1]
+                if sub_li:
+                    out.append(f"<li>{_inline_markdown(' '.join(sub_li))}</li>")
+                sub_li[:] = [item_text]
+            continue
 
-            manifest_exists, failures, not_downloaded, raw_false = self._read_manifest_failures(
-                MANIFEST_PATH
-            )
+        # Top-level unordered bullet (- or *)
+        m_ul = re.match(r"^[-*]\s+(.*)$", stripped)
+        if m_ul:
+            flush_para()
+            item_text = m_ul.group(1).strip()
+            if len(list_stack) > 1:
+                close_top_list()
+                out.append("</li>")
+            if list_stack and list_stack[-1][0] != "ul":
+                close_all_lists()
+            if not list_stack:
+                out.append("<ul>")
+                list_stack.append(("ul", [item_text]))
+            else:
+                _, cur_li = list_stack[-1]
+                if cur_li:
+                    out.append(f"<li>{_inline_markdown(' '.join(cur_li))}</li>")
+                cur_li[:] = [item_text]
+            continue
 
-            overall_pct = (
-                (present_total / self._expected_total * 100.0) if self._expected_total > 0 else 0.0
-            )
-            state = "ok" if (masks_root_exists or present_total > 0 or manifest_exists) else "not started"
+        # Top-level ordered list item (1. , 2. , ...)
+        m_ol = re.match(r"^\d+\.\s+(.*)$", stripped)
+        if m_ol:
+            flush_para()
+            item_text = m_ol.group(1).strip()
+            if len(list_stack) > 1:
+                close_top_list()
+                out.append("</li>")
+            if list_stack and list_stack[-1][0] != "ol":
+                close_all_lists()
+            if not list_stack:
+                out.append("<ol>")
+                list_stack.append(("ol", [item_text]))
+            else:
+                _, cur_li = list_stack[-1]
+                if cur_li:
+                    out.append(f"<li>{_inline_markdown(' '.join(cur_li))}</li>")
+                cur_li[:] = [item_text]
+            continue
 
-            res = {
-                "state": state,
-                "expected_total": self._expected_total,
-                "present_total": present_total,
-                "percent": round(overall_pct, 2),
-                "bytes_total": bytes_total,
-                "bytes_human": _human_bytes(bytes_total),
-                "manifest_present": manifest_exists,
-                "failures": failures,
-                "manifest_not_downloaded": not_downloaded,
-                "manifest_ok_false_raw": raw_false,
-                "rate_files_per_min": round(rate_per_min, 1),
-                "eta_seconds": round(eta_seconds, 1) if eta_seconds is not None else None,
-                "eta_human": eta_human,
-                "experiments": exp_rows,
-            }
-            self._last_scan_ts = now
-            self._cached_result = res
-            return res
+        # Indented continuation line inside an active list item
+        if list_stack and raw_line[:1].isspace():
+            list_stack[-1][1].append(stripped)
+            continue
+
+        # Normal paragraph line
+        close_all_lists()
+        para_lines.append(stripped)
+
+    flush_para()
+    while list_stack:
+        depth = len(list_stack)
+        close_top_list()
+        if depth > 1:
+            out.append("</li>")
+
+    return "\n".join(out)
 
 
 def get_plan_section(plan_path: Path = PLAN_PATH) -> dict:
-    """Read status/plan.json safely."""
+    """Read status/plan.json defensively."""
     if not plan_path.is_file():
         return {
-            "state": "not started",
-            "updated": None,
-            "review_url": None,
-            "steps": [],
+            "state": "not available",
+            "updated": "not available",
+            "aim": "not available",
+            "now": "not available",
+            "total_chambers": 502,
+            "phases": [],
+            "stages_done": 0,
+            "stages_total": 0,
+            "stages_summary": "not available",
+            "chambers": [],
+            "verdict_counts": {},
+            "verdict_tally": "not available",
+            "needs_pi": [],
+            "parked_note": "not available",
         }
     try:
-        with open(plan_path, "r", encoding="utf-8") as f:
+        with open(plan_path, "r", encoding="utf-8", errors="replace") as f:
             data = json.load(f)
-        steps = data.get("steps", [])
-        if not isinstance(steps, list):
-            steps = []
+
+        phases = data.get("phases", [])
+        if not isinstance(phases, list):
+            phases = []
+
+        done_count = sum(1 for p in phases if isinstance(p, dict) and p.get("status") == "done")
+        total_phases = len(phases)
+        stages_summary = f"{done_count} of {total_phases} stages done" if total_phases > 0 else "0 of 0 stages done"
+
+        chambers = data.get("chambers", [])
+        if not isinstance(chambers, list):
+            chambers = []
+
+        counts: collections.Counter[str] = collections.Counter()
+        for ch in chambers:
+            if isinstance(ch, dict):
+                v = str(ch.get("verdict", "unclear")).strip().lower() or "unclear"
+                counts[v] += 1
+
+        tally_parts: list[str] = []
+        seen_verdicts: set[str] = set()
+        for v in VERDICT_ORDER:
+            if counts.get(v, 0) > 0:
+                tally_parts.append(f"{counts[v]} {v}")
+                seen_verdicts.add(v)
+        for v, c in counts.items():
+            if v not in seen_verdicts and c > 0:
+                tally_parts.append(f"{c} {v}")
+        verdict_tally = ", ".join(tally_parts) if tally_parts else "none"
+
+        needs_pi = data.get("needs_pi", [])
+        if not isinstance(needs_pi, list):
+            needs_pi = []
+
+        total_chambers = data.get("total_chambers", 502)
+        if not isinstance(total_chambers, int) or total_chambers <= 0:
+            total_chambers = 502
+
         return {
             "state": "ok",
-            "updated": data.get("updated"),
-            "review_url": data.get("review_url"),
-            "steps": steps,
+            "updated": data.get("updated") or "not available",
+            "aim": data.get("aim") or "not available",
+            "now": data.get("now") or "not available",
+            "total_chambers": total_chambers,
+            "phases": phases,
+            "stages_done": done_count,
+            "stages_total": total_phases,
+            "stages_summary": stages_summary,
+            "chambers": chambers,
+            "verdict_counts": dict(counts),
+            "verdict_tally": verdict_tally,
+            "needs_pi": [str(x) for x in needs_pi],
+            "parked_note": data.get("parked_note") or "not available",
         }
     except Exception as exc:
         return {
-            "state": "not started",
+            "state": "not available",
             "error": str(exc),
-            "updated": None,
-            "review_url": None,
-            "steps": [],
+            "updated": "not available",
+            "aim": "not available",
+            "now": "not available",
+            "total_chambers": 502,
+            "phases": [],
+            "stages_done": 0,
+            "stages_total": 0,
+            "stages_summary": "not available",
+            "chambers": [],
+            "verdict_counts": {},
+            "verdict_tally": "not available",
+            "needs_pi": [],
+            "parked_note": "not available",
         }
 
 
-def _list_processes() -> list[tuple[int, str, str]]:
-    """Return list of (pid, comm, args) from ps."""
+def get_abstract_section(abstract_path: Path = ABSTRACT_PATH) -> dict:
+    """Read and render lab/notebook/ABSTRACT.md defensively."""
+    if not abstract_path.is_file():
+        return {
+            "state": "not available",
+            "raw": None,
+            "html": '<p class="muted">not available</p>',
+        }
+    try:
+        raw = abstract_path.read_text(encoding="utf-8", errors="replace").strip()
+        if not raw:
+            return {
+                "state": "not available",
+                "raw": "",
+                "html": '<p class="muted">not available</p>',
+            }
+        return {
+            "state": "ok",
+            "raw": raw,
+            "html": render_mini_markdown(raw),
+        }
+    except Exception as exc:
+        return {
+            "state": "not available",
+            "error": str(exc),
+            "raw": None,
+            "html": '<p class="muted">not available</p>',
+        }
+
+
+def _parse_frontmatter(md_path: Path) -> dict[str, str]:
+    """Parse simple YAML-ish frontmatter (id, date, title, gate, status, author) using stdlib."""
+    stem = md_path.stem
+    meta: dict[str, str] = {
+        "filename": md_path.name,
+        "id": stem,
+        "date": stem[:10] if re.match(r"^\d{4}-\d{2}-\d{2}", stem) else "not available",
+        "title": stem,
+        "gate": "none",
+        "status": "draft",
+        "author": "",
+    }
+    try:
+        with open(md_path, "r", encoding="utf-8", errors="replace") as f:
+            first = f.readline()
+            if first.strip() != "---":
+                return meta
+            for _ in range(80):
+                line = f.readline()
+                if not line:
+                    break
+                s = line.strip()
+                if s == "---":
+                    break
+                if ":" not in s or s.startswith("-"):
+                    continue
+                key, val = s.split(":", 1)
+                key = key.strip()
+                val = val.strip()
+                if len(val) >= 2 and ((val[0] == '"' and val[-1] == '"') or (val[0] == "'" and val[-1] == "'")):
+                    val = val[1:-1]
+                if key in ("id", "date", "title", "gate", "status", "author") and val:
+                    meta[key] = val
+    except OSError:
+        pass
+    return meta
+
+
+def get_notebook_section(notebook_dir: Path = NOTEBOOK_DIR, limit: int = 6) -> dict:
+    """Return the latest 6 lab/notebook/*.md entries by filename."""
+    if not notebook_dir.is_dir():
+        return {"state": "not available", "entries": []}
+    try:
+        candidates: list[Path] = []
+        with os.scandir(notebook_dir) as it:
+            for entry in it:
+                if not entry.is_file():
+                    continue
+                name = entry.name
+                if not name.endswith(".md"):
+                    continue
+                if name.upper() in ("ABSTRACT.MD", "README.MD"):
+                    continue
+                candidates.append(Path(entry.path))
+        candidates.sort(key=lambda p: p.name, reverse=True)
+        latest = candidates[:limit]
+        entries = [_parse_frontmatter(p) for p in latest]
+        return {"state": "ok", "entries": entries}
+    except Exception as exc:
+        return {"state": "not available", "error": str(exc), "entries": []}
+
+
+def _scan_seg_chambers(seg_dir: Path) -> set[tuple[str, str]]:
+    """Count (experiment, roi) subdirectories under seg_dir that contain at least one *.npz file."""
+    found: set[tuple[str, str]] = set()
+    if not seg_dir.is_dir():
+        return found
+    try:
+        with os.scandir(seg_dir) as exp_it:
+            for exp_entry in exp_it:
+                if not exp_entry.is_dir(follow_symlinks=False) or exp_entry.name.startswith("."):
+                    continue
+                try:
+                    with os.scandir(exp_entry.path) as roi_it:
+                        for roi_entry in roi_it:
+                            if not roi_entry.is_dir(follow_symlinks=False) or roi_entry.name.startswith("."):
+                                continue
+                            has_npz = False
+                            try:
+                                with os.scandir(roi_entry.path) as f_it:
+                                    for f_entry in f_it:
+                                        if (
+                                            f_entry.is_file(follow_symlinks=False)
+                                            and f_entry.name.endswith(".npz")
+                                            and not f_entry.name.startswith(".")
+                                            and ".part" not in f_entry.name
+                                        ):
+                                            has_npz = True
+                                            break
+                            except OSError:
+                                pass
+                            if has_npz:
+                                found.add((exp_entry.name, roi_entry.name))
+                except OSError:
+                    continue
+    except OSError:
+        pass
+    return found
+
+
+def _count_files_with_suffix(dir_path: Path, suffix: str) -> int:
+    """Count regular files ending with suffix in dir_path (non-recursive)."""
+    if not dir_path.is_dir():
+        return 0
+    count = 0
+    try:
+        with os.scandir(dir_path) as it:
+            for entry in it:
+                if (
+                    entry.is_file(follow_symlinks=False)
+                    and entry.name.endswith(suffix)
+                    and not entry.name.startswith(".")
+                    and ".part" not in entry.name
+                ):
+                    count += 1
+    except OSError:
+        return 0
+    return count
+
+
+def get_coverage_section(total_chambers: int = 502, test_chambers_total: int = 20) -> dict:
+    """Compute re-segmentation coverage for C4, C5, p5_tracks, and figures/pilot/p5 movies."""
+    try:
+        c4_set = _scan_seg_chambers(C4_DIR)
+        c5_set = _scan_seg_chambers(C5_DIR)
+        redrawn_set = c4_set | c5_set
+
+        c4_count = len(c4_set)
+        c5_count = len(c5_set)
+        redrawn_count = len(redrawn_set)
+
+        tracks_count = _count_files_with_suffix(P5_TRACKS_DIR, ".csv")
+        movies_count = _count_files_with_suffix(P5_MOVIES_DIR, ".mp4")
+
+        denom = max(1, total_chambers)
+        test_denom = max(1, test_chambers_total)
+        redrawn_pct = round(redrawn_count / denom * 100.0, 1)
+
+        return {
+            "state": "ok",
+            "c4_chambers": c4_count,
+            "c5_chambers": c5_count,
+            "redrawn_chambers": redrawn_count,
+            "total_chambers": total_chambers,
+            "redrawn_percent": redrawn_pct,
+            "test_chambers_total": test_denom,
+            "p5_c5_split": c5_count,
+            "p5_tracks": tracks_count,
+            "p5_movies": movies_count,
+        }
+    except Exception as exc:
+        return {
+            "state": "not available",
+            "error": str(exc),
+            "c4_chambers": 0,
+            "c5_chambers": 0,
+            "redrawn_chambers": 0,
+            "total_chambers": total_chambers,
+            "redrawn_percent": 0.0,
+            "test_chambers_total": test_chambers_total,
+            "p5_c5_split": 0,
+            "p5_tracks": 0,
+            "p5_movies": 0,
+        }
+
+
+def _list_ps_rows() -> tuple[bool, list[tuple[int, int, str, str]]]:
+    """Return (ok, [(pid, ppid, etime, args), ...]) from ps."""
     try:
         proc = subprocess.run(
-            ["ps", "-Ao", "pid=,comm=,args="],
+            ["ps", "-Ao", "pid=,ppid=,etime=,args="],
             capture_output=True,
             text=True,
             timeout=3,
             check=False,
         )
         if proc.returncode != 0:
-            return []
-        rows: list[tuple[int, str, str]] = []
+            return False, []
+        rows: list[tuple[int, int, str, str]] = []
         for line in proc.stdout.splitlines():
-            line_str = line.strip()
-            if not line_str:
+            s = line.strip()
+            if not s:
                 continue
-            parts = line_str.split(None, 2)
-            if len(parts) < 2:
+            parts = s.split(None, 3)
+            if len(parts) < 4:
                 continue
             try:
                 pid = int(parts[0])
+                ppid = int(parts[1])
             except ValueError:
                 continue
-            comm = parts[1]
-            args = parts[2] if len(parts) > 2 else comm
-            rows.append((pid, comm, args))
-        return rows
+            etime = parts[2].strip()
+            args = parts[3].strip()
+            rows.append((pid, ppid, etime, args))
+        return True, rows
     except Exception:
-        return []
-
-
-_REASON_RE = re.compile(r'reason="((?:[^"\\]|\\.)*)"')
-_TRIG_RE = re.compile(r"triggered=(true|false)")
-_LOG_PREFIX_RE = re.compile(r"^([IWEF](\d{2})(\d{2})\s+(\d{2}:\d{2}:\d{2})(?:\.\d+)?)")
-
-
-def _tail_cli_log(log_path: Path = CLI_LOG_PATH, max_lines: int = 12) -> tuple[bool, list[dict]]:
-    """Read last ~2 MB of ~/.gemini/antigravity-cli/cli.log for 'sir_flash_lite FINISHED'."""
-    if not log_path.is_file():
         return False, []
+
+
+_PROMPT_FILE_RE = re.compile(r"prompt_([A-Za-z0-9_.-]+)\.txt")
+_AGY_JSON_RE = re.compile(r"agy_([A-Za-z0-9_.-]+)\.json")
+_REPORT_ARG_RE = re.compile(r"\.agy_([A-Za-z0-9_.-]+?)_report\.md")
+_REASON_RE = re.compile(r'reason="((?:[^"\\]|\\.)*)"')
+_LOG_PREFIX_RE = re.compile(r"^([IWEF](\d{2})(\d{2})\s+(\d{2}:\d{2}:\d{2})(?:\.\d+)?)\s+\d+\s+([^\]]+)\]\s*(.*)$")
+
+
+def _tail_cli_log(log_path: Path = CLI_LOG_PATH, max_lines: int = 3) -> tuple[str, list[dict[str, str]]]:
+    """Read the last ~3 lines from ~/.gemini/antigravity-cli/cli.log."""
+    if not log_path.is_file():
+        return "not available", []
     try:
         size = log_path.stat().st_size
         with open(log_path, "rb") as f:
             if size > LOG_TAIL_BYTES:
                 f.seek(size - LOG_TAIL_BYTES)
                 raw = f.read()
-                # Drop partial first line after seek
                 nl = raw.find(b"\n")
                 if nl != -1:
                     raw = raw[nl + 1 :]
             else:
                 raw = f.read()
         text = raw.decode("utf-8", errors="replace")
-        matched: list[dict] = []
-        for line in text.splitlines():
+        all_lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
+        if not all_lines:
+            return "ok", []
+
+        # Prefer concise monitor summary lines if present in the tail, else raw tail lines
+        monitor_items: list[dict[str, str]] = []
+        for line in all_lines:
             if "sir_flash_lite FINISHED" not in line:
                 continue
-            reason_m = _REASON_RE.search(line)
-            reason = reason_m.group(1).replace('\\"', '"') if reason_m else line.strip()
-            trig_m = _TRIG_RE.search(line)
-            triggered = (trig_m.group(1) == "true") if trig_m else False
-            prefix_m = _LOG_PREFIX_RE.match(line)
-            if prefix_m:
-                mm, dd, hhmmss = prefix_m.group(2), prefix_m.group(3), prefix_m.group(4)
-                timestamp = f"{mm}-{dd} {hhmmss}"
-                raw_ts = prefix_m.group(1)
+            m_reason = _REASON_RE.search(line)
+            if not m_reason:
+                continue
+            reason = m_reason.group(1).replace('\\"', '"').replace("\\\\", "\\")
+            m_ts = _LOG_PREFIX_RE.match(line)
+            ts = m_ts.group(4) if m_ts else ""
+            monitor_items.append({"timestamp": ts, "text": reason})
+
+        if monitor_items:
+            return "ok", monitor_items[-max_lines:]
+
+        fallback_items: list[dict[str, str]] = []
+        for line in all_lines[-max_lines:]:
+            m_ts = _LOG_PREFIX_RE.match(line)
+            if m_ts:
+                fallback_items.append({"timestamp": m_ts.group(4), "text": m_ts.group(6)[:200]})
             else:
-                timestamp = ""
-                raw_ts = ""
-            matched.append(
-                {
-                    "timestamp": timestamp,
-                    "raw_timestamp": raw_ts,
-                    "reason": reason,
-                    "triggered": triggered,
-                }
-            )
-        return True, matched[-max_lines:]
+                fallback_items.append({"timestamp": "", "text": line[:200]})
+        return "ok", fallback_items
     except Exception:
-        return False, []
+        return "not available", []
 
 
-def get_agent_And_downloader_sections() -> tuple[dict, dict]:
-    """Inspect ps for active agy -p and download_masks.py processes, plus cli.log tail."""
-    procs = _list_processes()
+def _scan_recent_agy_reports(repo_root: Path = REPO_ROOT, now_ts: float | None = None) -> list[dict]:
+    """List .agy_*report*.md files modified in the last 24 hours."""
+    if now_ts is None:
+        now_ts = time.time()
+    cutoff = now_ts - REPORT_MAX_AGE_S
+    reports: list[tuple[float, dict]] = []
+    try:
+        for p in repo_root.glob(".agy_*report*.md"):
+            if not p.is_file():
+                continue
+            try:
+                st = p.stat()
+            except OSError:
+                continue
+            if st.st_mtime < cutoff:
+                continue
+            dt = datetime.datetime.fromtimestamp(st.st_mtime).astimezone()
+            reports.append(
+                (
+                    st.st_mtime,
+                    {
+                        "name": p.name,
+                        "mtime": dt.strftime("%Y-%m-%d %H:%M"),
+                        "age_human": _human_age(now_ts - st.st_mtime),
+                        "size_bytes": st.st_size,
+                        "size_human": _human_bytes(st.st_size),
+                    },
+                )
+            )
+    except OSError:
+        return []
+    reports.sort(key=lambda item: item[0], reverse=True)
+    return [r[1] for r in reports][:5]
+
+
+def get_active_work_section() -> dict:
+    """Collect running agy jobs, raw-image downloader (only if active), cli.log tail, and recent reports."""
+    ok_ps, rows = _list_ps_rows()
     my_pid = os.getpid()
 
-    agy_procs: list[dict] = []
-    dl_procs: list[dict] = []
+    # Index children by ppid to pair agy_run.sh wrappers with child agy processes
+    children_by_ppid: dict[int, list[tuple[int, str, str]]] = collections.defaultdict(list)
+    for pid, ppid, etime, args in rows:
+        children_by_ppid[ppid].append((pid, etime, args))
 
-    for pid, comm, args in procs:
+    jobs: list[dict] = []
+    wrapper_pids: set[int] = set()
+    paired_agy_pids: set[int] = set()
+    raw_dl_procs: list[dict] = []
+
+    for pid, ppid, etime, args in rows:
         if pid == my_pid:
             continue
-        base_comm = os.path.basename(comm)
-        # Check for processes named agy with -p
-        if base_comm == "agy":
-            tokens = args.split()
-            if "-p" in tokens or "--prompt" in tokens:
-                agy_procs.append({"pid": pid, "command": args[:160]})
+        tokens = args.split()
+        if not tokens:
+            continue
+        first_base = os.path.basename(tokens[0])
 
-        # Check for mask or raw downloader processes (ignore shell wrappers / grep / caffeinate)
-        if base_comm not in ("zsh", "sh", "bash", "grep", "ps", "agy", "caffeinate"):
-            if "download_masks.py" in args or "download_raw.py" in args:
-                dl_procs.append({"pid": pid, "command": args})
+        # Skip grep/ps inspection commands
+        if first_base in ("grep", "egrep", "fgrep", "ps", "sed", "cat", "head", "tail"):
+            continue
 
-    log_exists, log_lines = _tail_cli_log(CLI_LOG_PATH, max_lines=12)
-    agent_state = "ok" if (log_exists or agy_procs) else "not started"
+        # 1. Detect agy_run.sh wrapper processes
+        is_wrapper = any( os.path.basename(tok) == "agy_run.sh" for tok in tokens[:3] )
+        if is_wrapper:
+            wrapper_pids.add(pid)
+            m_prompt = _PROMPT_FILE_RE.search(args)
+            if m_prompt:
+                prompt_name = m_prompt.group(1)
+                prompt_file = f"prompt_{prompt_name}.txt"
+            else:
+                m_json = _AGY_JSON_RE.search(args)
+                prompt_name = m_json.group(1) if m_json else "agy_run"
+                prompt_file = "agy_run.sh"
 
-    agent_sec = {
-        "state": agent_state,
-        "active": len(agy_procs) > 0,
-        "process_count": len(agy_procs),
-        "processes": agy_procs,
-        "log_present": log_exists,
+            child_agy_pid: int | None = None
+            child_etime = etime
+            for c_pid, c_etime, c_args in children_by_ppid.get(pid, []):
+                c_tokens = c_args.split()
+                if c_tokens and os.path.basename(c_tokens[0]) == "agy":
+                    child_agy_pid = c_pid
+                    child_etime = c_etime or etime
+                    paired_agy_pids.add(c_pid)
+                    break
+
+            jobs.append(
+                {
+                    "prompt": prompt_name,
+                    "prompt_file": prompt_file,
+                    "wrapper_pid": pid,
+                    "agy_pid": child_agy_pid,
+                    "etime": child_etime,
+                }
+            )
+            continue
+
+        # 2. Detect active raw-image download processes (only if actually running now)
+        if first_base.startswith("python") and ("download_raw.py" in args or "download_mips.py" in args):
+            raw_dl_procs.append(
+                {
+                    "pid": pid,
+                    "etime": etime,
+                    "command": args[:160],
+                }
+            )
+
+    # 3. Also include any standalone `agy -p` jobs not launched via agy_run.sh
+    for pid, ppid, etime, args in rows:
+        if pid == my_pid or pid in paired_agy_pids or ppid in wrapper_pids:
+            continue
+        tokens = args.split()
+        if not tokens:
+            continue
+        if os.path.basename(tokens[0]) == "agy" and ("-p" in tokens or "--prompt" in tokens):
+            m_rep = _REPORT_ARG_RE.search(args)
+            prompt_name = m_rep.group(1) if m_rep else "agy -p"
+            jobs.append(
+                {
+                    "prompt": prompt_name,
+                    "prompt_file": "agy -p",
+                    "wrapper_pid": None,
+                    "agy_pid": pid,
+                    "etime": etime,
+                }
+            )
+
+    jobs.sort(key=lambda j: str(j.get("prompt", "")))
+    log_state, log_lines = _tail_cli_log(CLI_LOG_PATH, max_lines=3)
+    recent_reports = _scan_recent_agy_reports(REPO_ROOT)
+
+    if not ok_ps:
+        agy_status = "not available"
+        sec_state = "not available"
+    else:
+        agy_status = "running" if len(jobs) > 0 else "idle"
+        sec_state = "ok"
+
+    return {
+        "state": sec_state,
+        "agy_status": agy_status,
+        "job_count": len(jobs),
+        "jobs": jobs,
+        "log_state": log_state,
         "log_lines": log_lines,
+        "recent_reports": recent_reports,
+        "raw_download": {
+            "running": len(raw_dl_procs) > 0,
+            "process_count": len(raw_dl_procs),
+            "processes": raw_dl_procs,
+        },
     }
-    downloader_sec = {
-        "state": "ok" if dl_procs else "not started",
-        "running": len(dl_procs) > 0,
-        "process_count": len(dl_procs),
-        "processes": dl_procs,
-    }
-    return agent_sec, downloader_sec
 
 
 def get_git_section(repo_root: Path = REPO_ROOT) -> dict:
-    """Return current branch, last 6 commits, and count of uncommitted files."""
+    """Return branch, last commit (hash+subject), uncommitted file count, and commits today."""
     if not (repo_root / ".git").exists():
         return {
-            "state": "not started",
-            "branch": None,
+            "state": "not available",
+            "branch": "not available",
+            "last_commit": {"hash": "—", "subject": "not available", "relative_time": ""},
             "uncommitted_count": 0,
-            "commits": [],
+            "commits_today": 0,
         }
     try:
         branch_proc = subprocess.run(
@@ -475,7 +757,7 @@ def get_git_section(repo_root: Path = REPO_ROOT) -> dict:
             timeout=3,
             check=False,
         )
-        branch = branch_proc.stdout.strip() if branch_proc.returncode == 0 else "unknown"
+        branch = branch_proc.stdout.strip() if branch_proc.returncode == 0 else "not available"
 
         status_proc = subprocess.run(
             ["git", "-C", str(repo_root), "status", "--porcelain"],
@@ -485,81 +767,82 @@ def get_git_section(repo_root: Path = REPO_ROOT) -> dict:
             check=False,
         )
         if status_proc.returncode == 0:
-            uncommitted_lines = [ln for ln in status_proc.stdout.splitlines() if ln.strip()]
-            uncommitted_count = len(uncommitted_lines)
+            uncommitted_count = sum(1 for ln in status_proc.stdout.splitlines() if ln.strip())
         else:
             uncommitted_count = 0
 
-        log_proc = subprocess.run(
-            ["git", "-C", str(repo_root), "log", "-n", "6", "--pretty=format:%h%x1f%s%x1f%cr"],
+        last_proc = subprocess.run(
+            ["git", "-C", str(repo_root), "log", "-n", "1", "--pretty=format:%h%x1f%s%x1f%cr"],
             capture_output=True,
             text=True,
             timeout=3,
             check=False,
         )
-        commits: list[dict] = []
-        if log_proc.returncode == 0:
-            for line in log_proc.stdout.splitlines():
-                if not line.strip():
-                    continue
-                parts = line.split("\x1f")
-                if len(parts) == 3:
-                    commits.append(
-                        {
-                            "hash": parts[0],
-                            "subject": parts[1],
-                            "relative_time": parts[2],
-                        }
-                    )
+        last_commit = {"hash": "—", "subject": "not available", "relative_time": ""}
+        if last_proc.returncode == 0 and last_proc.stdout.strip():
+            parts = last_proc.stdout.strip().split("\x1f")
+            if len(parts) == 3:
+                last_commit = {
+                    "hash": parts[0],
+                    "subject": parts[1],
+                    "relative_time": parts[2],
+                }
+
+        today_proc = subprocess.run(
+            ["git", "-C", str(repo_root), "rev-list", "--count", "--since=midnight", "HEAD"],
+            capture_output=True,
+            text=True,
+            timeout=3,
+            check=False,
+        )
+        commits_today = 0
+        if today_proc.returncode == 0 and today_proc.stdout.strip().isdigit():
+            commits_today = int(today_proc.stdout.strip())
+
         return {
             "state": "ok",
             "branch": branch,
+            "last_commit": last_commit,
             "uncommitted_count": uncommitted_count,
-            "commits": commits,
+            "commits_today": commits_today,
         }
     except Exception as exc:
         return {
-            "state": "not started",
+            "state": "not available",
             "error": str(exc),
-            "branch": None,
+            "branch": "not available",
+            "last_commit": {"hash": "—", "subject": "not available", "relative_time": ""},
             "uncommitted_count": 0,
-            "commits": [],
+            "commits_today": 0,
         }
 
 
-def get_disk_section(data_dir: Path = DATA_DIR) -> dict:
-    """Return free space on the volume holding data/."""
-    target = data_dir if data_dir.exists() else REPO_ROOT
-    try:
-        usage = shutil.disk_usage(target)
-        free_pct = (usage.free / usage.total * 100.0) if usage.total > 0 else 0.0
-        return {
-            "state": "ok",
-            "path": str(target),
-            "total_bytes": usage.total,
-            "used_bytes": usage.used,
-            "free_bytes": usage.free,
-            "total_human": _human_bytes(usage.total),
-            "used_human": _human_bytes(usage.used),
-            "free_human": _human_bytes(usage.free),
-            "free_percent": round(free_pct, 1),
-        }
-    except Exception as exc:
-        return {
-            "state": "not started",
-            "error": str(exc),
-            "path": str(target),
-            "total_bytes": 0,
-            "used_bytes": 0,
-            "free_bytes": 0,
-            "total_human": "—",
-            "used_human": "—",
-            "free_human": "—",
-            "free_percent": 0.0,
-        }
+def build_status_payload() -> dict:
+    """Assemble full /api/status dictionary defensively."""
+    now_dt = datetime.datetime.now().astimezone()
+    plan_sec = get_plan_section()
+    total_ch = int(plan_sec.get("total_chambers") or 502)
+    test_ch = len(plan_sec.get("chambers") or []) or 20
+
+    abstract_sec = get_abstract_section()
+    coverage_sec = get_coverage_section(total_chambers=total_ch, test_chambers_total=test_ch)
+    active_sec = get_active_work_section()
+    notebook_sec = get_notebook_section()
+    git_sec = get_git_section()
+
+    return {
+        "updated_iso": now_dt.isoformat(timespec="seconds"),
+        "updated_human": now_dt.strftime("%H:%M:%S"),
+        "plan": plan_sec,
+        "abstract": abstract_sec,
+        "coverage": coverage_sec,
+        "active_work": active_sec,
+        "notebook": notebook_sec,
+        "git": git_sec,
+    }
 
 
-INDEX_HTML = """<!DOCTYPE html>
+INDEX_HTML_TEMPLATE = """<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -577,14 +860,22 @@ INDEX_HTML = """<!DOCTYPE html>
   --accent: #0B5FD1;
   --danger: #B3261E;
 
-  /* Status colors: done green, in_progress amber, todo grey, blocked red */
+  /* Status & verdict colours (light) */
   --st-done-fg: #1B5E3A;
   --st-done-bg: #EBF5EE;
   --st-done-bd: #9AC8AD;
 
+  --st-ok-fg: #1F5E4B;
+  --st-ok-bg: #EEF6F3;
+  --st-ok-bd: #A3C9BC;
+
   --st-prog-fg: #8A4B08;
   --st-prog-bg: #FDF3E7;
   --st-prog-bd: #E0B483;
+
+  --st-track-fg: #1F4E79;
+  --st-track-bg: #EDF3F9;
+  --st-track-bd: #9BB8D6;
 
   --st-todo-fg: #525252;
   --st-todo-bg: #F2F2F2;
@@ -593,6 +884,9 @@ INDEX_HTML = """<!DOCTYPE html>
   --st-block-fg: #9E1F18;
   --st-block-bg: #FCECEB;
   --st-block-bd: #E3A09C;
+
+  --dot-run: #1B7F46;
+  --dot-idle: #8C8C8C;
 
   color-scheme: light;
 }
@@ -612,9 +906,17 @@ INDEX_HTML = """<!DOCTYPE html>
     --st-done-bg: #142B1F;
     --st-done-bd: #2C5E43;
 
+    --st-ok-fg: #84D4BC;
+    --st-ok-bg: #152923;
+    --st-ok-bd: #2C594B;
+
     --st-prog-fg: #F5B971;
     --st-prog-bg: #2E2010;
     --st-prog-bd: #6B4920;
+
+    --st-track-fg: #8FBCE6;
+    --st-track-bg: #152230;
+    --st-track-bd: #315375;
 
     --st-todo-fg: #B8B8B8;
     --st-todo-bg: #222222;
@@ -623,6 +925,9 @@ INDEX_HTML = """<!DOCTYPE html>
     --st-block-fg: #FF9488;
     --st-block-bg: #301614;
     --st-block-bd: #6E2D28;
+
+    --dot-run: #4CD97B;
+    --dot-idle: #707070;
 
     color-scheme: dark;
   }
@@ -634,29 +939,33 @@ body {
   background: var(--paper);
   color: var(--text);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  font-size: 15px;
+  font-size: 14px;
   line-height: 1.45;
 }
-.num {
-  font-variant-numeric: tabular-nums;
+.num { font-variant-numeric: tabular-nums; }
+.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
 }
+.muted { color: var(--muted); }
 a {
   color: var(--accent);
   text-decoration: underline;
 }
+
+/* Header */
 .top {
   border-bottom: 1px solid var(--rule);
   background: var(--paper);
-  position: sticky;
-  top: 0;
-  z-index: 10;
 }
 .top-in {
-  max-width: 820px;
+  max-width: 860px;
   margin: 0 auto;
-  padding: 12px 16px;
+  padding: 14px 16px 12px;
+}
+.top-row {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: 12px;
   flex-wrap: wrap;
@@ -669,11 +978,32 @@ h1 {
   letter-spacing: -0.01em;
 }
 .hdr-meta {
-  font-size: 13px;
+  font-size: 12px;
   color: var(--muted);
   display: flex;
-  align-items: baseline;
-  gap: 10px;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.agy-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.status-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  display: inline-block;
+  background: var(--dot-idle);
+}
+.status-dot.running {
+  background: var(--dot-run);
+}
+.status-dot.idle {
+  background: var(--dot-idle);
 }
 .stale-banner {
   display: none;
@@ -681,20 +1011,37 @@ h1 {
   background: var(--st-block-bg);
   border: 1px solid var(--st-block-bd);
   border-radius: 3px;
-  padding: 2px 8px;
-  font-size: 12px;
+  padding: 1px 7px;
+  font-size: 11px;
   font-weight: 600;
 }
-.stale-banner.visible {
-  display: inline-block;
+.stale-banner.visible { display: inline-block; }
+
+.aim-line {
+  margin: 6px 0 0;
+  font-size: 14px;
+  color: var(--text);
 }
+.now-banner {
+  margin-top: 8px;
+  padding: 7px 10px;
+  background: var(--paper-2);
+  border-left: 3px solid var(--ink);
+  font-size: 13px;
+  color: var(--ink);
+}
+.now-banner strong {
+  font-weight: 700;
+}
+
+/* Main layout */
 main {
-  max-width: 820px;
+  max-width: 860px;
   margin: 0 auto;
-  padding: 16px 16px 64px;
+  padding: 16px 16px 32px;
 }
 section {
-  margin-bottom: 28px;
+  margin-bottom: 24px;
 }
 .sec-hdr {
   display: flex;
@@ -711,19 +1058,18 @@ h2 {
   font-weight: 700;
   color: var(--ink);
   margin: 0;
-  text-transform: none;
 }
 .sec-sub {
-  font-size: 13px;
+  font-size: 12px;
   color: var(--muted);
 }
 
-/* Status chip */
+/* Status pills & verdict chips */
 .chip {
   display: inline-block;
   font-size: 11px;
   font-weight: 600;
-  line-height: 1.2;
+  line-height: 1.25;
   padding: 2px 6px;
   border-radius: 3px;
   border: 1px solid var(--st-todo-bd);
@@ -732,59 +1078,88 @@ h2 {
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
-.chip.done {
+.chip.done, .chip.good, .chip.reviewed, .chip.signed {
   color: var(--st-done-fg);
   background: var(--st-done-bg);
   border-color: var(--st-done-bd);
 }
-.chip.in_progress {
+.chip.ok {
+  color: var(--st-ok-fg);
+  background: var(--st-ok-bg);
+  border-color: var(--st-ok-bd);
+}
+.chip.in_progress, .chip.merge {
   color: var(--st-prog-fg);
   background: var(--st-prog-bg);
   border-color: var(--st-prog-bd);
 }
-.chip.todo {
+.chip.track {
+  color: var(--st-track-fg);
+  background: var(--st-track-bg);
+  border-color: var(--st-track-bd);
+}
+.chip.todo, .chip.unclear, .chip.draft {
   color: var(--st-todo-fg);
   background: var(--st-todo-bg);
   border-color: var(--st-todo-bd);
 }
-.chip.blocked {
+.chip.waiting {
+  color: var(--muted);
+  background: transparent;
+  border: 1px solid var(--line);
+}
+.chip.blocked, .chip.poor {
   color: var(--st-block-fg);
   background: var(--st-block-bg);
   border-color: var(--st-block-bd);
 }
+.chip.parked {
+  color: var(--muted);
+  background: var(--paper-2);
+  border: 1px dashed var(--line);
+}
 
-/* Plan list */
+/* Where we are (Abstract) */
+.abstract-box {
+  font-size: 14px;
+  line-height: 1.5;
+}
+.abstract-box .abs-heading {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  margin: 0 0 6px;
+}
+.abstract-box p {
+  margin: 0 0 8px;
+}
+.abstract-box ul, .abstract-box ol {
+  margin: 0 0 8px;
+  padding-left: 20px;
+}
+.abstract-box li {
+  margin-bottom: 3px;
+}
+
+/* Stage tracker */
 .plan-list {
   list-style: none;
   margin: 0;
   padding: 0;
 }
 .plan-item {
-  padding: 8px 0;
+  padding: 7px 0;
   border-bottom: 1px solid var(--rule);
   display: grid;
-  grid-template-columns: 32px minmax(0, 1fr) auto;
+  grid-template-columns: 52px minmax(0, 1fr) auto;
   gap: 8px;
   align-items: start;
 }
-.plan-item:last-child {
-  border-bottom: none;
-}
-.plan-item.gate {
-  margin: 6px 0;
-  padding: 9px 10px;
-  border: 1px dashed var(--ink);
-  border-radius: 4px;
-  background: var(--paper-2);
-  grid-template-columns: 46px minmax(0, 1fr) auto;
-}
+.plan-item:last-child { border-bottom: none; }
 .step-id {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
   color: var(--muted);
-}
-.plan-item.gate .step-id {
-  color: var(--ink);
 }
 .step-title {
   font-weight: 600;
@@ -797,38 +1172,28 @@ h2 {
   margin-top: 2px;
 }
 
-/* Progress bars */
-.overall-box {
-  padding: 10px 0 12px;
+/* Coverage & progress bars */
+.cov-box {
+  padding: 8px 0 10px;
+  margin-bottom: 10px;
   border-bottom: 1px solid var(--rule);
-  margin-bottom: 8px;
 }
-.overall-top {
+.cov-row {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  flex-wrap: wrap;
   gap: 8px;
-  margin-bottom: 6px;
-}
-.overall-count {
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--ink);
-}
-.overall-stats {
-  font-size: 13px;
-  color: var(--muted);
-  display: flex;
-  gap: 12px;
   flex-wrap: wrap;
+  margin-bottom: 4px;
+  font-size: 13px;
 }
 .bar-lg {
-  height: 10px;
+  height: 8px;
   background: var(--paper-2);
   border: 1px solid var(--line);
   border-radius: 3px;
   overflow: hidden;
+  margin-bottom: 8px;
 }
 .bar-lg > i, .bar-sm > i {
   display: block;
@@ -836,327 +1201,541 @@ h2 {
   background: var(--ink);
   width: 0%;
 }
+.p5-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 6px;
+}
+.p5-item {
+  font-size: 12px;
+  color: var(--muted);
+}
 .bar-sm {
-  height: 6px;
+  height: 5px;
   background: var(--paper-2);
+  border: 1px solid var(--line);
   border-radius: 2px;
   overflow: hidden;
-}
-.exp-list {
-  display: flex;
-  flex-direction: column;
-}
-.exp-row {
-  display: grid;
-  grid-template-columns: minmax(145px, 1.3fr) minmax(80px, 1fr) 115px;
-  gap: 10px;
-  align-items: center;
-  padding: 5px 0;
-  border-bottom: 1px solid var(--rule);
-  font-size: 13px;
-}
-.exp-row:last-child {
-  border-bottom: none;
-}
-.exp-name {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 12px;
-  color: var(--text);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.exp-cnt {
-  text-align: right;
-  color: var(--muted);
-  font-size: 12px;
-  white-space: nowrap;
+  margin-top: 3px;
 }
 
-/* Compact key-value rows and tables */
-.kv-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 12px;
-  padding: 6px 0;
-  border-bottom: 1px solid var(--rule);
-  font-size: 14px;
+/* Test chambers table */
+.set-group {
+  margin-top: 10px;
 }
-.kv-row:last-child {
+.set-hdr {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin: 8px 0 4px;
+}
+table.ch-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+table.ch-table th {
+  text-align: left;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  padding: 4px 8px 4px 0;
+  border-bottom: 1px solid var(--ink);
+}
+table.ch-table td {
+  padding: 5px 8px 5px 0;
+  border-bottom: 1px solid var(--rule);
+  vertical-align: top;
+}
+table.ch-table tr:last-child td {
   border-bottom: none;
 }
-.mono {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 12px;
+
+/* Highlight box (Needs PI) */
+.pi-box {
+  padding: 10px 12px;
+  background: var(--paper-2);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--ink);
+  border-radius: 3px;
 }
-.log-list, .commit-list {
+.pi-list {
+  margin: 0;
+  padding-left: 18px;
+}
+.pi-list li {
+  margin-bottom: 4px;
+}
+.pi-list li:last-child {
+  margin-bottom: 0;
+}
+
+/* Active work & lists */
+.sub-lbl {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink);
+  margin: 10px 0 4px;
+}
+.kv-list {
   list-style: none;
   margin: 0;
   padding: 0;
 }
-.log-item, .commit-item {
+.kv-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
   padding: 5px 0;
   border-bottom: 1px solid var(--rule);
   font-size: 13px;
+  flex-wrap: wrap;
+}
+.kv-item:last-child { border-bottom: none; }
+.log-box {
+  background: var(--paper-2);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  padding: 6px 10px;
+  font-size: 12px;
+}
+.log-row {
+  padding: 3px 0;
+  border-bottom: 1px solid var(--rule);
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
-  gap: 10px;
+  gap: 8px;
+}
+.log-row:last-child { border-bottom: none; }
+
+/* Notebook entries */
+.nb-item {
+  padding: 6px 0;
+  border-bottom: 1px solid var(--rule);
+  display: grid;
+  grid-template-columns: 86px minmax(0, 1fr) auto;
+  gap: 8px;
   align-items: baseline;
+  font-size: 13px;
 }
-.log-item:last-child, .commit-item:last-child {
-  border-bottom: none;
-}
-.ts {
-  color: var(--muted);
-  font-size: 12px;
-  white-space: nowrap;
-}
-.commit-meta {
-  color: var(--muted);
-  font-size: 12px;
-  margin-left: 6px;
-  white-space: nowrap;
-}
-.danger-text {
-  color: var(--danger);
+.nb-item:last-child { border-bottom: none; }
+.nb-link {
+  color: var(--ink);
   font-weight: 600;
+  text-decoration: underline;
+  text-decoration-color: var(--line);
 }
-@media (max-width: 520px) {
-  .exp-row {
-    grid-template-columns: minmax(120px, 1.2fr) minmax(60px, 0.8fr) 102px;
-    gap: 6px;
-  }
+
+/* Footer */
+footer.foot {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 14px 16px 40px;
+  border-top: 1px solid var(--ink);
+  font-size: 12px;
+  color: var(--muted);
+}
+.foot-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+
+@media (max-width: 560px) {
+  .p5-grid { grid-template-columns: 1fr; gap: 6px; }
+  .nb-item { grid-template-columns: 1fr; gap: 2px; }
+  .plan-item { grid-template-columns: 44px minmax(0, 1fr) auto; }
 }
 </style>
 </head>
 <body>
 <header class="top">
   <div class="top-in">
-    <h1>Cell-Kill-Sim progress</h1>
-    <div class="hdr-meta num">
-      <span id="stale-warning" class="stale-banner">Stale: fetch failed</span>
-      <span id="last-updated">Updated: —</span>
+    <div class="top-row">
+      <h1>Cell-Kill-Sim progress</h1>
+      <div class="hdr-meta num">
+        <span id="stale-warning" class="stale-banner">Stale: fetch failed</span>
+        <span class="agy-badge">
+          <span id="hdr-agy-dot" class="status-dot idle"></span>
+          <span id="hdr-agy-text">agy: —</span>
+        </span>
+        <span id="hdr-plan-updated">plan: —</span>
+        <span id="hdr-page-updated">refreshed: —</span>
+      </div>
     </div>
+    <p id="hdr-aim" class="aim-line">—</p>
+    <div class="now-banner"><strong>Now:</strong> <span id="hdr-now">—</span></div>
   </div>
 </header>
 
 <main>
-  <section id="sec-plan">
+  <section id="sec-abstract">
     <div class="sec-hdr">
-      <h2>Plan</h2>
-      <span id="plan-meta" class="sec-sub"></span>
+      <h2>Where we are</h2>
+      <span class="sec-sub mono">lab/notebook/ABSTRACT.md</span>
     </div>
-    <div id="plan-body" class="sec-sub">Loading…</div>
+    <div id="abstract-body" class="abstract-box">Loading…</div>
   </section>
 
-  <section id="sec-masks">
+  <section id="sec-stages">
     <div class="sec-hdr">
-      <h2>Masks</h2>
-      <span id="masks-meta" class="sec-sub num"></span>
+      <h2>Stage tracker</h2>
+      <span id="stages-meta" class="sec-sub num"></span>
     </div>
-    <div id="masks-body" class="sec-sub">Loading…</div>
+    <div id="stages-body">Loading…</div>
   </section>
 
-  <section id="sec-processes">
+  <section id="sec-chambers">
     <div class="sec-hdr">
-      <h2>Processes &amp; Agent Log</h2>
-      <span id="proc-meta" class="sec-sub"></span>
+      <h2>Test chambers (20)</h2>
+      <span id="chambers-meta" class="sec-sub num"></span>
     </div>
-    <div id="proc-body" class="sec-sub">Loading…</div>
+    <div id="coverage-body" class="cov-box"></div>
+    <div id="chambers-body">Loading…</div>
   </section>
 
-  <section id="sec-git-disk">
+  <section id="sec-needs-pi">
     <div class="sec-hdr">
-      <h2>Git &amp; Disk</h2>
-      <span id="git-disk-meta" class="sec-sub num"></span>
+      <h2>Needs the PI / Fei lab</h2>
+      <span class="sec-sub">open questions</span>
     </div>
-    <div id="git-disk-body" class="sec-sub">Loading…</div>
+    <div id="needs-pi-body" class="pi-box">Loading…</div>
+  </section>
+
+  <section id="sec-active">
+    <div class="sec-hdr">
+      <h2>Active work</h2>
+      <span id="active-meta" class="sec-sub num"></span>
+    </div>
+    <div id="active-body">Loading…</div>
+  </section>
+
+  <section id="sec-notebook">
+    <div class="sec-hdr">
+      <h2>Recent lab notebook entries</h2>
+      <span class="sec-sub">latest 6 by filename</span>
+    </div>
+    <div id="notebook-body">Loading…</div>
   </section>
 </main>
 
+<footer class="foot">
+  <div id="foot-git" class="foot-row num">Loading git info…</div>
+  <div id="foot-parked" class="foot-row"></div>
+  <div class="foot-row">
+    <span>Links: <a href="http://localhost:8767">Lab site (http://localhost:8767)</a> · <a href="http://localhost:8766">Review app (http://localhost:8766)</a></span>
+    <span class="mono">/api/status (5s auto-refresh)</span>
+  </div>
+</footer>
+
+<script id="initial-status" type="application/json">__INITIAL_STATUS_JSON__</script>
 <script>
 (function() {
-  const fmtInt = (n) => Number(n || 0).toLocaleString('en-US');
   const esc = (s) => String(s == null ? '' : s)
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
 
-  function chipHtml(status, labelOverride) {
-    const st = String(status || 'todo').toLowerCase();
-    const cls = (st === 'done' || st === 'in_progress' || st === 'blocked') ? st : 'todo';
-    const label = labelOverride != null ? labelOverride : st.replace('_', ' ');
+  function chipHtml(kind, labelOverride) {
+    const raw = String(kind || 'todo').toLowerCase().trim();
+    const cls = raw.replace(/[^a-z0-9_]/g, '');
+    const label = labelOverride != null ? labelOverride : raw.replace(/_/g, ' ');
     return '<span class="chip ' + cls + '">' + esc(label) + '</span>';
   }
 
-  function renderPlan(plan) {
-    const metaEl = document.getElementById('plan-meta');
-    const bodyEl = document.getElementById('plan-body');
-    if (!plan || plan.state === 'not started' || !Array.isArray(plan.steps) || plan.steps.length === 0) {
-      metaEl.innerHTML = '';
-      bodyEl.innerHTML = '<div class="sec-sub">not started</div>';
+  function renderHeader(data) {
+    const plan = data.plan || {};
+    const active = data.active_work || {};
+    const agyStatus = active.agy_status || 'idle';
+
+    const dotEl = document.getElementById('hdr-agy-dot');
+    const txtEl = document.getElementById('hdr-agy-text');
+    dotEl.className = 'status-dot ' + (agyStatus === 'running' ? 'running' : 'idle');
+    txtEl.textContent = 'agy ' + agyStatus;
+
+    document.getElementById('hdr-plan-updated').textContent = 'plan: ' + (plan.updated || 'not available');
+    document.getElementById('hdr-page-updated').textContent = 'refreshed: ' + (data.updated_human || '—');
+    document.getElementById('hdr-aim').textContent = plan.aim || 'not available';
+    document.getElementById('hdr-now').textContent = plan.now || 'not available';
+  }
+
+  function renderAbstract(abs) {
+    const el = document.getElementById('abstract-body');
+    if (!abs || abs.state !== 'ok' || !abs.html) {
+      el.innerHTML = '<p class="muted">not available</p>';
       return;
     }
-    let metaParts = [];
-    if (plan.updated) metaParts.push('Updated ' + esc(plan.updated));
-    if (plan.review_url) {
-      metaParts.push('<a href="' + esc(plan.review_url) + '" target="_blank" rel="noopener">Review artifact</a>');
-    }
-    metaEl.innerHTML = metaParts.join(' · ');
+    el.innerHTML = abs.html;
+  }
 
+  function renderStages(plan) {
+    const metaEl = document.getElementById('stages-meta');
+    const bodyEl = document.getElementById('stages-body');
+    if (!plan || plan.state !== 'ok' || !Array.isArray(plan.phases) || plan.phases.length === 0) {
+      metaEl.textContent = 'not available';
+      bodyEl.innerHTML = '<div class="muted">not available</div>';
+      return;
+    }
+    metaEl.textContent = plan.stages_summary || '';
     let html = '<ul class="plan-list">';
-    for (const step of plan.steps) {
-      const isGate = String(step.id) === 'check';
-      html += '<li class="plan-item' + (isGate ? ' gate' : '') + '">';
-      html += '<div class="step-id num">' + esc(step.id) + '</div>';
-      html += '<div><div class="step-title">' + esc(step.title) + '</div>';
-      if (step.note) {
-        html += '<div class="step-note">' + esc(step.note) + '</div>';
+    for (const ph of plan.phases) {
+      html += '<li class="plan-item">';
+      html += '<div class="step-id mono num">' + esc(ph.id) + '</div>';
+      html += '<div><div class="step-title">' + esc(ph.title) + '</div>';
+      if (ph.note) {
+        html += '<div class="step-note">' + esc(ph.note) + '</div>';
       }
       html += '</div>';
-      html += '<div>' + chipHtml(step.status) + '</div>';
+      html += '<div>' + chipHtml(ph.status) + '</div>';
       html += '</li>';
     }
     html += '</ul>';
     bodyEl.innerHTML = html;
   }
 
-  function renderMasks(masks) {
-    const metaEl = document.getElementById('masks-meta');
-    const bodyEl = document.getElementById('masks-body');
-    if (!masks || (masks.state === 'not started' && !masks.expected_total)) {
-      metaEl.textContent = 'not started';
-      bodyEl.innerHTML = '<div class="sec-sub">not started</div>';
+  function renderCoverageAndChambers(cov, plan) {
+    const covEl = document.getElementById('coverage-body');
+    const metaEl = document.getElementById('chambers-meta');
+    const bodyEl = document.getElementById('chambers-body');
+
+    if (!cov || cov.state !== 'ok') {
+      covEl.innerHTML = '<div class="muted">Coverage not available</div>';
+    } else {
+      const redrawn = Number(cov.redrawn_chambers || 0);
+      const total = Number(cov.total_chambers || 502);
+      const pct = Math.max(0, Math.min(100, Number(cov.redrawn_percent || 0)));
+      const testTot = Number(cov.test_chambers_total || 20);
+      const c5Split = Number(cov.p5_c5_split || 0);
+      const tracks = Number(cov.p5_tracks || 0);
+      const movies = Number(cov.p5_movies || 0);
+
+      const c5Pct = Math.min(100, Math.round((c5Split / Math.max(1, testTot)) * 100));
+      const trPct = Math.min(100, Math.round((tracks / Math.max(1, testTot)) * 100));
+      const mvPct = Math.min(100, Math.round((movies / Math.max(1, testTot)) * 100));
+
+      let cHtml = '';
+      cHtml += '<div class="cov-row num"><strong>chambers redrawn: ' + redrawn + ' of ' + total + '</strong>';
+      cHtml += '<span class="muted">C4: ' + Number(cov.c4_chambers || 0) + ' · C5: ' + c5Split + ' (' + pct.toFixed(1) + '%)</span></div>';
+      cHtml += '<div class="bar-lg"><i style="width:' + pct.toFixed(2) + '%"></i></div>';
+      cHtml += '<div class="cov-row num"><span>P5 outputs: C5 split ' + c5Split + '/' + testTot + ' chambers, tracks ' + tracks + '/' + testTot + ', movies <code class="mono">figures/pilot/p5/*.mp4</code> ' + movies + '/' + testTot + '</span></div>';
+      cHtml += '<div class="p5-grid num">';
+      cHtml += '<div class="p5-item">C5 split (' + c5Split + '/' + testTot + ')<div class="bar-sm"><i style="width:' + c5Pct + '%"></i></div></div>';
+      cHtml += '<div class="p5-item">tracks (' + tracks + '/' + testTot + ')<div class="bar-sm"><i style="width:' + trPct + '%"></i></div></div>';
+      cHtml += '<div class="p5-item">movies (' + movies + '/' + testTot + ')<div class="bar-sm"><i style="width:' + mvPct + '%"></i></div></div>';
+      cHtml += '</div>';
+      covEl.innerHTML = cHtml;
+    }
+
+    if (!plan || plan.state !== 'ok' || !Array.isArray(plan.chambers) || plan.chambers.length === 0) {
+      metaEl.textContent = 'not available';
+      bodyEl.innerHTML = '<div class="muted">not available</div>';
       return;
     }
-    const expTotal = masks.expected_total || 63053;
-    const presTotal = masks.present_total || 0;
-    const pct = Number(masks.percent || 0).toFixed(1);
-    const rate = Number(masks.rate_files_per_min || 0).toFixed(1);
-    const eta = masks.eta_human || '—';
-    const bytesHuman = masks.bytes_human || '0 B';
-    const failures = masks.failures || 0;
 
-    metaEl.innerHTML = esc(bytesHuman) + ' on disk · ' +
-      (failures > 0 ? '<span class="danger-text">' + fmtInt(failures) + ' failures</span>' : '0 failures');
+    metaEl.textContent = plan.verdict_tally || '';
 
-    let html = '<div class="overall-box num">';
-    html += '<div class="overall-top">';
-    html += '<div class="overall-count">' + fmtInt(presTotal) + ' / ' + fmtInt(expTotal) + ' <span class="sec-sub">(' + pct + '%)</span></div>';
-    html += '<div class="overall-stats">';
-    html += '<span>Rate: <strong>' + esc(rate) + '</strong> files/min</span>';
-    html += '<span>ETA: <strong>' + esc(eta) + '</strong></span>';
-    html += '</div></div>';
-    html += '<div class="bar-lg"><i style="width:' + Math.min(100, Math.max(0, Number(masks.percent || 0))) + '%"></i></div>';
-    html += '</div>';
+    const groups = new Map();
+    for (const ch of plan.chambers) {
+      const s = ch.set || 'other';
+      if (!groups.has(s)) groups.set(s, []);
+      groups.get(s).push(ch);
+    }
 
-    if (Array.isArray(masks.experiments) && masks.experiments.length > 0) {
-      html += '<div class="exp-list num">';
-      for (const row of masks.experiments) {
-        const rPct = Math.min(100, Math.max(0, Number(row.percent || 0)));
-        html += '<div class="exp-row">';
-        html += '<div class="exp-name" title="' + esc(row.experiment) + '">' + esc(row.experiment) + '</div>';
-        html += '<div class="bar-sm"><i style="width:' + rPct + '%"></i></div>';
-        html += '<div class="exp-cnt">' + fmtInt(row.present) + ' / ' + fmtInt(row.expected) + '</div>';
-        html += '</div>';
+    let html = '';
+    for (const [setName, list] of groups.entries()) {
+      html += '<div class="set-group">';
+      html += '<div class="set-hdr num">' + esc(setName) + ' (' + list.length + ')</div>';
+      html += '<table class="ch-table"><thead><tr><th style="width:160px">Chamber</th><th style="width:86px">Verdict</th><th>Issue</th></tr></thead><tbody>';
+      for (const ch of list) {
+        html += '<tr>';
+        html += '<td class="mono num">' + esc(ch.id) + '</td>';
+        html += '<td>' + chipHtml(ch.verdict) + '</td>';
+        html += '<td>' + (ch.issue ? esc(ch.issue) : '<span class="muted">—</span>') + '</td>';
+        html += '</tr>';
       }
-      html += '</div>';
+      html += '</tbody></table></div>';
     }
     bodyEl.innerHTML = html;
   }
 
-  function renderProcesses(agent, downloader) {
-    const metaEl = document.getElementById('proc-meta');
-    const bodyEl = document.getElementById('proc-body');
+  function renderNeedsPi(plan) {
+    const el = document.getElementById('needs-pi-body');
+    if (!plan || plan.state !== 'ok' || !Array.isArray(plan.needs_pi)) {
+      el.innerHTML = '<span class="muted">not available</span>';
+      return;
+    }
+    if (plan.needs_pi.length === 0) {
+      el.innerHTML = '<span class="muted">None currently</span>';
+      return;
+    }
+    let html = '<ul class="pi-list">';
+    for (const item of plan.needs_pi) {
+      html += '<li>' + esc(item) + '</li>';
+    }
+    html += '</ul>';
+    el.innerHTML = html;
+  }
 
-    const agyActive = Boolean(agent && agent.active);
-    const dlActive = Boolean(downloader && downloader.running);
+  function renderActiveWork(active) {
+    const metaEl = document.getElementById('active-meta');
+    const bodyEl = document.getElementById('active-body');
+    if (!active || active.state === 'not available') {
+      metaEl.textContent = 'not available';
+      bodyEl.innerHTML = '<div class="muted">not available</div>';
+      return;
+    }
 
-    metaEl.innerHTML =
-      'agy: ' + chipHtml(agyActive ? 'in_progress' : 'todo', agyActive ? 'active' : 'idle') +
-      ' &nbsp; downloader: ' + chipHtml(dlActive ? 'in_progress' : 'todo', dlActive ? 'running' : 'stopped');
+    const st = active.agy_status || 'idle';
+    const jobs = Array.isArray(active.jobs) ? active.jobs : [];
+    metaEl.textContent = 'state: ' + st + ' (' + jobs.length + ' job' + (jobs.length === 1 ? '' : 's') + ')';
 
     let html = '';
-    html += '<div class="kv-row"><span>Downloader (<code>download_masks.py</code> / <code>download_raw.py</code>)</span><span class="mono num">' +
-      (dlActive ? esc(downloader.processes.map(p => 'PID ' + p.pid).join(', ')) : 'not running') + '</span></div>';
-    html += '<div class="kv-row"><span>Antigravity agent (<code>agy -p</code>)</span><span class="mono num">' +
-      (agyActive ? esc(agent.processes.map(p => 'PID ' + p.pid).join(', ')) : 'idle') + '</span></div>';
 
-    const lines = (agent && Array.isArray(agent.log_lines)) ? agent.log_lines : [];
-    if (lines.length === 0) {
-      html += '<div class="sec-sub" style="margin-top:8px">No recent sir_flash_lite progress lines in cli.log</div>';
+    // Show raw-image download ONLY if actually running now
+    if (active.raw_download && active.raw_download.running && Array.isArray(active.raw_download.processes)) {
+      html += '<div class="sub-lbl">Raw-image download (active)</div>';
+      html += '<ul class="kv-list">';
+      for (const p of active.raw_download.processes) {
+        html += '<li class="kv-item num"><span class="mono">' + esc(p.command) + '</span>';
+        html += '<span class="mono muted">PID ' + esc(p.pid) + ' · elapsed ' + esc(p.etime) + '</span></li>';
+      }
+      html += '</ul>';
+    }
+
+    // Running agy jobs
+    html += '<div class="sub-lbl" style="margin-top:2px">Running agy jobs</div>';
+    if (jobs.length === 0) {
+      html += '<div class="muted" style="font-size:13px;padding:2px 0 6px">idle (no active agy_run.sh / agy jobs)</div>';
     } else {
-      html += '<div class="sec-sub" style="margin:10px 0 4px;font-weight:600;color:var(--ink)">Last ' + lines.length + ' agent monitor lines</div>';
-      html += '<ul class="log-list">';
-      for (let i = lines.length - 1; i >= 0; i--) {
-        const item = lines[i];
-        html += '<li class="log-item">';
-        html += '<span class="ts mono num">' + esc(item.timestamp || '—') + '</span>';
-        html += '<span>' + esc(item.reason) + '</span>';
+      html += '<ul class="kv-list">';
+      for (const j of jobs) {
+        const pidInfo = j.agy_pid ? ('wrapper PID ' + j.wrapper_pid + ' → agy PID ' + j.agy_pid) : ('PID ' + (j.wrapper_pid || '—'));
+        html += '<li class="kv-item num">';
+        html += '<span><strong>' + esc(j.prompt) + '</strong> <span class="mono muted">(' + esc(j.prompt_file) + ')</span></span>';
+        html += '<span class="mono">elapsed ' + esc(j.etime) + ' <span class="muted">· ' + esc(pidInfo) + '</span></span>';
         html += '</li>';
       }
       html += '</ul>';
     }
-    bodyEl.innerHTML = html;
-  }
 
-  function renderGitAndDisk(git, disk) {
-    const metaEl = document.getElementById('git-disk-meta');
-    const bodyEl = document.getElementById('git-disk-body');
-
-    const freeHuman = (disk && disk.free_human) ? disk.free_human : '—';
-    const freePct = (disk && disk.free_percent != null) ? (' (' + disk.free_percent + '% free)') : '';
-    metaEl.textContent = 'Disk free: ' + freeHuman + freePct;
-
-    let html = '';
-    if (disk && disk.state === 'ok') {
-      html += '<div class="kv-row num"><span>Volume free space (<code>data/</code>)</span><span><strong>' +
-        esc(disk.free_human) + '</strong> free of ' + esc(disk.total_human) + '</span></div>';
+    // Shared agent log (~3 lines of cli.log)
+    html += '<div class="sub-lbl">Agent log (~last 3 lines of cli.log)</div>';
+    if (active.log_state === 'not available') {
+      html += '<div class="log-box muted">not available</div>';
+    } else if (!Array.isArray(active.log_lines) || active.log_lines.length === 0) {
+      html += '<div class="log-box muted">No recent log lines</div>';
     } else {
-      html += '<div class="kv-row"><span>Volume free space (<code>data/</code>)</span><span>not started</span></div>';
-    }
-
-    if (!git || git.state === 'not started') {
-      html += '<div class="kv-row"><span>Git status</span><span>not started</span></div>';
-    } else {
-      html += '<div class="kv-row num"><span>Branch: <strong class="mono">' + esc(git.branch || '—') + '</strong></span>' +
-        '<span>Uncommitted files: <strong>' + fmtInt(git.uncommitted_count) + '</strong></span></div>';
-      const commits = Array.isArray(git.commits) ? git.commits : [];
-      if (commits.length > 0) {
-        html += '<ul class="commit-list" style="margin-top:6px">';
-        for (const c of commits) {
-          html += '<li class="commit-item">';
-          html += '<span class="mono num">' + esc(c.hash) + '</span>';
-          html += '<span>' + esc(c.subject) + '<span class="commit-meta num">' + esc(c.relative_time) + '</span></span>';
-          html += '</li>';
-        }
-        html += '</ul>';
+      html += '<div class="log-box">';
+      for (const ln of active.log_lines) {
+        html += '<div class="log-row">';
+        html += '<span class="mono num muted">' + esc(ln.timestamp || '—') + '</span>';
+        html += '<span>' + esc(ln.text) + '</span>';
+        html += '</div>';
       }
+      html += '</div>';
     }
+
+    // Recent agy reports (last 24 h)
+    const reports = Array.isArray(active.recent_reports) ? active.recent_reports : [];
+    html += '<div class="sub-lbl">Recent agy reports (last 24 h: ' + reports.length + ')</div>';
+    if (reports.length === 0) {
+      html += '<div class="muted" style="font-size:13px">None modified in the last 24 h</div>';
+    } else {
+      html += '<ul class="kv-list">';
+      for (const r of reports) {
+        html += '<li class="kv-item num">';
+        html += '<span class="mono">' + esc(r.name) + '</span>';
+        html += '<span class="muted">' + esc(r.mtime) + ' (' + esc(r.age_human) + ', ' + esc(r.size_human) + ')</span>';
+        html += '</li>';
+      }
+      html += '</ul>';
+    }
+
     bodyEl.innerHTML = html;
   }
+
+  function renderNotebook(nb) {
+    const bodyEl = document.getElementById('notebook-body');
+    if (!nb || nb.state !== 'ok' || !Array.isArray(nb.entries)) {
+      bodyEl.innerHTML = '<div class="muted">not available</div>';
+      return;
+    }
+    if (nb.entries.length === 0) {
+      bodyEl.innerHTML = '<div class="muted">No notebook entries found</div>';
+      return;
+    }
+    let html = '<div>';
+    for (const e of nb.entries) {
+      html += '<div class="nb-item">';
+      html += '<span class="mono num muted">' + esc(e.date) + '</span>';
+      html += '<div><span class="nb-link">' + esc(e.title) + '</span> <span class="mono muted">(' + esc(e.filename) + ')</span></div>';
+      html += '<div class="num">' + chipHtml('waiting', 'gate ' + (e.gate || 'none')) + ' ' + chipHtml(e.status || 'draft') + '</div>';
+      html += '</div>';
+    }
+    html += '</div>';
+    bodyEl.innerHTML = html;
+  }
+
+  function renderFooter(git, plan) {
+    const gitEl = document.getElementById('foot-git');
+    const parkedEl = document.getElementById('foot-parked');
+
+    if (!git || git.state !== 'ok') {
+      gitEl.textContent = 'Git: not available';
+    } else {
+      const lc = git.last_commit || {};
+      const commitStr = lc.hash ? (lc.hash + ' ' + (lc.subject || '')) : 'not available';
+      gitEl.innerHTML =
+        '<span>Branch: <strong class="mono">' + esc(git.branch) + '</strong> · Last commit: <span class="mono">' +
+        esc(commitStr) + '</span></span>' +
+        '<span>Uncommitted files: <strong>' + Number(git.uncommitted_count || 0) +
+        '</strong> · Commits today: <strong>' + Number(git.commits_today || 0) + '</strong></span>';
+    }
+
+    const parked = (plan && plan.parked_note) ? plan.parked_note : '';
+    parkedEl.textContent = parked ? ('Parked: ' + parked) : '';
+  }
+
+  function applyStatus(data) {
+    if (!data) return;
+    renderHeader(data);
+    renderAbstract(data.abstract);
+    renderStages(data.plan);
+    renderCoverageAndChambers(data.coverage, data.plan);
+    renderNeedsPi(data.plan);
+    renderActiveWork(data.active_work);
+    renderNotebook(data.notebook);
+    renderFooter(data.git, data.plan);
+  }
+
+  try {
+    const initEl = document.getElementById('initial-status');
+    if (initEl && initEl.textContent) {
+      applyStatus(JSON.parse(initEl.textContent));
+    }
+  } catch (_) {}
 
   async function refresh() {
     const staleEl = document.getElementById('stale-warning');
-    const updatedEl = document.getElementById('last-updated');
     try {
       const resp = await fetch('/api/status', { cache: 'no-store' });
       if (!resp.ok) throw new Error('HTTP ' + resp.status);
       const data = await resp.json();
       staleEl.classList.remove('visible');
-      updatedEl.textContent = 'Updated: ' + (data.updated_human || new Date().toLocaleTimeString());
-      renderPlan(data.plan);
-      renderMasks(data.masks);
-      renderProcesses(data.agent, data.downloader);
-      renderGitAndDisk(data.git, data.disk);
+      applyStatus(data);
     } catch (err) {
       staleEl.classList.add('visible');
     }
   }
 
-  refresh();
   setInterval(refresh, 5000);
 })();
 </script>
@@ -1166,8 +1745,6 @@ h2 {
 
 
 class DashboardHandler(BaseHTTPRequestHandler):
-    tracker: MaskProgressTracker
-
     def log_message(self, fmt: str, *args) -> None:
         # Quiet default stderr logging
         pass
@@ -1177,7 +1754,10 @@ class DashboardHandler(BaseHTTPRequestHandler):
         route = parsed.path
 
         if route == "/" or route == "/index.html":
-            body = INDEX_HTML.encode("utf-8")
+            payload = build_status_payload()
+            init_json = json.dumps(payload).replace("</", "<\\/")
+            page_html = INDEX_HTML_TEMPLATE.replace("__INITIAL_STATUS_JSON__", init_json)
+            body = page_html.encode("utf-8")
             self.send_response(HTTPStatus.OK)
             self.send_header("Content-Type", "text/html; charset=utf-8")
             self.send_header("Content-Length", str(len(body)))
@@ -1187,49 +1767,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
             return
 
         if route == "/api/status":
-            now_dt = datetime.datetime.now().astimezone()
-            try:
-                plan_sec = get_plan_section()
-            except Exception as exc:
-                plan_sec = {"state": "not started", "error": str(exc), "steps": []}
-
-            try:
-                masks_sec = self.tracker.get_status()
-            except Exception as exc:
-                masks_sec = {
-                    "state": "not started",
-                    "error": str(exc),
-                    "expected_total": 0,
-                    "present_total": 0,
-                    "experiments": [],
-                }
-
-            try:
-                agent_sec, downloader_sec = get_agent_And_downloader_sections()
-            except Exception as exc:
-                agent_sec = {"state": "not started", "active": False, "log_lines": [], "error": str(exc)}
-                downloader_sec = {"state": "not started", "running": False, "error": str(exc)}
-
-            try:
-                git_sec = get_git_section()
-            except Exception as exc:
-                git_sec = {"state": "not started", "branch": None, "uncommitted_count": 0, "commits": [], "error": str(exc)}
-
-            try:
-                disk_sec = get_disk_section()
-            except Exception as exc:
-                disk_sec = {"state": "not started", "free_bytes": 0, "free_human": "—", "error": str(exc)}
-
-            payload = {
-                "updated_iso": now_dt.isoformat(timespec="seconds"),
-                "updated_human": now_dt.strftime("%H:%M:%S"),
-                "plan": plan_sec,
-                "masks": masks_sec,
-                "agent": agent_sec,
-                "downloader": downloader_sec,
-                "git": git_sec,
-                "disk": disk_sec,
-            }
+            payload = build_status_payload()
             raw = json.dumps(payload, indent=2).encode("utf-8")
             self.send_response(HTTPStatus.OK)
             self.send_header("Content-Type", "application/json; charset=utf-8")
@@ -1252,9 +1790,6 @@ def main() -> None:
     parser.add_argument("--port", type=int, default=8765, help="Port to bind (default: 8765)")
     parser.add_argument("--host", type=str, default="127.0.0.1", help="Host to bind (default: 127.0.0.1)")
     args = parser.parse_args()
-
-    tracker = MaskProgressTracker()
-    DashboardHandler.tracker = tracker
 
     server = ThreadingHTTPServer((args.host, args.port), DashboardHandler)
     print(f"Serving Cell-Kill-Sim progress dashboard on http://{args.host}:{args.port}", flush=True)

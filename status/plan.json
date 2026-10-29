@@ -1,60 +1,45 @@
 {
-  "updated": "2026-10-28 21:45",
-  "review_url": "https://claude.ai/artifact/7rfWCPdbZtaptkK5nc7NTX",
-  "steps": [
-    {
-      "id": "audit",
-      "title": "Audit: verify every stage on real images",
-      "status": "in_progress",
-      "note": "Started 2026-10-28 after reviewing all 128 real-data panels (figures/review/gallery.html; findings in status/visual_review_2026-10-28.md). Plan in status/verification_plan.md: gates G0-G5, each passed only after every panel of a real-image gallery is reviewed. Running now: mask QC + death-label checks (agy), raw volumes for the gallery panels (then the in-depth chambers)."
-    },
-    {
-      "id": "1",
-      "title": "Fix the foundation",
-      "status": "done",
-      "note": "Portable paths, VOXEL_UM = 0.1962, report status notes. Commit 067c571."
-    },
-    {
-      "id": "2",
-      "title": "Download all 63,053 masks (~4.3 GB)",
-      "status": "done",
-      "note": "All 63,053 masks downloaded and validated, 0 failures (2026-10-27). data/scidb_19235_masks/ with manifest.csv."
-    },
-    {
-      "id": "3",
-      "title": "Reproduce the lab's published numbers",
-      "status": "done",
-      "note": "Verified on external checks: trace_num==1 count equals the paper's row count in all 12 fully deposited experiments (395/395); chamber identity firm for 415/419 rows; masks-only contact area within 0.5% for 369/419. Gate G0 passed. Not yet checked visually; gate G1 covers the same masks."
-    },
-    {
-      "id": "4",
-      "title": "Build per-cell death labels",
-      "status": "blocked",
-      "note": "AUDIT G2. Labels exist for all 502 chambers (contacted target only, 200-min window, ROI_0 band excluded), but are not verified. Gallery panels overlap dye with every target in the field, labels with the contacted target only: death_surviving_19, 24 and death_killed_07 disagree with their labels. Possible overlap bug (death_dasatinib_30), possible neighbour false kills (death_killed_05, 09). Faint dye (threshold 404 vs background ~400): threshold sensitivity running in the QC job."
-    },
-    {
-      "id": "5",
-      "title": "Describe every chamber, and 10-20 in depth",
-      "status": "blocked",
-      "note": "AUDIT G1/G3. 5a descriptors exist but the cup measurements are inflated where the target mask is not one whole cell: fragmented (cup_01 10.2 um), two targets merged (deep_07 5.6 um), hollow (dasatinib_11 6.75 um), cut by the image edge (cup_05, cup_13). Median cup depth 0.72 um (compact targets) vs 1.35 um (least compact). Donor hd10 masks mostly fragmented/hollow. QC flags running; recompute on clean cells, then re-verify visually. Raw volumes for all 121 gallery panels downloading."
-    },
-    {
-      "id": "check",
-      "title": "Does geometry relate to killing at all?",
-      "status": "blocked",
-      "note": "AUDIT G4, on hold. The pre-registered association (deeper cups, faster killing, HR 1.4/SD) may be partly mask artefact if targets fragment before death. Rerun on verified G1-G3 data, old result kept for comparison."
-    },
-    {
-      "id": "6",
-      "title": "First mechanical model",
-      "status": "blocked",
-      "note": "PARKED (G5). Solver fixed and passes analytic and contact benchmarks, but on real data: solved cells drift 2-3 um off the masks (no rigid-body pinning); re-solve disagrees with the fit curve in 9/32 panels; starting target misplaced (overlap up to 11 um); one curve-inversion inconsistency (fit_reach_14). Final run stopped. Resume only if G4 still shows something to explain."
-    },
-    {
-      "id": "7",
-      "title": "Ask one sharp question",
-      "status": "blocked",
-      "note": "AUDIT G4, on hold. Pre-registered result was inconclusive (dasatinib control failed on depth/radius). The hd10 outlier that drove part of it has mostly fragmented/hollow masks. Rerun after G1-G3."
-    }
-  ]
+  "updated": "2026-10-29 08:30",
+  "aim": "Build 3D-over-time digital twins of CAR-T cells killing leukaemia cells from the Fei lab light-sheet movies, and test whether how a T cell pushes on its target predicts killing.",
+  "now": "P5: fixing cell choice/tracking and splitting of touching tumour cells (two agy jobs, then Claude reviews every frame)",
+  "total_chambers": 502,
+  "phases": [
+    {"id": "G0", "title": "Reproduce the lab's published numbers", "status": "done", "note": "Contact areas match within 0.5% (369/419); row counts 395/395."},
+    {"id": "G1", "title": "Redraw the cells from raw images", "status": "in_progress", "note": "Lab masks are often hollow, merged or have phantom lobes. Replacing them with membrane-based outlines (C4), reviewed frame by frame."},
+    {"id": "P1-P3", "title": "Pilot: choose a method on 8 chambers", "status": "done", "note": "C4 (PlantSeg membrane-based) best on all 8."},
+    {"id": "P4", "title": "Held-out test: C4 unchanged on 12 new chambers", "status": "done", "note": "Outlines generalise. Touching tumour cells merge (5/12) and the wrong cell is tracked."},
+    {"id": "P5", "title": "Fix tracking and merging; retest on all 20 chambers", "status": "in_progress", "note": "Job A: track T cell and target from first contact. Job B: split touching tumour cells, drop haze and beads."},
+    {"id": "P6", "title": "Redraw all 502 chambers", "status": "todo", "note": "Process each movie as it downloads."},
+    {"id": "G2", "title": "Death labels / kill definition", "status": "blocked", "note": "Two 'survived' chambers contain late kills. Needs the Fei lab's kill definition."},
+    {"id": "G3", "title": "Contact and dent measurements on new outlines", "status": "waiting", "note": "Waits on P5/P6."},
+    {"id": "G4", "title": "Does dent depth predict killing?", "status": "waiting", "note": "Earlier result may be a mask artefact; redo on verified outlines."},
+    {"id": "G5", "title": "Mechanical model", "status": "parked", "note": "Only if G4 still shows something to explain."}
+  ],
+  "chambers": [
+    {"id": "v01_MIP_ROI_2", "set": "pilot", "verdict": "ok", "issue": "faint target spills (visits 3-5)"},
+    {"id": "v01_MIP_ROI_32", "set": "pilot", "verdict": "merge", "issue": "touching tumour cells merge (visits 3, 7-9)"},
+    {"id": "v02_MIP_ROI_3", "set": "pilot", "verdict": "track", "issue": "dead target loses ID at visit 19-20"},
+    {"id": "v02_MIP_ROI_32", "set": "pilot", "verdict": "ok", "issue": "T cell split once (visit 11)"},
+    {"id": "v03_MIP_ROI_6", "set": "pilot", "verdict": "merge", "issue": "small neighbours attached (visits 9-11)"},
+    {"id": "v03_MIP_ROI_30", "set": "pilot", "verdict": "ok", "issue": ""},
+    {"id": "v04_MIP_ROI_24", "set": "pilot", "verdict": "track", "issue": "ID changes in a simple chamber"},
+    {"id": "v05_MIP_ROI_8", "set": "pilot", "verdict": "track", "issue": "target ID changes in 9/20 visits"},
+    {"id": "v06_MIP_ROI_28", "set": "held-out", "verdict": "poor", "issue": "crowded, many dead cells"},
+    {"id": "v07_MIP_ROI_2", "set": "held-out", "verdict": "merge", "issue": "merges at visits 1-3"},
+    {"id": "v07_MIP_ROI_26", "set": "held-out", "verdict": "merge", "issue": "merges at visits 1-8 (lab masks separate them)"},
+    {"id": "v08_MIP_ROI_24", "set": "held-out", "verdict": "good", "issue": ""},
+    {"id": "v08_MIP_ROI_38", "set": "held-out", "verdict": "track", "issue": "wrong cell chosen at times"},
+    {"id": "v09_MIP_ROI_29", "set": "held-out", "verdict": "poor", "issue": "merges"},
+    {"id": "v09_MIP_ROI_38", "set": "held-out", "verdict": "track", "issue": "target is a distant cell"},
+    {"id": "v10_MIP_ROI_28", "set": "held-out", "verdict": "track", "issue": "target switches between two cells (visits 15-19)"},
+    {"id": "v11_MIP_ROI_15", "set": "held-out", "verdict": "poor", "issue": "faint dasatinib cells merge"},
+    {"id": "v12_MIP_ROI_23", "set": "held-out", "verdict": "unclear", "issue": "magenta signal inside a dividing green cell; maybe no tumour cell"},
+    {"id": "v12_MIP_ROI_32", "set": "held-out", "verdict": "track", "issue": "orange 'T cell' is a small dim object (visits 1-4)"},
+    {"id": "v13_MIP_ROI_28", "set": "held-out", "verdict": "poor", "issue": "faint large tumour cells merge"}
+  ],
+  "needs_pi": [
+    "Ask the Fei lab how a kill is defined: does a death after the T cell leaves count, and within how long? Is a death seen only at the last visit kept?",
+    "v12 ROI 23: what is the magenta signal inside the dividing green cell?"
+  ],
+  "parked_note": "Step 6b mechanical model and step 7 focus test are parked until G4 (uncommitted edits in src/mech/run_step6b.py and src/step7_focus_test.py)."
 }
