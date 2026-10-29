@@ -251,8 +251,33 @@ the lab masks' lobes hanging into empty space. But two problems now dominate:
 hangs far below the cells in the side view. Right: C4 follows the cell.</figcaption>
 </figure>
 
+<p><strong>Round 5: two fixes, tested on all 20 chambers.</strong> We tried a splitter that cuts touching
+tumour cells apart, and a tracker that picks the T cell and the target once, from the whole
+movie, and follows the same cell to the end. Four people reviewed every frame (the tracker
+and the splitter separately).</p>
+<p>The splitter did help where two tumour cells touch with a visible neck:</p>
+<figure>
+<img src="img/f16_p5_split_helps.jpg" alt="Two touching round tumour cells: one outline in the left column, two in the right">
+<figcaption><b>Touching cells, separated.</b> Left: one outline around two tumour cells. Right: two.</figcaption>
+</figure>
+
+<p>But overall it was better in about 1 frame in 6, the same in 3 in 5, and worse in 1 in 5. It cut
+single cells along lines that follow no visible gap, and it deleted some dead cells:</p>
+<figure>
+<img src="img/f17_p5_split_hurts.jpg" alt="One large faint tumour cell outlined whole on the left, cut into a strip and a remainder on the right">
+<figcaption><b>One cell cut in two.</b> A single large, faint tumour cell. Left: outlined whole. Right: cut, and only a strip is tracked.</figcaption>
+</figure>
+
+<figure>
+<img src="img/f18_p5_dead_lost.jpg" alt="A tumour cell full of yellow death dye outlined on the left and without an outline on the right">
+<figcaption><b>A dead cell loses its outline.</b> The tumour cell is full of death dye (yellow). Left: outlined. Right: no outline.</figcaption>
+</figure>
+
+<p>We rejected this splitter and are rewriting it. The tracker mostly picked the same cells as
+before; it fixed a few mistakes and caused a few. Where tumour cells are still merged, it is
+not clear even by eye which cell "the target" is.</p>
 <p><strong>After that:</strong>
-1. Pick and follow the right cells over time, and separate touching tumour cells.
+1. Rewrite the splitter so it only cuts where there is a real gap and never removes a dead cell, then re-review and re-check the tracker on its outlines.
 2. Agree on what counts as a kill, then redo the death labels on the new outlines.
 3. <strong>Scale up</strong> by processing raw images as they download, keeping only the cell outlines
    and summaries, so all 502 chambers fit on one computer.

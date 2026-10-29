@@ -1,4 +1,4 @@
-## Abstract (updated 29 October 2026, after the held-out test)
+## Abstract (updated 29 October 2026, after P5)
 
 **Aim.** Build 3D-over-time "digital twins" of CAR-T cells attacking leukaemia
 cells, from the Fei lab's public light-sheet movies, and ask whether the way a T
@@ -10,24 +10,26 @@ cell pushes on its target predicts killing.
   hollow, two cells merged, or with lobes where there is no cell. These errors
   inflate the dents, so all dent and killing results are on hold and the mechanical
   model is parked.
-- We are redrawing the cells from the raw images, comparing methods on movies and
-  reviewing every frame. After three rounds on 8 chambers, an improved membrane-based
-  method ("C4") was best.
-- We then tested C4, unchanged, on 12 chambers it had never seen.
+- We are redrawing the cells from the raw images and reviewing every frame. An
+  improved membrane-based method ("C4") was best on 8 chambers and held up on 12
+  it had never seen.
+- Round 5 tried two fixes on all 20 chambers. Four reviewers looked at every frame.
 
 **Where we are now.**
-- C4's outlines held up on the new chambers: solid, tight, and without the lab
-  masks' phantom lobes, including in the donor whose lab masks are hollow.
-- Two problems now dominate:
-  - touching tumour cells merge into one (5 of 12 chambers);
-  - the wrong cell is often picked as "the target" or "the T cell".
-- One chamber may contain no tumour cell at all.
-- Separately, two chambers labelled "survived" contain a target that dies after the
-  T cell leaves. How a kill is defined is a question for the Fei lab.
+- A splitter for touching tumour cells helped in about 1 frame in 6, changed nothing
+  in 3 in 5, and made things worse in 1 in 5. It cut single cells in two and deleted
+  some dead cells, which are the kill evidence. We rejected it.
+- A tracker that picks the T cell and target once from the whole movie fixed a few
+  wrong choices and caused a few; it is not yet better overall.
+- Where tumour cells stay merged, it is unclear even by eye which cell is the target.
+  Two crowded chambers and two faint ones may need to be left out.
+- Open for the Fei lab: how a kill is defined (two "survived" chambers contain a
+  target that dies after the T cell leaves), and what the magenta signal in one
+  chamber is.
 
 **What's next.**
-1. Fix cell choice and tracking, and the separation of touching tumour cells.
-   Retest on all 20 chambers.
-2. Agree on what counts as a kill.
-3. Redraw all 502 chambers by processing each movie as it downloads.
+1. Rewrite the splitter to cut only at a visible gap and never delete a dead cell;
+   review every frame again.
+2. Agree on what counts as a kill, and on which chambers are usable.
+3. Redraw all 502 chambers, processing each movie as it downloads.
 4. Redo the dent and killing analysis on the new outlines.

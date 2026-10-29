@@ -217,6 +217,9 @@ table.data th,main table th{
 }
 .fig img{display:block;max-width:100%;height:auto;width:100%}
 .fig video{display:block;max-width:100%;height:auto;width:100%;background:#000}
+main figure{margin:14px 0 18px;max-width:100%}
+main figure img,main figure video{display:block;max-width:100%;height:auto;width:100%;border-radius:3px;background:#000}
+main figure figcaption{font-size:14px;color:var(--muted);margin-top:6px}
 .fig-with-movie{
   display:grid;grid-template-columns:minmax(0,1.4fr) minmax(260px,0.85fr);gap:16px;
   align-items:start;margin:8px 0 14px;
